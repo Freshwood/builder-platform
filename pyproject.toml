@@ -1,0 +1,90 @@
+[project]
+name = "homeworking-workspace"
+version = "0.1.0"
+requires-python = ">=3.13"
+
+[tool.uv]
+package = false
+# Supply-chain cooldown: ignore releases younger than a week.
+exclude-newer = "7 days"
+
+[tool.uv.workspace]
+members = ["packages/construction-model", "packages/calc-engine", "apps/api"]
+
+[tool.uv.sources]
+construction-model = { workspace = true }
+calc-engine = { workspace = true }
+homeworking-api = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "construction-model",
+    "calc-engine",
+    "homeworking-api",
+    "ruff>=0.15,<0.17",
+    "mypy>=1.18,<2.4",
+    "pytest>=8.4,<10",
+    "pytest-asyncio>=1.2",
+    "hypothesis>=6.140",
+    "syrupy>=5.0",
+    "import-linter>=2.5",
+    "aiosqlite>=0.21",
+    "pre-commit>=4.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "S", "PT", "N"]
+# E501: the formatter wraps code; long German UI strings are fine.
+ignore = ["S101", "E501", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S", "N802"]
+"apps/api/src/homeworking/migrations/**" = ["N999"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["packages/construction-model/src", "packages/calc-engine/src", "apps/api/src"]
+
+[[tool.mypy.overrides]]
+module = ["drawsvg.*", "weasyprint.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["packages/construction-model/tests", "packages/calc-engine/tests", "apps/api/tests"]
+addopts = "--import-mode=importlib"
+markers = ["postgres: requires a running PostgreSQL (docker compose)"]
+
+[tool.importlinter]
+root_packages = ["construction_model", "calc_engine", "homeworking"]
+
+[[tool.importlinter.contracts]]
+name = "Domain model is independent of engine and platform"
+type = "forbidden"
+source_modules = ["construction_model"]
+forbidden_modules = ["calc_engine", "homeworking", "fastapi", "sqlalchemy", "pydantic_ai"]
+
+[[tool.importlinter.contracts]]
+name = "Engine is pure (no platform, DB or LLM)"
+type = "forbidden"
+source_modules = ["calc_engine"]
+forbidden_modules = ["homeworking", "fastapi", "sqlalchemy", "pydantic_ai"]
+
+[[tool.importlinter.contracts]]
+name = "Only the API layer may use the agent module"
+type = "forbidden"
+source_modules = [
+    "homeworking.modules.projects",
+    "homeworking.modules.documents",
+    "homeworking.modules.drawings",
+    "homeworking.modules.compliance",
+    "homeworking.modules.identity",
+]
+forbidden_modules = ["homeworking.modules.agent"]

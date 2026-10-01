@@ -1,0 +1,57 @@
+# Local infrastructure for development. Application processes run on the host (just dev).
+name: homeworking
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: homeworking
+      POSTGRES_PASSWORD: homeworking
+      POSTGRES_DB: homeworking
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homeworking"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: homeworking
+      MINIO_ROOT_PASSWORD: homeworking-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    profiles: ["storage"]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    profiles: ["mail"]
+
+  # Optional OpenAI-compatible proxy. Run as a separate container with a pinned image
+  # (never as a Python library dependency, see ADR-0003). Pin the digest before use.
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    volumes:
+      - ./infra/litellm/config.yaml:/app/config.yaml:ro
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "4000:4000"
+    profiles: ["llm-proxy"]
+
+volumes:
+  pgdata:
+  miniodata:

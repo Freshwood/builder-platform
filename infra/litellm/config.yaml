@@ -1,0 +1,7 @@
+# Example LiteLLM proxy config. Point the API at it with
+#   LLM_MODE=openai LLM_BASE_URL=http://localhost:4000/v1 LLM_MODEL=planner
+model_list:
+  - model_name: planner
+    litellm_params:
+      model: mistral/mistral-medium-latest
+      api_key: os.environ/MISTRAL_API_KEY
