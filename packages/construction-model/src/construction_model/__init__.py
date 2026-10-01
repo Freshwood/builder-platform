@@ -1,0 +1,1 @@
+"""Homeworking construction model."""

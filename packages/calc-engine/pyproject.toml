@@ -1,0 +1,16 @@
+[project]
+name = "calc-engine"
+version = "0.1.0"
+description = "Deterministic construction and calculation engine with construction packs"
+requires-python = ">=3.13"
+dependencies = ["construction-model", "pydantic>=2.12,<2.14"]
+
+[tool.uv.sources]
+construction-model = { workspace = true }
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/calc_engine"]

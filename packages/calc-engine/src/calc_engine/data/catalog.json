@@ -1,0 +1,35 @@
+{
+  "version": "2026.09-seed.1",
+  "as_of": "2026-09",
+  "note": "Richtpreise (Seed-Daten) für Deutschland, keine Händlerangebote. Vor Produktivbetrieb durch echte Preisquellen ersetzen.",
+  "items": [
+    {"id": "board_spruce_28x145_4000", "name": "Rauspund-/Profilbrett Fichte, unbehandelt", "spec": "28 × 145 × 4000 mm", "unit": "Stk", "price_min": "11.00", "price_max": "17.00", "category": "wood"},
+    {"id": "board_douglas_28x145_4000", "name": "Brett Douglasie, unbehandelt", "spec": "28 × 145 × 4000 mm", "unit": "Stk", "price_min": "17.00", "price_max": "25.00", "category": "wood"},
+    {"id": "board_larch_28x145_4000", "name": "Brett Lärche, unbehandelt", "spec": "28 × 145 × 4000 mm", "unit": "Stk", "price_min": "21.00", "price_max": "31.00", "category": "wood"},
+    {"id": "post_spruce_70x70_2500", "name": "Kantholz Fichte, unbehandelt", "spec": "70 × 70 × 2500 mm", "unit": "Stk", "price_min": "9.00", "price_max": "14.00", "category": "wood"},
+    {"id": "post_douglas_70x70_2500", "name": "Kantholz Douglasie, unbehandelt", "spec": "70 × 70 × 2500 mm", "unit": "Stk", "price_min": "13.00", "price_max": "19.00", "category": "wood"},
+    {"id": "post_larch_70x70_2500", "name": "Kantholz Lärche, unbehandelt", "spec": "70 × 70 × 2500 mm", "unit": "Stk", "price_min": "15.00", "price_max": "22.00", "category": "wood"},
+    {"id": "screw_a2_5x60_200", "name": "Edelstahl-Holzbauschraube A2, Teilgewinde", "spec": "5 × 60 mm, Packung 200 Stk", "unit": "Pkg", "price_min": "16.00", "price_max": "26.00", "category": "fasteners"},
+    {"id": "rod_m10_a2_1000", "name": "Gewindestange Edelstahl A2", "spec": "M10 × 1000 mm", "unit": "Stk", "price_min": "4.00", "price_max": "7.00", "category": "fasteners"},
+    {"id": "rod_m10_a2_2000", "name": "Gewindestange Edelstahl A2", "spec": "M10 × 2000 mm", "unit": "Stk", "price_min": "8.00", "price_max": "13.00", "category": "fasteners"},
+    {"id": "nutwasher_m10_a2_10", "name": "Sechskantmuttern + U-Scheiben A2", "spec": "M10, je 10 Stk", "unit": "Pkg", "price_min": "4.00", "price_max": "7.00", "category": "fasteners"},
+    {"id": "slab_concrete_300x300x40", "name": "Gehwegplatte Beton", "spec": "300 × 300 × 40 mm", "unit": "Stk", "price_min": "2.00", "price_max": "3.50", "category": "base"},
+    {"id": "liner_hdpe_1000x5000", "name": "Noppenbahn HDPE (lebensmittelecht, PVC-frei)", "spec": "1,0 × 5,0 m Rolle", "unit": "Rolle", "price_min": "15.00", "price_max": "25.00", "category": "membrane"},
+    {"id": "liner_hdpe_1500x5000", "name": "Noppenbahn HDPE (lebensmittelecht, PVC-frei)", "spec": "1,5 × 5,0 m Rolle", "unit": "Rolle", "price_min": "22.00", "price_max": "35.00", "category": "membrane"},
+    {"id": "staples_a2_10mm_1000", "name": "Tackerklammern Edelstahl", "spec": "10 mm, 1000 Stk", "unit": "Pkg", "price_min": "4.00", "price_max": "7.00", "category": "fasteners"},
+    {"id": "mesh_galv_13mm_1000x5000", "name": "Wühlmausgitter verzinkt, Masche 13 mm", "spec": "1,0 × 5,0 m Rolle", "unit": "Rolle", "price_min": "25.00", "price_max": "40.00", "category": "mesh"},
+    {"id": "soil_raised_bed_40l", "name": "Hochbeeterde, torffrei", "spec": "Sack 40 l", "unit": "Sack", "price_min": "5.00", "price_max": "9.00", "category": "soil"}
+  ],
+  "tools": [
+    {"id": "tool_drill_driver", "name": "Akku-Bohrschrauber mit Bits (TX25)", "price_min": "60.00", "price_max": "150.00"},
+    {"id": "tool_saw", "name": "Handkreissäge oder Kappsäge (alternativ Handsäge)", "price_min": "60.00", "price_max": "160.00"},
+    {"id": "tool_drill_bit", "name": "Holzbohrer 3 mm und 11 mm", "price_min": "6.00", "price_max": "15.00"},
+    {"id": "tool_measure", "name": "Zollstock/Maßband, Bleistift, Anschlagwinkel", "price_min": "10.00", "price_max": "25.00"},
+    {"id": "tool_level", "name": "Wasserwaage", "price_min": "10.00", "price_max": "25.00"},
+    {"id": "tool_spade", "name": "Spaten", "price_min": "20.00", "price_max": "40.00"},
+    {"id": "tool_stapler", "name": "Handtacker", "price_min": "12.00", "price_max": "30.00"},
+    {"id": "tool_snips", "name": "Blechschere", "price_min": "12.00", "price_max": "25.00"},
+    {"id": "tool_wrench", "name": "Maulschlüssel SW 17 (2 Stk)", "price_min": "8.00", "price_max": "18.00"},
+    {"id": "tool_ppe", "name": "Schutzbrille, Gehörschutz, Arbeitshandschuhe", "price_min": "15.00", "price_max": "35.00"}
+  ]
+}
