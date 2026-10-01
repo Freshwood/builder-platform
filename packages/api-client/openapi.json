@@ -1,0 +1,2337 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Homeworking API",
+    "description": "Bauvorhaben als veränderbares, berechenbares Projektmodell.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Health",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Me",
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notices": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Notices",
+        "operationId": "notices",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalNotices"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/packs": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Packs",
+        "operationId": "list_packs",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PackDescriptor"
+                  },
+                  "type": "array",
+                  "title": "Response List Packs"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Projects",
+        "operationId": "list_projects",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectListEntry"
+                  },
+                  "type": "array",
+                  "title": "Response List Projects"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create Project",
+        "operationId": "create_project",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Get Project",
+        "operationId": "get_project",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Delete Project",
+        "operationId": "delete_project",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/commands": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Execute Command",
+        "operationId": "execute_command",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/undo": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Undo",
+        "operationId": "undo",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/history": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "History",
+        "operationId": "history",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HistoryEntry"
+                  },
+                  "title": "Response History"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/drawings/{view}.svg": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Drawing",
+        "operationId": "drawing",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "view",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "View"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "image/svg+xml": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/document.pdf": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Document",
+        "operationId": "document",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/pdf": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/export": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Export",
+        "operationId": "export",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Export"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Chat",
+        "operationId": "chat",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddNote": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "add_note",
+            "title": "Type",
+            "default": "add_note"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/Origin",
+            "default": "user"
+          },
+          "note_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Note Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "AddNote",
+        "description": "Attach a note. Id and timestamp live in the command so that replay is deterministic."
+      },
+      "BomLine": {
+        "properties": {
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "spec": {
+            "type": "string",
+            "title": "Spec"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "unit_price": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "position",
+          "item_id",
+          "name",
+          "spec",
+          "quantity",
+          "unit",
+          "unit_price",
+          "total"
+        ],
+        "title": "BomLine"
+      },
+      "ChangeParameterBy": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "change_parameter_by",
+            "title": "Type",
+            "default": "change_parameter_by"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "delta": {
+            "type": "integer",
+            "title": "Delta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "delta"
+        ],
+        "title": "ChangeParameterBy",
+        "description": "Change a numeric parameter relatively, e.g. ``width_mm`` by +500."
+      },
+      "CommandRequest": {
+        "properties": {
+          "command": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SetParameters"
+              },
+              {
+                "$ref": "#/components/schemas/ChangeParameterBy"
+              },
+              {
+                "$ref": "#/components/schemas/SelectVariant"
+              },
+              {
+                "$ref": "#/components/schemas/Rename"
+              },
+              {
+                "$ref": "#/components/schemas/SetRegion"
+              },
+              {
+                "$ref": "#/components/schemas/AddNote"
+              }
+            ],
+            "title": "Command",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "add_note": "#/components/schemas/AddNote",
+                "change_parameter_by": "#/components/schemas/ChangeParameterBy",
+                "rename": "#/components/schemas/Rename",
+                "select_variant": "#/components/schemas/SelectVariant",
+                "set_parameters": "#/components/schemas/SetParameters",
+                "set_region": "#/components/schemas/SetRegion"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "command"
+        ],
+        "title": "CommandRequest"
+      },
+      "CommandResponse": {
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectModel"
+          },
+          "can_undo": {
+            "type": "boolean",
+            "title": "Can Undo"
+          },
+          "diff": {
+            "$ref": "#/components/schemas/ModelDiff"
+          },
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project",
+          "can_undo",
+          "diff",
+          "seq"
+        ],
+        "title": "CommandResponse"
+      },
+      "Component": {
+        "properties": {
+          "guid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Guid"
+          },
+          "ifc_type": {
+            "type": "string",
+            "title": "Ifc Type"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "material_id": {
+            "type": "string",
+            "title": "Material Id"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Profile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "length_mm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "description": "Length in millimetres"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length Mm"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "guid",
+          "ifc_type",
+          "role",
+          "name",
+          "material_id"
+        ],
+        "title": "Component",
+        "description": "A physical part of the construction. ``ifc_type`` eases a later IFC export."
+      },
+      "ConstructionResult": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "effective_params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Effective Params"
+          },
+          "key_figures": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Key Figures"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/Component"
+            },
+            "type": "array",
+            "title": "Components"
+          },
+          "bom": {
+            "items": {
+              "$ref": "#/components/schemas/BomLine"
+            },
+            "type": "array",
+            "title": "Bom"
+          },
+          "cut_list": {
+            "items": {
+              "$ref": "#/components/schemas/CutLine"
+            },
+            "type": "array",
+            "title": "Cut List"
+          },
+          "stock_plan": {
+            "items": {
+              "$ref": "#/components/schemas/StockPlan"
+            },
+            "type": "array",
+            "title": "Stock Plan"
+          },
+          "fill_layers": {
+            "items": {
+              "$ref": "#/components/schemas/FillLayer"
+            },
+            "type": "array",
+            "title": "Fill Layers"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/Tool"
+            },
+            "type": "array",
+            "title": "Tools"
+          },
+          "costs": {
+            "$ref": "#/components/schemas/CostSummary"
+          },
+          "drawings": {
+            "items": {
+              "$ref": "#/components/schemas/Drawing"
+            },
+            "type": "array",
+            "title": "Drawings"
+          },
+          "instructions": {
+            "items": {
+              "$ref": "#/components/schemas/InstructionStep"
+            },
+            "type": "array",
+            "title": "Instructions"
+          },
+          "notices": {
+            "items": {
+              "$ref": "#/components/schemas/Notice"
+            },
+            "type": "array",
+            "title": "Notices"
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/VariantSummary"
+            },
+            "type": "array",
+            "title": "Variants"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summary",
+          "effective_params",
+          "key_figures",
+          "components",
+          "bom",
+          "cut_list",
+          "stock_plan",
+          "fill_layers",
+          "tools",
+          "costs",
+          "drawings",
+          "instructions",
+          "notices",
+          "variants",
+          "provenance"
+        ],
+        "title": "ConstructionResult",
+        "description": "Everything the engine derives from the inputs."
+      },
+      "CostSummary": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "tools_optional": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "material",
+          "tools_optional",
+          "note"
+        ],
+        "title": "CostSummary"
+      },
+      "CreateProjectRequest": {
+        "properties": {
+          "pack_id": {
+            "type": "string",
+            "title": "Pack Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Region"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "pack_id",
+          "title"
+        ],
+        "title": "CreateProjectRequest"
+      },
+      "CutLine": {
+        "properties": {
+          "part": {
+            "type": "string",
+            "title": "Part"
+          },
+          "material": {
+            "type": "string",
+            "title": "Material"
+          },
+          "cross_section": {
+            "type": "string",
+            "title": "Cross Section"
+          },
+          "length_mm": {
+            "type": "integer",
+            "title": "Length Mm",
+            "description": "Length in millimetres"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "part",
+          "material",
+          "cross_section",
+          "length_mm",
+          "count"
+        ],
+        "title": "CutLine"
+      },
+      "Dimension": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "dimension",
+            "title": "Kind",
+            "default": "dimension"
+          },
+          "x1": {
+            "type": "number",
+            "title": "X1"
+          },
+          "y1": {
+            "type": "number",
+            "title": "Y1"
+          },
+          "x2": {
+            "type": "number",
+            "title": "X2"
+          },
+          "y2": {
+            "type": "number",
+            "title": "Y2"
+          },
+          "offset": {
+            "type": "number",
+            "title": "Offset"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x1",
+          "y1",
+          "x2",
+          "y2",
+          "offset",
+          "text"
+        ],
+        "title": "Dimension",
+        "description": "Linear dimension between two points, drawn ``offset`` mm away from the measured line."
+      },
+      "Drawing": {
+        "properties": {
+          "view": {
+            "type": "string",
+            "title": "View"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "scale_hint": {
+            "type": "string",
+            "title": "Scale Hint"
+          },
+          "min_x": {
+            "type": "number",
+            "title": "Min X"
+          },
+          "min_y": {
+            "type": "number",
+            "title": "Min Y"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height"
+          },
+          "primitives": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Rect"
+                },
+                {
+                  "$ref": "#/components/schemas/Line"
+                },
+                {
+                  "$ref": "#/components/schemas/Dimension"
+                },
+                {
+                  "$ref": "#/components/schemas/Label"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "kind",
+                "mapping": {
+                  "dimension": "#/components/schemas/Dimension",
+                  "label": "#/components/schemas/Label",
+                  "line": "#/components/schemas/Line",
+                  "rect": "#/components/schemas/Rect"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Primitives"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "view",
+          "title",
+          "description",
+          "scale_hint",
+          "min_x",
+          "min_y",
+          "width",
+          "height",
+          "primitives"
+        ],
+        "title": "Drawing"
+      },
+      "Fill": {
+        "type": "string",
+        "enum": [
+          "none",
+          "wood",
+          "wood_end",
+          "steel",
+          "membrane",
+          "ground"
+        ],
+        "title": "Fill"
+      },
+      "FillLayer": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "thickness_mm": {
+            "type": "integer",
+            "title": "Thickness Mm",
+            "description": "Length in millimetres"
+          },
+          "volume_l": {
+            "type": "integer",
+            "title": "Volume L"
+          },
+          "purchase": {
+            "type": "boolean",
+            "title": "Purchase"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "thickness_mm",
+          "volume_l",
+          "purchase"
+        ],
+        "title": "FillLayer"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HistoryEntry": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "command": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Command"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "actor",
+          "command",
+          "engine_version",
+          "created_at"
+        ],
+        "title": "HistoryEntry"
+      },
+      "InstructionStep": {
+        "properties": {
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/Origin",
+            "default": "engine"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "number",
+          "title",
+          "text"
+        ],
+        "title": "InstructionStep"
+      },
+      "Label": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "label",
+            "title": "Kind",
+            "default": "label"
+          },
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "anchor": {
+            "type": "string",
+            "enum": [
+              "start",
+              "middle",
+              "end"
+            ],
+            "title": "Anchor",
+            "default": "start"
+          },
+          "size": {
+            "type": "string",
+            "enum": [
+              "small",
+              "normal"
+            ],
+            "title": "Size",
+            "default": "normal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "text"
+        ],
+        "title": "Label"
+      },
+      "LegalNotices": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "ai_disclosure": {
+            "type": "string",
+            "title": "Ai Disclosure"
+          },
+          "document_notices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Document Notices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "ai_disclosure",
+          "document_notices"
+        ],
+        "title": "LegalNotices"
+      },
+      "Line": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "line",
+            "title": "Kind",
+            "default": "line"
+          },
+          "x1": {
+            "type": "number",
+            "title": "X1"
+          },
+          "y1": {
+            "type": "number",
+            "title": "Y1"
+          },
+          "x2": {
+            "type": "number",
+            "title": "X2"
+          },
+          "y2": {
+            "type": "number",
+            "title": "Y2"
+          },
+          "stroke": {
+            "$ref": "#/components/schemas/Stroke",
+            "default": "thin"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x1",
+          "y1",
+          "x2",
+          "y2"
+        ],
+        "title": "Line"
+      },
+      "MeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "is_guest": {
+            "type": "boolean",
+            "title": "Is Guest"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "is_guest"
+        ],
+        "title": "MeResponse"
+      },
+      "ModelDiff": {
+        "properties": {
+          "params": {
+            "items": {
+              "$ref": "#/components/schemas/ValueChange"
+            },
+            "type": "array",
+            "title": "Params"
+          },
+          "key_figures": {
+            "items": {
+              "$ref": "#/components/schemas/ValueChange"
+            },
+            "type": "array",
+            "title": "Key Figures"
+          },
+          "quantities": {
+            "items": {
+              "$ref": "#/components/schemas/QuantityChange"
+            },
+            "type": "array",
+            "title": "Quantities"
+          },
+          "material_cost_before": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "string",
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material Cost Before"
+          },
+          "material_cost_after": {
+            "prefixItems": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Material Cost After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "params",
+          "key_figures",
+          "quantities",
+          "material_cost_before",
+          "material_cost_after"
+        ],
+        "title": "ModelDiff"
+      },
+      "Money": {
+        "properties": {
+          "min": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Min"
+          },
+          "max": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Max"
+          },
+          "currency": {
+            "type": "string",
+            "const": "EUR",
+            "title": "Currency",
+            "default": "EUR"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "min",
+          "max"
+        ],
+        "title": "Money"
+      },
+      "Note": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/Origin"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origin",
+          "text"
+        ],
+        "title": "Note",
+        "description": "Free text attached to a project, e.g. an explanation written by the agent."
+      },
+      "Notice": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "rule_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "severity",
+          "message"
+        ],
+        "title": "Notice"
+      },
+      "Origin": {
+        "type": "string",
+        "enum": [
+          "user",
+          "engine",
+          "ai"
+        ],
+        "title": "Origin",
+        "description": "Who produced a piece of content (relevant for AI Act Art. 50 labelling)."
+      },
+      "PackDescriptor": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "example_prompt": {
+            "type": "string",
+            "title": "Example Prompt"
+          },
+          "params_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params Schema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "title",
+          "description",
+          "example_prompt",
+          "params_schema"
+        ],
+        "title": "PackDescriptor"
+      },
+      "Profile": {
+        "properties": {
+          "thickness_mm": {
+            "type": "integer",
+            "title": "Thickness Mm",
+            "description": "Length in millimetres"
+          },
+          "width_mm": {
+            "type": "integer",
+            "title": "Width Mm",
+            "description": "Length in millimetres"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thickness_mm",
+          "width_mm"
+        ],
+        "title": "Profile",
+        "description": "Rectangular cross-section."
+      },
+      "ProjectInputs": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "pack_id": {
+            "type": "string",
+            "title": "Pack Id"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params"
+          },
+          "variant_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Key"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Region"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/Note"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "pack_id",
+          "params"
+        ],
+        "title": "ProjectInputs",
+        "description": "The part of the project that commands change."
+      },
+      "ProjectListEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "pack_id": {
+            "type": "string",
+            "title": "Pack Id"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "pack_id",
+          "summary",
+          "updated_at"
+        ],
+        "title": "ProjectListEntry"
+      },
+      "ProjectModel": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version",
+            "default": 1
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/ProjectInputs"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ConstructionResult"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "inputs",
+          "result"
+        ],
+        "title": "ProjectModel",
+        "description": "Single source of truth of a construction project."
+      },
+      "ProjectView": {
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectModel"
+          },
+          "can_undo": {
+            "type": "boolean",
+            "title": "Can Undo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project",
+          "can_undo"
+        ],
+        "title": "ProjectView"
+      },
+      "Provenance": {
+        "properties": {
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "pack_id": {
+            "type": "string",
+            "title": "Pack Id"
+          },
+          "pack_version": {
+            "type": "string",
+            "title": "Pack Version"
+          },
+          "catalog_version": {
+            "type": "string",
+            "title": "Catalog Version"
+          },
+          "catalog_as_of": {
+            "type": "string",
+            "title": "Catalog As Of"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleRef"
+            },
+            "type": "array",
+            "title": "Rules"
+          },
+          "computed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Computed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "engine_version",
+          "pack_id",
+          "pack_version",
+          "catalog_version",
+          "catalog_as_of",
+          "rules",
+          "computed_at"
+        ],
+        "title": "Provenance"
+      },
+      "QuantityChange": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "before": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Before"
+          },
+          "after": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "name",
+          "unit",
+          "before",
+          "after"
+        ],
+        "title": "QuantityChange"
+      },
+      "Rect": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "rect",
+            "title": "Kind",
+            "default": "rect"
+          },
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          },
+          "w": {
+            "type": "number",
+            "title": "W"
+          },
+          "h": {
+            "type": "number",
+            "title": "H"
+          },
+          "stroke": {
+            "$ref": "#/components/schemas/Stroke",
+            "default": "outline"
+          },
+          "fill": {
+            "$ref": "#/components/schemas/Fill",
+            "default": "none"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "title": "Rect"
+      },
+      "Region": {
+        "type": "string",
+        "enum": [
+          "BW",
+          "BY",
+          "BE",
+          "BB",
+          "HB",
+          "HH",
+          "HE",
+          "MV",
+          "NI",
+          "NW",
+          "RP",
+          "SL",
+          "SN",
+          "ST",
+          "SH",
+          "TH"
+        ],
+        "title": "Region",
+        "description": "German federal states; building regulations differ per state."
+      },
+      "Rename": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "rename",
+            "title": "Type",
+            "default": "rename"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "Rename"
+      },
+      "RuleRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "norm_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Norm Reference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "title"
+        ],
+        "title": "RuleRef",
+        "description": "A versioned engineering rule of thumb used by the engine (provenance)."
+      },
+      "SelectVariant": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "select_variant",
+            "title": "Type",
+            "default": "select_variant"
+          },
+          "variant_key": {
+            "type": "string",
+            "title": "Variant Key"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "variant_key"
+        ],
+        "title": "SelectVariant"
+      },
+      "SetParameters": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "set_parameters",
+            "title": "Type",
+            "default": "set_parameters"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "minProperties": 1,
+            "title": "Values"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "title": "SetParameters",
+        "description": "Set one or more parameters to absolute values (lengths in mm)."
+      },
+      "SetRegion": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "set_region",
+            "title": "Type",
+            "default": "set_region"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Region"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "region"
+        ],
+        "title": "SetRegion"
+      },
+      "Severity": {
+        "type": "string",
+        "enum": [
+          "info",
+          "warning",
+          "critical"
+        ],
+        "title": "Severity"
+      },
+      "StockPlan": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "stock_length_mm": {
+            "type": "integer",
+            "title": "Stock Length Mm",
+            "description": "Length in millimetres"
+          },
+          "stock_count": {
+            "type": "integer",
+            "title": "Stock Count"
+          },
+          "waste_mm": {
+            "type": "integer",
+            "title": "Waste Mm",
+            "description": "Length in millimetres"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item_id",
+          "stock_length_mm",
+          "stock_count",
+          "waste_mm"
+        ],
+        "title": "StockPlan",
+        "description": "How cut pieces are distributed over purchased stock lengths."
+      },
+      "Stroke": {
+        "type": "string",
+        "enum": [
+          "outline",
+          "thin",
+          "hidden",
+          "center",
+          "membrane"
+        ],
+        "title": "Stroke"
+      },
+      "Tool": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": true
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Tool"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValueChange": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "before",
+          "after"
+        ],
+        "title": "ValueChange"
+      },
+      "VariantSummary": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "overrides": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Overrides"
+          },
+          "material_cost": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "is_selected": {
+            "type": "boolean",
+            "title": "Is Selected"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "description",
+          "overrides",
+          "material_cost",
+          "is_selected"
+        ],
+        "title": "VariantSummary"
+      }
+    }
+  }
+}

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from calc_engine.engine import Engine, default_engine
 from pydantic_ai import Agent
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from calc_engine.engine import Engine, default_engine
 from homeworking.db.schema import Base
 from homeworking.db.session import make_engine, make_session_factory
 from homeworking.modules.agent.model import build_model

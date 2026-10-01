@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from calc_engine.packs.raised_bed.geometry import BOARD_T, BOARD_W, POST, RaisedBedGeometry
 from construction_model.drawing import (
     Dimension,
     Drawing,
@@ -12,8 +13,6 @@ from construction_model.drawing import (
     Rect,
     Stroke,
 )
-
-from calc_engine.packs.raised_bed.geometry import BOARD_T, BOARD_W, POST, RaisedBedGeometry
 
 SLAB = 300
 SLAB_T = 40

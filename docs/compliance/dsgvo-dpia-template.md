@@ -4,10 +4,10 @@
 
 | Zweck | Daten | Rechtsgrundlage | Speicherdauer |
 |---|---|---|---|
-| Nutzerkonto | E-Mail, Anzeigename | Art. 6 Abs. 1 lit. b | bis zur Kontolöschung |
+| Gastkonto | zufällige Kennung im signierten Session-Cookie (keine E-Mail in Phase I) | Art. 6 Abs. 1 lit. b | bis zur Kontolöschung; Cookie 180 Tage |
 | Projekte | Projektparameter, Ergebnisse, Command-Log | Art. 6 Abs. 1 lit. b | bis zur Löschung des Projekts oder Kontos |
-| Agent-Chat | Nachrichtentexte | Art. 6 Abs. 1 lit. b | `CHAT_RETENTION_DAYS` (Standard 90) |
-| Betriebslogs | IP (gekürzt), Request-IDs | Art. 6 Abs. 1 lit. f | 14 Tage |
+| Agent-Chat | Nachrichtentexte (vor Übermittlung an das LLM redigiert) | Art. 6 Abs. 1 lit. b | wird serverseitig **nicht** gespeichert, nur im Browser-Tab gehalten |
+| Betriebslogs | Request-IDs, Agent-Trace-ID, Modell- und Prompt-Version | Art. 6 Abs. 1 lit. f | **offen:** IP-Kürzung und 14-Tage-Rotation beim Hosting umsetzen |
 
 Ausgeschlossen sind in Phase I: Analytics, Tracking, Marketing-Cookies und das Training mit Nutzerdaten.
 

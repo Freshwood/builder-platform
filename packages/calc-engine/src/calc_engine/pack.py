@@ -9,6 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from pydantic import BaseModel
+
+from calc_engine.catalog import Catalog
 from construction_model.drawing import Drawing
 from construction_model.model import (
     BomLine,
@@ -23,9 +26,6 @@ from construction_model.model import (
     StockPlan,
     Tool,
 )
-from pydantic import BaseModel
-
-from calc_engine.catalog import Catalog
 
 
 @dataclass(frozen=True)

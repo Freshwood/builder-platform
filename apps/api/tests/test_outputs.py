@@ -2,20 +2,21 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
+from syrupy.extensions.single_file import SingleFileSnapshotExtension, WriteMode
+
 from calc_engine.engine import default_engine
 from construction_model.model import Note, Origin, ProjectInputs, ProjectModel
 from homeworking.modules.compliance.redaction import redact
 from homeworking.modules.compliance.safety import check_message
 from homeworking.modules.documents.pdf import render_html, render_pdf
 from homeworking.modules.drawings.svg import render_svg
-from syrupy.extensions.single_file import SingleFileSnapshotExtension, WriteMode
 
 NOW = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
 PROJECT_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
 
 class SvgSnapshot(SingleFileSnapshotExtension):
-    _file_extension = "svg"
+    file_extension = "svg"
     _write_mode = WriteMode.TEXT
 
 

@@ -6,6 +6,10 @@ from dataclasses import dataclass, field
 from typing import Annotated, Any
 from uuid import UUID
 
+from pydantic import Field
+from pydantic_ai import Agent, RunContext
+from pydantic_ai.models import Model
+
 from calc_engine.engine import ParameterError, UnknownPackError
 from construction_model.commands import (
     AddNote,
@@ -18,10 +22,6 @@ from construction_model.commands import (
 )
 from construction_model.diff import ModelDiff
 from construction_model.model import Origin, ParamValue, ProjectModel
-from pydantic import Field
-from pydantic_ai import Agent, RunContext
-from pydantic_ai.models import Model
-
 from homeworking.modules.agent.prompts import INSTRUCTIONS
 from homeworking.modules.projects.service import ProjectNotFoundError, ProjectService
 

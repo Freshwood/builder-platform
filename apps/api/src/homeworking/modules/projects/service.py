@@ -19,7 +19,6 @@ from construction_model.commands import (
 )
 from construction_model.diff import ModelDiff, diff_results
 from construction_model.model import ParamValue, ProjectInputs, ProjectModel, Region
-
 from homeworking.modules.projects.ports import (
     Actor,
     CommandRecord,

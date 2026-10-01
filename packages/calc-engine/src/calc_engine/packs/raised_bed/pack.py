@@ -5,19 +5,6 @@ from __future__ import annotations
 import math
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from construction_model.model import (
-    Component,
-    CostSummary,
-    CutLine,
-    FillLayer,
-    InstructionStep,
-    Notice,
-    Profile,
-    RuleRef,
-    Severity,
-    StockPlan,
-    Tool,
-)
 from pydantic import BaseModel
 
 from calc_engine.catalog import BomBuilder, Catalog, money, sum_money
@@ -38,6 +25,19 @@ from calc_engine.packs.raised_bed.geometry import (
     compute_geometry,
 )
 from calc_engine.packs.raised_bed.params import WOOD_LABELS, RaisedBedParams, Wood
+from construction_model.model import (
+    Component,
+    CostSummary,
+    CutLine,
+    FillLayer,
+    InstructionStep,
+    Notice,
+    Profile,
+    RuleRef,
+    Severity,
+    StockPlan,
+    Tool,
+)
 
 PACK_ID = "raised_bed"
 PACK_VERSION = "1.0.0"

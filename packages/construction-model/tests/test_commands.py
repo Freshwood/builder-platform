@@ -1,4 +1,5 @@
 import pytest
+
 from construction_model.commands import (
     AddNote,
     ChangeParameterBy,

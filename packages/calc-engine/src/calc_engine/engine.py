@@ -5,6 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from datetime import UTC, datetime
 
+from pydantic import BaseModel, ValidationError
+
+from calc_engine.catalog import Catalog, default_catalog
+from calc_engine.pack import Pack, PackDescriptor
 from construction_model.model import (
     ConstructionResult,
     ParamValue,
@@ -12,10 +16,6 @@ from construction_model.model import (
     Provenance,
     VariantSummary,
 )
-from pydantic import BaseModel, ValidationError
-
-from calc_engine.catalog import Catalog, default_catalog
-from calc_engine.pack import Pack, PackDescriptor
 
 ENGINE_VERSION = "0.1.0"
 

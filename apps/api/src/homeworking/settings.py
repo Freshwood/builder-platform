@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://homeworking:homeworking@localhost:5433/homeworking"
     session_secret: SecretStr = SecretStr(DEV_SECRET)
     cors_origins: list[str] = ["http://localhost:3000"]
+    # Create tables on startup instead of running Alembic (SQLite dev / E2E only).
+    auto_create_schema: bool = False
 
     llm_mode: Literal["test", "openai"] = "test"
     llm_base_url: str = "https://openrouter.ai/api/v1"

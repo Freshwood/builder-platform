@@ -2,14 +2,15 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
 from calc_engine.cutting import plan_cuts
 from calc_engine.engine import ParameterError, default_engine
 from calc_engine.packs.raised_bed.geometry import BOARD_W, compute_geometry
 from calc_engine.packs.raised_bed.params import RaisedBedParams
 from construction_model.diff import diff_results
 from construction_model.model import ProjectInputs
-from hypothesis import given, settings
-from hypothesis import strategies as st
 
 FIXED_NOW = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
 engine = default_engine(clock=lambda: FIXED_NOW)

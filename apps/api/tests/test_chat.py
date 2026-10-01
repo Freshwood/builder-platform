@@ -2,6 +2,7 @@ import json
 
 import httpx
 import pytest
+
 from homeworking.modules.agent.offline import ToolCall, decide_for_user_text
 
 

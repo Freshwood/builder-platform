@@ -4,6 +4,7 @@ import os
 
 import httpx
 import pytest
+
 from homeworking.main import create_app
 from homeworking.settings import Settings
 

@@ -7,8 +7,9 @@ from decimal import ROUND_HALF_UP, Decimal
 from functools import cache
 from importlib import resources
 
-from construction_model.model import BomLine, Money
 from pydantic import BaseModel, ConfigDict
+
+from construction_model.model import BomLine, Money
 
 CENT = Decimal("0.01")
 

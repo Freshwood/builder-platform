@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from calc_engine.engine import ParameterError, UnknownPackError
-from construction_model.commands import CommandError
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
+from calc_engine.engine import ParameterError, UnknownPackError
+from construction_model.commands import CommandError
 from homeworking.api import chat, projects
 from homeworking.bootstrap import Container, build_container
 from homeworking.modules.projects.service import ProjectNotFoundError
@@ -29,7 +29,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.container = container or build_container(settings)
-        if create_schema:
+        if create_schema or settings.auto_create_schema:
             await app.state.container.create_schema()
         yield
         await app.state.container.close()
@@ -39,6 +39,8 @@ def create_app(
         version="0.1.0",
         description="Bauvorhaben als veränderbares, berechenbares Projektmodell.",
         lifespan=lifespan,
+        # Readable operation ids for the generated TypeScript client.
+        generate_unique_id_function=lambda route: route.name,
     )
     app.add_middleware(
         SessionMiddleware,

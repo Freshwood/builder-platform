@@ -6,14 +6,14 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from calc_engine.pack import PackDescriptor
-from construction_model.commands import EditCommand, can_undo
-from construction_model.diff import ModelDiff
-from construction_model.model import ParamValue, ProjectModel, Region
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
+from calc_engine.pack import PackDescriptor
+from construction_model.commands import EditCommand, can_undo
+from construction_model.diff import ModelDiff
+from construction_model.model import ParamValue, ProjectModel, Region
 from homeworking.api.deps import ContainerDep, UserDep
 from homeworking.modules.compliance.disclosure import (
     AI_CHAT_DISCLOSURE,

@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from construction_model.model import Origin, ProjectModel
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+from construction_model.model import Origin, ProjectModel
 from homeworking.modules.compliance.disclosure import (
     AI_CONTENT_LABEL,
     AI_DOCUMENT_STATEMENT,
