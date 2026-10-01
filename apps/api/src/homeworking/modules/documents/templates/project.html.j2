@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>{{ project.inputs.title }} – Bauplan</title>
+<meta name="author" content="Homeworking">
+<meta name="description" content="{{ result.summary }}">
+<meta name="keywords" content="Homeworking, Bauplan, {{ ai_keyword }}">
+<meta name="generator" content="Homeworking {{ result.provenance.engine_version }}">
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+    @bottom-left { content: "{{ footer }}"; font-size: 7pt; color: #6b7280; }
+    @bottom-right { content: "Seite " counter(page) " / " counter(pages); font-size: 7pt; color: #6b7280; }
+  }
+  html { font-family: "DejaVu Sans", Helvetica, Arial, sans-serif; font-size: 9.5pt; color: #111827; line-height: 1.4; }
+  h1 { font-size: 20pt; margin: 0 0 4mm; }
+  h2 { font-size: 13pt; margin: 8mm 0 3mm; border-bottom: 0.6pt solid #d1d5db; padding-bottom: 1mm; }
+  h3 { font-size: 10.5pt; margin: 5mm 0 2mm; }
+  p { margin: 0 0 2mm; }
+  .lead { font-size: 11pt; color: #374151; }
+  table { width: 100%; border-collapse: collapse; margin: 0 0 3mm; }
+  th, td { text-align: left; vertical-align: top; padding: 1.2mm 1.6mm; border-bottom: 0.4pt solid #e5e7eb; }
+  th { background: #f3f4f6; font-weight: 600; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .figures td:first-child { color: #4b5563; width: 35%; }
+  .notice { border-left: 2.5pt solid #9ca3af; padding: 1.5mm 3mm; margin: 0 0 2mm; background: #f9fafb; }
+  .notice.warning { border-color: #d97706; background: #fffbeb; }
+  .notice.critical { border-color: #dc2626; background: #fef2f2; }
+  .safety { border: 0.8pt solid #d97706; padding: 3mm 4mm; margin: 4mm 0; break-inside: avoid; }
+  .safety h2 { margin-top: 0; border: none; }
+  .drawing { break-inside: avoid; margin: 0 0 5mm; }
+  .drawing svg { width: 100%; height: auto; max-height: 120mm; }
+  .drawing figcaption { font-size: 8pt; color: #4b5563; }
+  .step { break-inside: avoid; margin: 0 0 3mm; }
+  .step h3 { margin: 0 0 1mm; }
+  .ai { border: 0.8pt dashed #6366f1; padding: 2mm 3mm; margin: 0 0 3mm; }
+  .ai-label { display: inline-block; font-size: 7pt; font-weight: 700; color: #4338ca; background: #eef2ff; padding: 0.3mm 1.5mm; margin-bottom: 1mm; }
+  .muted { color: #6b7280; font-size: 8pt; }
+  .page-break { break-before: page; }
+</style>
+</head>
+<body>
+<header>
+  <h1>{{ project.inputs.title }}</h1>
+  <p class="lead">{{ result.summary }}</p>
+  <p class="muted">Erstellt am {{ created }} · Projekt-ID {{ project.id }}</p>
+</header>
+
+<main>
+<section aria-labelledby="h-figures">
+  <h2 id="h-figures">Eckdaten</h2>
+  <table class="figures">
+    <tbody>
+    {% for key, value in result.key_figures.items() %}
+      <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+    {% endfor %}
+      <tr><td>Materialkosten (Richtwert)</td><td>{{ eur(result.costs.material.min) }} – {{ eur(result.costs.material.max) }}</td></tr>
+      <tr><td>Werkzeug, falls nicht vorhanden</td><td>{{ eur(result.costs.tools_optional.min) }} – {{ eur(result.costs.tools_optional.max) }}</td></tr>
+    </tbody>
+  </table>
+  {% for notice in result.notices %}
+    <div class="notice {{ notice.severity.value }}"><p>{{ notice.message }}</p></div>
+  {% endfor %}
+</section>
+
+<section class="safety" aria-labelledby="h-safety">
+  <h2 id="h-safety">Wichtige Hinweise</h2>
+  {% for text in document_notices %}<p>{{ text }}</p>{% endfor %}
+  <p>{{ ai_statement }}</p>
+</section>
+
+<section aria-labelledby="h-variants">
+  <h2 id="h-variants">Varianten</h2>
+  <table>
+    <thead><tr><th scope="col">Variante</th><th scope="col">Beschreibung</th><th scope="col" class="num">Material</th></tr></thead>
+    <tbody>
+    {% for v in result.variants %}
+      <tr>
+        <td>{{ v.name }}{% if v.is_selected %} (gewählt){% endif %}</td>
+        <td>{{ v.description }}</td>
+        <td class="num">{{ eur(v.material_cost.min) }} – {{ eur(v.material_cost.max) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% if ai_notes %}
+<section aria-labelledby="h-ai">
+  <h2 id="h-ai">Erläuterungen des Assistenten</h2>
+  {% for note in ai_notes %}
+    <div class="ai"><span class="ai-label">{{ ai_label }}</span><p>{{ note.text }}</p></div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="page-break" aria-labelledby="h-drawings">
+  <h2 id="h-drawings">Zeichnungen</h2>
+  {% for d in drawings %}
+    <figure class="drawing">
+      {{ d.svg | safe }}
+      <figcaption>{{ d.description }}</figcaption>
+    </figure>
+  {% endfor %}
+</section>
+
+<section class="page-break" aria-labelledby="h-bom">
+  <h2 id="h-bom">Materialliste</h2>
+  <table>
+    <thead><tr><th scope="col">Pos.</th><th scope="col">Material</th><th scope="col">Spezifikation</th><th scope="col" class="num">Menge</th><th scope="col" class="num">Richtpreis</th></tr></thead>
+    <tbody>
+    {% for line in result.bom %}
+      <tr>
+        <td>{{ line.position }}</td>
+        <td>{{ line.name }}{% if line.note %}<br><span class="muted">{{ line.note }}</span>{% endif %}</td>
+        <td>{{ line.spec }}</td>
+        <td class="num">{{ qty(line.quantity) }} {{ line.unit }}</td>
+        <td class="num">{{ eur(line.total.min) }} – {{ eur(line.total.max) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">{{ result.costs.note }} Katalog {{ result.provenance.catalog_version }} (Stand {{ result.provenance.catalog_as_of }}).</p>
+
+  <h2>Zuschnittliste</h2>
+  <table>
+    <thead><tr><th scope="col">Bauteil</th><th scope="col">Material</th><th scope="col">Querschnitt</th><th scope="col" class="num">Länge</th><th scope="col" class="num">Anzahl</th></tr></thead>
+    <tbody>
+    {% for c in result.cut_list %}
+      <tr><td>{{ c.part }}</td><td>{{ c.material }}</td><td>{{ c.cross_section }} mm</td><td class="num">{{ c.length_mm }} mm</td><td class="num">{{ c.count }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Füllung</h3>
+  <table>
+    <thead><tr><th scope="col">Schicht (von unten)</th><th scope="col" class="num">Stärke</th><th scope="col" class="num">Volumen</th><th scope="col">Herkunft</th></tr></thead>
+    <tbody>
+    {% for f in result.fill_layers %}
+      <tr><td>{{ f.name }}</td><td class="num">{{ f.thickness_mm }} mm</td><td class="num">{{ f.volume_l }} l</td><td>{% if f.purchase %}kaufen{% else %}aus dem Garten{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Werkzeug</h3>
+  <ul>{% for t in result.tools %}<li>{{ t.name }}</li>{% endfor %}</ul>
+</section>
+
+<section class="page-break" aria-labelledby="h-steps">
+  <h2 id="h-steps">Bauanleitung</h2>
+  {% for step in result.instructions %}
+    <div class="step">
+      <h3>{{ step.number }}. {{ step.title }}</h3>
+      <p>{{ step.text }}</p>
+    </div>
+  {% endfor %}
+</section>
+
+<section aria-labelledby="h-provenance">
+  <h2 id="h-provenance">Nachvollziehbarkeit</h2>
+  <p class="muted">Engine {{ result.provenance.engine_version }} · Pack {{ result.provenance.pack_id }} {{ result.provenance.pack_version }} · Katalog {{ result.provenance.catalog_version }} · Hinweise {{ notices_version }} · berechnet {{ computed }}</p>
+  <table>
+    <thead><tr><th scope="col">Regel</th><th scope="col">Beschreibung</th><th scope="col">Bezug</th></tr></thead>
+    <tbody>
+    {% for r in result.provenance.rules %}
+      <tr><td>{{ r.id }} v{{ r.version }}</td><td>{{ r.title }}</td><td>{{ r.norm_reference or "Faustregel" }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+</main>
+</body>
+</html>

@@ -8,7 +8,9 @@ command sequence is obtained with stack semantics (:func:`effective_commands`).
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
+from datetime import UTC, datetime
 from typing import Annotated, Literal
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
@@ -62,9 +64,13 @@ class SetRegion(_Command):
 
 
 class AddNote(_Command):
+    """Attach a note. Id and timestamp live in the command so that replay is deterministic."""
+
     type: Literal["add_note"] = "add_note"
     text: str = Field(min_length=1, max_length=4000)
     origin: Origin = Origin.USER
+    note_id: UUID = Field(default_factory=uuid4)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class Undo(_Command):
@@ -135,8 +141,8 @@ def apply_to_inputs(
             return inputs.model_copy(update={"title": title})
         case SetRegion(region=region):
             return inputs.model_copy(update={"region": region})
-        case AddNote(text=text, origin=origin):
-            note = Note(origin=origin, text=text)
+        case AddNote(text=text, origin=origin, note_id=note_id, created_at=created_at):
+            note = Note(id=note_id, origin=origin, text=text, created_at=created_at)
             return inputs.model_copy(update={"notes": [*inputs.notes, note]})
         case Undo():
             raise CommandError("Undo must be resolved via effective_commands()")

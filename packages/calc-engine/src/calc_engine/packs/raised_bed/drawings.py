@@ -129,7 +129,7 @@ def _elevation(
             offset=-DIM_GAP,
             text=_mm(BOARD_W),
         ),
-        Label(x=-200, y=ground + 30, text="Gelände / Kiesbett", size="small"),
+        Label(x=-200, y=ground + 110, text="Gelände / Kiesbett", size="small"),
     ]
     return Drawing(
         view=view,

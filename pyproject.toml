@@ -52,7 +52,7 @@ plugins = ["pydantic.mypy"]
 files = ["packages/construction-model/src", "packages/calc-engine/src", "apps/api/src"]
 
 [[tool.mypy.overrides]]
-module = ["drawsvg.*", "weasyprint.*"]
+module = ["weasyprint.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -64,6 +64,7 @@ markers = ["postgres: requires a running PostgreSQL (docker compose)"]
 
 [tool.importlinter]
 root_packages = ["construction_model", "calc_engine", "homeworking"]
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Domain model is independent of engine and platform"
