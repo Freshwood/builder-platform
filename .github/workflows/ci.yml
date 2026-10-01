@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Renovate (helpers:pinGitHubActionDigests) pins all actions to commit SHAs.
+jobs:
+  python:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: homeworking
+          POSTGRES_PASSWORD: homeworking
+          POSTGRES_DB: homeworking
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U homeworking" --health-interval 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://homeworking:homeworking@localhost:5432/homeworking
+    steps:
+      - uses: actions/checkout@v5
+      - name: System libraries for WeasyPrint
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-dejavu-core
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - run: uv run lint-imports
+      - run: uv run pytest
+      - name: OpenAPI schema is up to date
+        run: |
+          uv run python -m homeworking.openapi > /tmp/openapi.json
+          diff -u packages/api-client/openapi.json /tmp/openapi.json
+
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generated API client is up to date
+        run: |
+          pnpm --filter @homeworking/api-client generate
+          git diff --exit-code packages/api-client/src
+      - run: pnpm -r lint
+      - run: pnpm -r typecheck
+      - run: pnpm --filter web build
+
+  e2e:
+    runs-on: ubuntu-24.04
+    needs: [python, web]
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-dejavu-core
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web exec playwright install --with-deps chromium --only-shell
+      - run: mkdir -p var && pnpm --filter web e2e
+        env:
+          CI: "true"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/test-results

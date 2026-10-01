@@ -1,0 +1,10 @@
+packages:
+  - apps/web
+  - packages/api-client
+
+# Supply-chain cooldown: only install versions published at least 7 days ago (minutes).
+minimumReleaseAge: 10080
+
+# Install scripts are denied unless explicitly allowed.
+allowBuilds:
+  unrs-resolver: false
