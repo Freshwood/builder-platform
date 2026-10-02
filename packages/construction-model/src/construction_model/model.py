@@ -10,29 +10,22 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from construction_model.assembly import AssemblyDesign
+from construction_model.base import Mm, Origin, ParamValue
 from construction_model.drawing import Drawing
 
 SCHEMA_VERSION = 1
 
-Mm = Annotated[int, Field(description="Length in millimetres")]
-ParamValue = int | float | str | bool
+__all__ = ["Mm", "Origin", "ParamValue"]
 
 
 class Frozen(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
-
-
-class Origin(StrEnum):
-    """Who produced a piece of content (relevant for AI Act Art. 50 labelling)."""
-
-    USER = "user"
-    ENGINE = "engine"
-    AI = "ai"
 
 
 class Severity(StrEnum):
@@ -115,6 +108,8 @@ class CutLine(Frozen):
     cross_section: str
     length_mm: Mm
     count: int
+    width_mm: Mm | None = Field(None, description="Second cut dimension for sheet parts")
+    position: int | None = Field(None, description="Position number in drawings")
 
 
 class StockPlan(Frozen):
@@ -124,6 +119,11 @@ class StockPlan(Frozen):
     stock_length_mm: Mm
     stock_count: int
     waste_mm: Mm
+    name: str | None = None
+    bars: list[list[Mm]] = Field(
+        default_factory=list, description="Cut piece lengths per purchased bar (linear stock)"
+    )
+    utilization_pct: int | None = None
 
 
 class Tool(Frozen):
@@ -178,6 +178,43 @@ class Provenance(Frozen):
     computed_at: datetime
 
 
+class ChoiceSpec(Frozen):
+    value: str
+    label: str
+
+
+class ParamSpec(Frozen):
+    """UI metadata of an adjustable parameter (packs and designs alike)."""
+
+    name: str
+    label: str
+    kind: Literal["length", "count", "angle", "bool", "choice", "number"]
+    min: float | None = None
+    max: float | None = None
+    options: list[ChoiceSpec] = Field(default_factory=list)
+
+
+class SolidRotation(Frozen):
+    axis: Literal["x", "y", "z"]
+    deg: float
+
+
+class Solid(Frozen):
+    """A placed box for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner."""
+
+    position: int
+    part_id: str
+    name: str
+    material: str
+    tone: str
+    size: tuple[float, float, float]
+    at: tuple[float, float, float]
+    rotation: SolidRotation | None = None
+
+
+Trust = Literal["pack", "template", "ai_draft"]
+
+
 class ConstructionResult(Frozen):
     """Everything the engine derives from the inputs."""
 
@@ -196,6 +233,9 @@ class ConstructionResult(Frozen):
     notices: list[Notice]
     variants: list[VariantSummary]
     provenance: Provenance
+    trust: Trust = "pack"
+    param_specs: list[ParamSpec] = Field(default_factory=list)
+    solids: list[Solid] = Field(default_factory=list)
 
 
 class Note(Frozen):
@@ -216,6 +256,9 @@ class ProjectInputs(Frozen):
     variant_key: str | None = None
     region: Region | None = None
     notes: list[Note] = Field(default_factory=list)
+    design: AssemblyDesign | None = Field(
+        None, description="Free-form parametric design (pack_id 'design', ADR-0004)"
+    )
 
 
 class ProjectModel(Frozen):

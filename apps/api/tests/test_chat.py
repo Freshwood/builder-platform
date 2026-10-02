@@ -99,3 +99,25 @@ def test_offline_planner_relative_change() -> None:
             {"command": {"type": "change_parameter_by", "name": "height_mm", "delta": -200}},
         )
     ]
+
+
+async def test_chat_plans_from_template_offline(client: httpx.AsyncClient) -> None:
+    events = await _chat(client, "Ich brauche ein Regal 100 x 35 x 200 cm mit 6 Böden")
+    outputs = _tool_outputs(events)
+    assert outputs[0]["action"] == "created"
+    project = outputs[0]["project"]
+    assert project["trust"] == "template"
+    assert project["params"]["width_mm"] == 1000
+    assert project["params"]["shelves"] == 6
+
+    events = await _chat(client, "Bitte 20 cm breiter", project["project_id"])
+    outputs = _tool_outputs(events)
+    assert outputs[0]["diff"]["changed_params"]["width_mm"] == {"before": 1000, "after": 1200}
+
+
+def test_offline_template_matching_prefers_longest_keyword() -> None:
+    decision = decide_for_user_text("Werkbank 150 x 70 cm mit Rollen")
+    assert isinstance(decision, list)
+    assert decision[0].name == "create_from_template"
+    assert decision[0].args["template_key"] == "workbench"
+    assert decision[0].args["params"] == {"width_mm": 1500, "depth_mm": 700, "castors": True}

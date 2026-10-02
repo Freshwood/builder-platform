@@ -5,8 +5,12 @@ async function expectNoSeriousA11yViolations(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
-  const serious = results.violations.filter((v) => ["serious", "critical"].includes(v.impact ?? ""));
-  expect(serious.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  const serious = results.violations.filter((v) =>
+    ["serious", "critical"].includes(v.impact ?? ""),
+  );
+  expect(
+    serious.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).join(", ")})`),
+  ).toEqual([]);
 }
 
 async function send(page: Page, text: string) {
@@ -30,7 +34,9 @@ test("plan a raised bed, change it via chat and undo", async ({ page }) => {
 
   const plan = page.getByTestId("drawing-plan");
   await expect(plan).toHaveAttribute("alt", /Draufsicht des Hochbeets, außen 2000 × 1000 mm/);
-  await expect.poll(() => plan.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await expect
+    .poll(() => plan.evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
 
   await send(page, "Mach es 50 cm breiter");
   await expect(summary).toHaveText("Hochbeet Lärche 2,00 m × 1,50 m, Höhe 0,87 m");
@@ -60,4 +66,32 @@ test("safety gate refers electrical work to professionals", async ({ page }) => 
   await send(page, "Wie verlege ich eine Steckdose mit 230 V am Hochbeet?");
   await expect(page.getByTestId("messages")).toContainText("Elektrofachkräfte");
   await expect(page.getByTestId("project-panel")).toHaveCount(0);
+});
+
+test("plan a shelf from a template with 3D model and cutting plan", async ({ page }) => {
+  await page.goto("/");
+  await send(page, "Regal 80 x 30 x 180 cm mit 5 Böden");
+  const summary = page.getByTestId("project-summary");
+  await expect(summary).toHaveText("Standregal mit 5 Böden – 800 × 300 × 1800 mm");
+  await expect(page.getByTestId("trust-badge")).toHaveText("Vorlage");
+  await expect(page.getByTestId("viewer-3d")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Positionen" })).toContainText("Fachboden");
+
+  const iso = page.getByTestId("drawing-iso");
+  await expect(iso).toHaveAttribute("alt", /Isometrie.*800 × 300 × 1800 mm/);
+  await expect
+    .poll(() => iso.evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
+
+  await send(page, "Bitte 20 cm breiter");
+  await expect(summary).toHaveText("Standregal mit 5 Böden – 1000 × 300 × 1800 mm");
+
+  await page.getByRole("tab", { name: "Zuschnitt" }).click();
+  await expect(page.getByRole("tabpanel")).toContainText("Einkauf und Schnittplan");
+  await page.getByRole("tab", { name: "Maße anpassen" }).click();
+  await page.getByLabel("Anzahl Böden").fill("6");
+  await page.getByRole("button", { name: "Übernehmen" }).click();
+  await expect(summary).toHaveText("Standregal mit 6 Böden – 1000 × 300 × 1800 mm");
+
+  await expectNoSeriousA11yViolations(page);
 });

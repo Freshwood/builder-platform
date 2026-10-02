@@ -39,12 +39,16 @@
   .ai-label { display: inline-block; font-size: 7pt; font-weight: 700; color: #4338ca; background: #eef2ff; padding: 0.3mm 1.5mm; margin-bottom: 1mm; }
   .muted { color: #6b7280; font-size: 8pt; }
   .page-break { break-before: page; }
+  .trust { display: inline-block; font-size: 8pt; font-weight: 700; padding: 0.5mm 2mm; border-radius: 1mm; background: #ecfdf5; color: #047857; }
+  .trust.template { background: #eff6ff; color: #1d4ed8; }
+  .trust.ai_draft { background: #fffbeb; color: #b45309; }
 </style>
 </head>
 <body>
 <header>
   <h1>{{ project.inputs.title }}</h1>
   <p class="lead">{{ result.summary }}</p>
+  <p class="trust {{ result.trust }}">{{ trust_label }}</p>
   <p class="muted">Erstellt am {{ created }} · Projekt-ID {{ project.id }}</p>
 </header>
 
@@ -126,14 +130,15 @@
 
   <h2>Zuschnittliste</h2>
   <table>
-    <thead><tr><th scope="col">Bauteil</th><th scope="col">Material</th><th scope="col">Querschnitt</th><th scope="col" class="num">Länge</th><th scope="col" class="num">Anzahl</th></tr></thead>
+    <thead><tr><th scope="col">Pos.</th><th scope="col">Bauteil</th><th scope="col">Material</th><th scope="col">Querschnitt</th><th scope="col" class="num">Zuschnitt</th><th scope="col" class="num">Anzahl</th></tr></thead>
     <tbody>
     {% for c in result.cut_list %}
-      <tr><td>{{ c.part }}</td><td>{{ c.material }}</td><td>{{ c.cross_section }} mm</td><td class="num">{{ c.length_mm }} mm</td><td class="num">{{ c.count }}</td></tr>
+      <tr><td>{{ c.position or "" }}</td><td>{{ c.part }}</td><td>{{ c.material }}</td><td>{{ c.cross_section }}{% if not c.width_mm %} mm{% endif %}</td><td class="num">{{ c.length_mm }}{% if c.width_mm %} × {{ c.width_mm }}{% endif %} mm</td><td class="num">{{ c.count }}</td></tr>
     {% endfor %}
     </tbody>
   </table>
 
+  {% if result.fill_layers %}
   <h3>Füllung</h3>
   <table>
     <thead><tr><th scope="col">Schicht (von unten)</th><th scope="col" class="num">Stärke</th><th scope="col" class="num">Volumen</th><th scope="col">Herkunft</th></tr></thead>
@@ -143,6 +148,7 @@
     {% endfor %}
     </tbody>
   </table>
+  {% endif %}
 
   <h3>Werkzeug</h3>
   <ul>{% for t in result.tools %}<li>{{ t.name }}</li>{% endfor %}</ul>

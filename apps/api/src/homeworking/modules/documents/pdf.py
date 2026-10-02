@@ -39,6 +39,13 @@ class _DrawingView:
     svg: str
 
 
+TRUST_LABELS = {
+    "pack": "Geprüftes Construction Pack",
+    "template": "Vorlage aus der Homeworking-Sammlung",
+    "ai_draft": "KI-Entwurf – Konstruktion nicht fachlich geprüft",
+}
+
+
 def render_html(project: ProjectModel, *, now: datetime | None = None) -> str:
     result = project.result
     created = (now or datetime.now(UTC)).strftime("%d.%m.%Y")
@@ -60,7 +67,12 @@ def render_html(project: ProjectModel, *, now: datetime | None = None) -> str:
         drawings=drawings,
         ai_notes=ai_notes,
         ai_label=AI_CONTENT_LABEL,
-        ai_keyword="AI-generated text: yes" if ai_notes else "AI-generated text: no",
+        ai_keyword=(
+            "AI-generated text: yes"
+            if ai_notes or result.trust == "ai_draft"
+            else "AI-generated text: no"
+        ),
+        trust_label=TRUST_LABELS[result.trust],
         ai_statement=AI_DOCUMENT_STATEMENT,
         document_notices=DOCUMENT_NOTICES,
         notices_version=NOTICES_VERSION,

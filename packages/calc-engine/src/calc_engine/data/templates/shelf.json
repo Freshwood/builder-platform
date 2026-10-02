@@ -1,0 +1,47 @@
+{
+  "key": "shelf",
+  "title": "Standregal",
+  "description": "Regal aus Leimholz oder Multiplex mit einstellbarer Anzahl Böden und optionaler Rückwand",
+  "keywords": ["regal", "bücherregal", "standregal", "schrank", "kellerregal"],
+  "design": {
+    "object_type": "Standregal",
+    "summary": "Standregal mit {shelves} Böden",
+    "use": "indoor",
+    "support": "floor",
+    "origin": "engine",
+    "params": [
+      {"name": "width_mm", "label": "Breite (mm)", "kind": "length", "default": 800, "min": 400, "max": 1400},
+      {"name": "depth_mm", "label": "Tiefe (mm)", "kind": "length", "default": 300, "min": 200, "max": 590},
+      {"name": "height_mm", "label": "Höhe (mm)", "kind": "length", "default": 1800, "min": 600, "max": 2000},
+      {"name": "shelves", "label": "Anzahl Böden", "kind": "count", "default": 5, "min": 2, "max": 9},
+      {"name": "back_panel", "label": "Rückwand", "kind": "bool", "default": true},
+      {"name": "material", "label": "Material", "kind": "choice", "default": "glulam_spruce_18",
+       "options": [{"value": "glulam_spruce_18", "label": "Leimholz Fichte"}, {"value": "plywood_birch_18", "label": "Birke Multiplex"}]}
+    ],
+    "parts": [
+      {"id": "side_left", "name": "Seitenteil", "material": "{material}",
+       "size": [18, "depth_mm - 3 * back_panel", "height_mm"], "at": [0, 0, 0]},
+      {"id": "side_right", "name": "Seitenteil", "material": "{material}",
+       "size": [18, "depth_mm - 3 * back_panel", "height_mm"], "at": ["width_mm - 18", 0, 0]},
+      {"id": "shelf", "name": "Fachboden", "material": "{material}",
+       "size": ["width_mm - 36", "depth_mm - 3 * back_panel", 18],
+       "at": [18, 0, "i * (height_mm - 18) / (n - 1)"],
+       "repeat": {"count": "shelves", "var": "i"}},
+      {"id": "back", "name": "Rückwand", "material": "hdf_3",
+       "size": ["width_mm / n", 3, "height_mm"], "at": ["i * width_mm / n", "depth_mm - 3", 0],
+       "repeat": {"count": "back_panel * if(width_mm > 1250 and height_mm > 1250, 2, 1)"}}
+    ],
+    "hardware": [],
+    "finish": "finish_hardwax_750",
+    "steps": [
+      {"title": "Böden anzeichnen", "text": "Lege beide Seitenteile nebeneinander und zeichne die Bodenpositionen gleichzeitig an, damit die Böden waagerecht werden.", "parts": ["side_left", "side_right"]},
+      {"title": "Korpus verschrauben", "text": "Zuerst den untersten und obersten Boden zwischen die Seitenteile leimen und verschrauben, dann die übrigen Böden. Diagonalen messen – sie müssen gleich lang sein.", "parts": ["shelf"]},
+      {"title": "Rückwand aufschrauben", "text": "Rückwand rechtwinklig auflegen und alle 20 cm mit kurzen Schrauben befestigen; sie steift das Regal aus.", "parts": ["back"]}
+    ],
+    "variants": [
+      {"key": "compact", "name": "Kompakt", "description": "60 cm breit, 4 Böden", "overrides": {"width_mm": 600, "shelves": 4}},
+      {"key": "wide", "name": "Breit", "description": "120 cm breit, 35 cm tief", "overrides": {"width_mm": 1200, "depth_mm": 350}},
+      {"key": "plywood", "name": "Multiplex", "description": "Birke Multiplex statt Leimholz – formstabiler, aus einer Platte", "overrides": {"material": "plywood_birch_18"}}
+    ]
+  }
+}

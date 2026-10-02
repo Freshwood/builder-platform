@@ -6,7 +6,7 @@ It validates parameters, proposes variants and deterministically builds the cons
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from pydantic import BaseModel
@@ -23,6 +23,7 @@ from construction_model.model import (
     Notice,
     ParamValue,
     RuleRef,
+    Solid,
     StockPlan,
     Tool,
 )
@@ -51,6 +52,7 @@ class PackBuild:
     instructions: list[InstructionStep]
     notices: list[Notice]
     rules: list[RuleRef]
+    solids: list[Solid] = field(default_factory=list)
 
 
 class Pack(Protocol):

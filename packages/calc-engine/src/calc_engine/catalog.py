@@ -6,8 +6,9 @@ import json
 from decimal import ROUND_HALF_UP, Decimal
 from functools import cache
 from importlib import resources
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from construction_model.model import BomLine, Money
 
@@ -24,6 +25,28 @@ class CatalogItem(BaseModel):
     price_min: Decimal
     price_max: Decimal
     category: str
+    # Fields used by free-form designs (ADR-0004). For ``linear`` items the price is per metre.
+    kind: Literal["piece", "linear", "sheet", "screw", "finish"] = "piece"
+    material: str | None = None
+    section_mm: tuple[int, int] | None = Field(None, description="Linear: thickness × width")
+    stock_lengths_mm: list[int] = Field(default_factory=list)
+    sheet_mm: tuple[int, int] | None = Field(None, description="Sheet: length × width")
+    thickness_mm: int | None = None
+    size_mm: tuple[int, int, int] | None = Field(None, description="Placeable piece: x × y × z")
+    screw_length_mm: int | None = None
+    pack_size: int | None = None
+    coverage_m2: Decimal | None = Field(None, description="Finish: area per unit and coat")
+    outdoor: bool = False
+    designable: bool = Field(False, description="Offered to the LLM for free-form designs")
+
+
+class MaterialInfo(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    label: str
+    tone: str
+    density_kg_m3: int
+    outdoor: bool
 
 
 class CatalogTool(BaseModel):
@@ -43,12 +66,16 @@ class Catalog(BaseModel):
     note: str
     items: list[CatalogItem]
     tools: list[CatalogTool]
+    materials: dict[str, MaterialInfo] = Field(default_factory=dict)
 
     def item(self, item_id: str) -> CatalogItem:
         for item in self.items:
             if item.id == item_id:
                 return item
         raise KeyError(f"Catalog item '{item_id}' not found")
+
+    def find(self, item_id: str) -> CatalogItem | None:
+        return next((item for item in self.items if item.id == item_id), None)
 
     def tool(self, tool_id: str) -> CatalogTool:
         for tool in self.tools:
@@ -93,6 +120,35 @@ class BomBuilder:
                 unit=item.unit,
                 unit_price=money(item.price_min, item.price_max),
                 total=money(item.price_min * qty, item.price_max * qty),
+                note=note,
+            )
+        )
+
+    def add_custom(
+        self,
+        item_id: str,
+        name: str,
+        spec: str,
+        quantity: int | Decimal,
+        unit: str,
+        unit_min: Decimal,
+        unit_max: Decimal,
+        note: str | None = None,
+    ) -> None:
+        """Add a line with an explicitly computed unit price (e.g. a stock length of a profile)."""
+        if quantity <= 0:
+            return
+        qty = Decimal(quantity)
+        self._lines.append(
+            BomLine(
+                position=len(self._lines) + 1,
+                item_id=item_id,
+                name=name,
+                spec=spec,
+                quantity=qty,
+                unit=unit,
+                unit_price=money(unit_min, unit_max),
+                total=money(unit_min * qty, unit_max * qty),
                 note=note,
             )
         )

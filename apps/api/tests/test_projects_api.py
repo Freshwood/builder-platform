@@ -124,3 +124,71 @@ async def test_concurrent_append_is_rejected(settings) -> None:  # type: ignore[
         assert undoable is True
     finally:
         await container.close()
+
+
+async def test_templates_and_free_design(client: httpx.AsyncClient) -> None:
+    keys = {t["key"] for t in (await client.get("/api/templates")).json()}
+    assert keys >= {"shelf", "garden_bench", "workbench"}
+
+    created = await client.post(
+        "/api/projects",
+        json={
+            "pack_id": "template",
+            "template_key": "shelf",
+            "title": "Bücherregal",
+            "params": {"width_mm": 900},
+        },
+    )
+    assert created.status_code == 201, created.text
+    project = created.json()["project"]
+    assert project["result"]["trust"] == "template"
+    assert project["inputs"]["pack_id"] == "design"
+    assert project["result"]["solids"]
+    project_id = project["id"]
+
+    changed = await client.post(
+        f"/api/projects/{project_id}/commands",
+        json={"command": {"type": "change_parameter_by", "name": "shelves", "delta": 1}},
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["project"]["inputs"]["params"]["shelves"] == 6
+
+    svg = await client.get(f"/api/projects/{project_id}/drawings/iso.svg")
+    assert svg.status_code == 200
+    assert "<polygon" in svg.text
+    assert "<circle" in svg.text
+
+    pdf = await client.get(f"/api/projects/{project_id}/document.pdf")
+    assert pdf.status_code == 200
+
+
+async def test_rejected_design_returns_engine_errors(client: httpx.AsyncClient) -> None:
+    design = {
+        "object_type": "Kiste",
+        "summary": "Kiste",
+        "params": [],
+        "parts": [
+            {
+                "id": "a",
+                "name": "Brett",
+                "material": "board_spruce_18x96",
+                "size": [500, 96, 18],
+                "at": [0, 0, 0],
+            },
+            {
+                "id": "b",
+                "name": "Brett",
+                "material": "board_spruce_18x96",
+                "size": [500, 96, 18],
+                "at": [0, 0, 300],
+            },
+        ],
+    }
+    response = await client.post(
+        "/api/projects", json={"pack_id": "design", "title": "Kiste", "design": design}
+    )
+    assert response.status_code == 422
+    assert "nicht alle bauteile sind verbunden" in " ".join(response.json()["detail"]).lower()
+
+    missing = await client.post("/api/projects", json={"pack_id": "design", "title": "x"})
+    assert missing.status_code == 422

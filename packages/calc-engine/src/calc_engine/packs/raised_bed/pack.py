@@ -35,6 +35,7 @@ from construction_model.model import (
     Profile,
     RuleRef,
     Severity,
+    Solid,
     StockPlan,
     Tool,
 )
@@ -81,6 +82,63 @@ RULES: dict[str, RuleRef] = {
         ),
     ]
 }
+
+
+_POSITIONS = {
+    "Längsbrett": 1,
+    "Stirnbrett": 2,
+    "Pfosten": 3,
+    "Abdeckleiste lang": 4,
+    "Abdeckleiste kurz": 5,
+}
+
+
+def _solids(g: RaisedBedGeometry, wood: Wood, wood_label: str) -> list[Solid]:
+    """Placed boxes for the 3D view (x = length, y = width, z = height; positions as cut list)."""
+    p = g.p
+    material = f"Holz {wood_label}"
+    tone = wood.value
+    out: list[Solid] = []
+
+    def add(
+        position: int, name: str, size: tuple[float, float, float], at: tuple[float, float, float]
+    ) -> None:
+        out.append(
+            Solid(
+                position=position,
+                part_id=f"{name}[{len(out)}]",
+                name=name,
+                material=material,
+                tone=tone,
+                size=size,
+                at=at,
+            )
+        )
+
+    for row in range(g.rows):
+        z = row * BOARD_W
+        for y in (0, p.width_mm - BOARD_T):
+            add(1, "Längsbrett", (p.length_mm, BOARD_T, BOARD_W), (0, y, z))
+        for x in (0, p.length_mm - BOARD_T):
+            add(2, "Stirnbrett", (BOARD_T, g.short_board_length, BOARD_W), (x, BOARD_T, z))
+    corners = [BOARD_T, p.length_mm - BOARD_T - POST]
+    for x in corners:
+        for y in (BOARD_T, p.width_mm - BOARD_T - POST):
+            add(3, "Pfosten", (POST, POST, g.post_length), (x, y, 0))
+    for centre in g.mid_positions:
+        for y in (BOARD_T, p.width_mm - BOARD_T - POST):
+            add(3, "Pfosten", (POST, POST, g.post_length), (centre - POST / 2, y, 0))
+    if p.top_cap:
+        for y in (0, p.width_mm - BOARD_W):
+            add(4, "Abdeckleiste lang", (p.length_mm, BOARD_W, BOARD_T), (0, y, g.wall_height))
+        for x in (0, p.length_mm - BOARD_W):
+            add(
+                5,
+                "Abdeckleiste kurz",
+                (BOARD_W, g.cap_short_length, BOARD_T),
+                (x, BOARD_W, g.wall_height),
+            )
+    return out
 
 
 def _guid(role: str, index: int = 0) -> UUID:
@@ -576,7 +634,10 @@ class RaisedBedPack:
             key_figures=key_figures,
             components=_components(g, p.wood),
             bom=bom.lines,
-            cut_list=_cut_lines(g, wood_label),
+            cut_list=[
+                c.model_copy(update={"position": _POSITIONS.get(c.part)})
+                for c in _cut_lines(g, wood_label)
+            ],
             stock_plan=stock_plan,
             fill_layers=fill_layers,
             tools=tools,
@@ -592,6 +653,7 @@ class RaisedBedPack:
             instructions=_instructions(g, wood_label),
             notices=_notices(g),
             rules=list(RULES.values()),
+            solids=_solids(g, p.wood, wood_label),
         )
 
 

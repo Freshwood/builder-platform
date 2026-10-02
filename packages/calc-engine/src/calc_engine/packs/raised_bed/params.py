@@ -36,7 +36,11 @@ class RaisedBedParams(BaseModel):
         title="Höhe (mm)",
         description="Gewünschte Wandhöhe 290–1160 mm; wird auf ganze Brettreihen (145 mm) aufgerundet",
     )
-    wood: Wood = Field(Wood.DOUGLAS, title="Holzart")
+    wood: Wood = Field(
+        Wood.DOUGLAS,
+        title="Holzart",
+        json_schema_extra={"option_labels": {w.value: label for w, label in WOOD_LABELS.items()}},
+    )
     liner: bool = Field(True, title="Noppenbahn innen")
     vole_mesh: bool = Field(True, title="Wühlmausgitter")
     top_cap: bool = Field(False, title="Abdeckleiste / Sitzkante")

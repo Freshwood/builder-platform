@@ -98,6 +98,31 @@
         }
       }
     },
+    "/api/templates": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Templates",
+        "operationId": "list_templates",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateEntry"
+                  },
+                  "type": "array",
+                  "title": "Response List Templates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects": {
       "get": {
         "tags": [
@@ -568,6 +593,115 @@
         "title": "AddNote",
         "description": "Attach a note. Id and timestamp live in the command so that replay is deterministic."
       },
+      "AssemblyDesign": {
+        "properties": {
+          "object_type": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Object Type",
+            "description": "German, e.g. 'Wandregal'"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Summary",
+            "description": "One German sentence; may contain {param} placeholders"
+          },
+          "use": {
+            "type": "string",
+            "enum": [
+              "indoor",
+              "outdoor"
+            ],
+            "title": "Use",
+            "default": "indoor"
+          },
+          "support": {
+            "type": "string",
+            "enum": [
+              "floor",
+              "wall"
+            ],
+            "title": "Support",
+            "description": "floor: stands on z=0; wall: back side (max y) is fixed to a wall",
+            "default": "floor"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/Origin",
+            "default": "ai"
+          },
+          "params": {
+            "items": {
+              "$ref": "#/components/schemas/DesignParam"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Params"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/PartSpec"
+            },
+            "type": "array",
+            "maxItems": 120,
+            "minItems": 1,
+            "title": "Parts"
+          },
+          "hardware": {
+            "items": {
+              "$ref": "#/components/schemas/HardwareSpec"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Hardware"
+          },
+          "auto_screws": {
+            "type": "boolean",
+            "title": "Auto Screws",
+            "description": "Derive screws from contact faces",
+            "default": true
+          },
+          "finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish",
+            "description": "Catalog item id of an oil/glaze, or null"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/DesignStep"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Steps"
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/DesignVariant"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Variants"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "object_type",
+          "summary",
+          "params",
+          "parts"
+        ],
+        "title": "AssemblyDesign",
+        "description": "A complete parametric design of a buildable object."
+      },
       "BomLine": {
         "properties": {
           "position": {
@@ -627,6 +761,47 @@
         ],
         "title": "BomLine"
       },
+      "Callout": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "callout",
+            "title": "Kind",
+            "default": "callout"
+          },
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          },
+          "bx": {
+            "type": "number",
+            "title": "Bx"
+          },
+          "by": {
+            "type": "number",
+            "title": "By"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "bx",
+          "by",
+          "text"
+        ],
+        "title": "Callout",
+        "description": "Position bubble at (bx, by) with a leader line to the target point (x, y)."
+      },
       "ChangeParameterBy": {
         "properties": {
           "type": {
@@ -653,6 +828,47 @@
         "title": "ChangeParameterBy",
         "description": "Change a numeric parameter relatively, e.g. ``width_mm`` by +500."
       },
+      "ChoiceOption": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,40}$",
+            "title": "Value"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "ChoiceOption"
+      },
+      "ChoiceSpec": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "ChoiceSpec"
+      },
       "CommandRequest": {
         "properties": {
           "command": {
@@ -674,6 +890,9 @@
               },
               {
                 "$ref": "#/components/schemas/AddNote"
+              },
+              {
+                "$ref": "#/components/schemas/ReplaceDesign"
               }
             ],
             "title": "Command",
@@ -683,6 +902,7 @@
                 "add_note": "#/components/schemas/AddNote",
                 "change_parameter_by": "#/components/schemas/ChangeParameterBy",
                 "rename": "#/components/schemas/Rename",
+                "replace_design": "#/components/schemas/ReplaceDesign",
                 "select_variant": "#/components/schemas/SelectVariant",
                 "set_parameters": "#/components/schemas/SetParameters",
                 "set_region": "#/components/schemas/SetRegion"
@@ -893,6 +1113,30 @@
           },
           "provenance": {
             "$ref": "#/components/schemas/Provenance"
+          },
+          "trust": {
+            "type": "string",
+            "enum": [
+              "pack",
+              "template",
+              "ai_draft"
+            ],
+            "title": "Trust",
+            "default": "pack"
+          },
+          "param_specs": {
+            "items": {
+              "$ref": "#/components/schemas/ParamSpec"
+            },
+            "type": "array",
+            "title": "Param Specs"
+          },
+          "solids": {
+            "items": {
+              "$ref": "#/components/schemas/Solid"
+            },
+            "type": "array",
+            "title": "Solids"
           }
         },
         "additionalProperties": false,
@@ -943,7 +1187,8 @@
         "properties": {
           "pack_id": {
             "type": "string",
-            "title": "Pack Id"
+            "title": "Pack Id",
+            "description": "Construction pack id, 'design' for a free-form design or 'template'"
           },
           "title": {
             "type": "string",
@@ -980,6 +1225,29 @@
                 "type": "null"
               }
             ]
+          },
+          "design": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssemblyDesign"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required for pack_id 'design'"
+          },
+          "template_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Key",
+            "description": "Required for pack_id 'template'"
           }
         },
         "type": "object",
@@ -1011,6 +1279,31 @@
           "count": {
             "type": "integer",
             "title": "Count"
+          },
+          "width_mm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "description": "Length in millimetres"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width Mm",
+            "description": "Second cut dimension for sheet parts"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position",
+            "description": "Position number in drawings"
           }
         },
         "additionalProperties": false,
@@ -1023,6 +1316,171 @@
           "count"
         ],
         "title": "CutLine"
+      },
+      "DesignParam": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "description": "German label for the UI"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "length",
+              "count",
+              "angle",
+              "bool",
+              "choice"
+            ],
+            "title": "Kind"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Default"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ChoiceOption"
+            },
+            "type": "array",
+            "title": "Options",
+            "description": "Only for kind=choice, e.g. wood species"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "kind",
+          "default"
+        ],
+        "title": "DesignParam",
+        "description": "A user-adjustable parameter. Lengths are millimetres and should end in ``_mm``."
+      },
+      "DesignStep": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 800,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "parts": {
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,39}$"
+            },
+            "type": "array",
+            "title": "Parts",
+            "description": "Part ids used in this step"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "text"
+        ],
+        "title": "DesignStep"
+      },
+      "DesignVariant": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Description"
+          },
+          "overrides": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Overrides"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "description",
+          "overrides"
+        ],
+        "title": "DesignVariant"
       },
       "Dimension": {
         "properties": {
@@ -1118,20 +1576,35 @@
                 },
                 {
                   "$ref": "#/components/schemas/Label"
+                },
+                {
+                  "$ref": "#/components/schemas/Polygon"
+                },
+                {
+                  "$ref": "#/components/schemas/Callout"
                 }
               ],
               "discriminator": {
                 "propertyName": "kind",
                 "mapping": {
+                  "callout": "#/components/schemas/Callout",
                   "dimension": "#/components/schemas/Dimension",
                   "label": "#/components/schemas/Label",
                   "line": "#/components/schemas/Line",
+                  "polygon": "#/components/schemas/Polygon",
                   "rect": "#/components/schemas/Rect"
                 }
               }
             },
             "type": "array",
             "title": "Primitives"
+          },
+          "legend": {
+            "items": {
+              "$ref": "#/components/schemas/LegendEntry"
+            },
+            "type": "array",
+            "title": "Legend"
           }
         },
         "additionalProperties": false,
@@ -1203,6 +1676,66 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HardwareSpec": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Item"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Quantity",
+            "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "When"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item",
+          "quantity"
+        ],
+        "title": "HardwareSpec",
+        "description": "Explicit hardware, e.g. hinges, castors or brackets. Screws are added automatically."
       },
       "HistoryEntry": {
         "properties": {
@@ -1348,6 +1881,25 @@
           "document_notices"
         ],
         "title": "LegalNotices"
+      },
+      "LegendEntry": {
+        "properties": {
+          "tone": {
+            "type": "string",
+            "title": "Tone"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tone",
+          "label"
+        ],
+        "title": "LegendEntry"
       },
       "Line": {
         "properties": {
@@ -1619,6 +2171,270 @@
         ],
         "title": "PackDescriptor"
       },
+      "ParamSpec": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "length",
+              "count",
+              "angle",
+              "bool",
+              "choice",
+              "number"
+            ],
+            "title": "Kind"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ChoiceSpec"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "kind"
+        ],
+        "title": "ParamSpec",
+        "description": "UI metadata of an adjustable parameter (packs and designs alike)."
+      },
+      "PartSpec": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "description": "German part name, e.g. 'Seitenteil'"
+          },
+          "material": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Material",
+            "description": "Catalog item id. May contain {param} placeholders for choice parameters, e.g. 'frame_{wood}_44x69'."
+          },
+          "size": {
+            "prefixItems": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Size",
+            "description": "Extent along x, y, z in mm"
+          },
+          "at": {
+            "prefixItems": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "At",
+            "description": "Minimum corner (x, y, z) in mm before rotation"
+          },
+          "rotate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rotation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "repeat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Repeat"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "when": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "When",
+            "description": "Include the part only if this evaluates truthy"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "material",
+          "size",
+          "at"
+        ],
+        "title": "PartSpec"
+      },
+      "Polygon": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "polygon",
+            "title": "Kind",
+            "default": "polygon"
+          },
+          "points": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "tone": {
+            "type": "string",
+            "title": "Tone"
+          },
+          "shade": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Shade",
+            "default": 1.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "points",
+          "tone"
+        ],
+        "title": "Polygon",
+        "description": "Filled face of a projected solid. ``tone`` names a material colour, ``shade`` 0..1 its light."
+      },
       "Profile": {
         "properties": {
           "thickness_mm": {
@@ -1698,6 +2514,17 @@
             },
             "type": "array",
             "title": "Notes"
+          },
+          "design": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssemblyDesign"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free-form parametric design (pack_id 'design', ADR-0004)"
           }
         },
         "additionalProperties": false,
@@ -1981,6 +2808,88 @@
         ],
         "title": "Rename"
       },
+      "Repeat": {
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Count",
+            "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+          },
+          "var": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Var",
+            "default": "i"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "count"
+        ],
+        "title": "Repeat",
+        "description": "Repeat a part ``count`` times; ``var`` (0-based index) is usable in its expressions."
+      },
+      "ReplaceDesign": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "replace_design",
+            "title": "Type",
+            "default": "replace_design"
+          },
+          "design": {
+            "$ref": "#/components/schemas/AssemblyDesign"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "design"
+        ],
+        "title": "ReplaceDesign",
+        "description": "Replace the free-form design (structural change). Parameters that still exist are kept."
+      },
+      "Rotation": {
+        "properties": {
+          "axis": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y",
+              "z"
+            ],
+            "title": "Axis"
+          },
+          "deg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Deg",
+            "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "axis",
+          "deg"
+        ],
+        "title": "Rotation",
+        "description": "Rotation about an axis through the part's ``at`` point (right-hand rule)."
+      },
       "RuleRef": {
         "properties": {
           "id": {
@@ -2110,6 +3019,111 @@
         ],
         "title": "Severity"
       },
+      "Solid": {
+        "properties": {
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "part_id": {
+            "type": "string",
+            "title": "Part Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "material": {
+            "type": "string",
+            "title": "Material"
+          },
+          "tone": {
+            "type": "string",
+            "title": "Tone"
+          },
+          "size": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Size"
+          },
+          "at": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "At"
+          },
+          "rotation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SolidRotation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "position",
+          "part_id",
+          "name",
+          "material",
+          "tone",
+          "size",
+          "at"
+        ],
+        "title": "Solid",
+        "description": "A placed box for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner."
+      },
+      "SolidRotation": {
+        "properties": {
+          "axis": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y",
+              "z"
+            ],
+            "title": "Axis"
+          },
+          "deg": {
+            "type": "number",
+            "title": "Deg"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "axis",
+          "deg"
+        ],
+        "title": "SolidRotation"
+      },
       "StockPlan": {
         "properties": {
           "item_id": {
@@ -2129,6 +3143,40 @@
             "type": "integer",
             "title": "Waste Mm",
             "description": "Length in millimetres"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "bars": {
+            "items": {
+              "items": {
+                "type": "integer",
+                "description": "Length in millimetres"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Bars",
+            "description": "Cut piece lengths per purchased bar (linear stock)"
+          },
+          "utilization_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Utilization Pct"
           }
         },
         "additionalProperties": false,
@@ -2152,6 +3200,29 @@
           "membrane"
         ],
         "title": "Stroke"
+      },
+      "TemplateEntry": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "description"
+        ],
+        "title": "TemplateEntry"
       },
       "Tool": {
         "properties": {

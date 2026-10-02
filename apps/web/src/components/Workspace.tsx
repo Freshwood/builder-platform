@@ -48,9 +48,31 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
               </li>
               <li>Ändere alles per Chat („50 cm breiter“) oder direkt im Formular.</li>
             </ol>
-            <p className="mt-4 text-sm">
-              Aktuell verfügbar: <strong>Hochbeet aus Holz</strong>. Terrasse, Carport und
-              Gartenhaus folgen.
+            <ul className="mt-5 grid gap-3 sm:grid-cols-3">
+              <li className="rounded-xl border border-border bg-surface p-3">
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                  Geprüftes Pack
+                </span>
+                <p className="mt-2 text-sm text-text">Hochbeet aus Holz</p>
+              </li>
+              <li className="rounded-xl border border-border bg-surface p-3">
+                <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200">
+                  Vorlagen
+                </span>
+                <p className="mt-2 text-sm text-text">Regal, Gartenbank, Werkbank</p>
+              </li>
+              <li className="rounded-xl border border-border bg-surface p-3">
+                <span className="rounded-full bg-ai-soft px-2 py-0.5 text-xs font-semibold text-ai">
+                  KI-Entwurf
+                </span>
+                <p className="mt-2 text-sm text-text">
+                  Alles aus Holz, Platten und Beschlägen – frei beschrieben
+                </p>
+              </li>
+            </ul>
+            <p className="mt-3 text-xs">
+              Freie Entwürfe brauchen ein angebundenes Sprachmodell. Tragende Bauwerke (Carport,
+              Dach, Balkon) plant Homeworking nicht.
             </p>
           </div>
         )}

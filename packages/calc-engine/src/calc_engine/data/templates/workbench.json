@@ -1,0 +1,55 @@
+{
+  "key": "workbench",
+  "title": "Werkbank",
+  "description": "Stabile Werkbank mit Multiplex-Arbeitsplatte, Ablageboden und optionalen Rollen",
+  "keywords": ["werkbank", "werktisch", "arbeitstisch", "hobelbank"],
+  "design": {
+    "object_type": "Werkbank",
+    "summary": "Werkbank mit Multiplex-Arbeitsplatte",
+    "use": "indoor",
+    "support": "floor",
+    "origin": "engine",
+    "params": [
+      {"name": "width_mm", "label": "Breite (mm)", "kind": "length", "default": 1500, "min": 800, "max": 2000},
+      {"name": "depth_mm", "label": "Tiefe (mm)", "kind": "length", "default": 650, "min": 500, "max": 900},
+      {"name": "height_mm", "label": "Arbeitshöhe (mm)", "kind": "length", "default": 900, "min": 750, "max": 1050},
+      {"name": "lower_shelf", "label": "Ablageboden", "kind": "bool", "default": true},
+      {"name": "castors", "label": "Rollen mit Feststeller", "kind": "bool", "default": false}
+    ],
+    "parts": [
+      {"id": "castor", "name": "Lenkrolle", "material": "castor_75_brake", "size": [60, 60, 100],
+       "at": ["5 + (i % 2) * (width_mm - 70)", "5 + (i // 2) * (depth_mm - 70)", 0],
+       "repeat": {"count": "4 * castors"}},
+      {"id": "leg", "name": "Bein", "material": "square_spruce_70x70",
+       "size": [70, 70, "height_mm - 24 - 100 * castors"],
+       "at": ["(i % 2) * (width_mm - 70)", "(i // 2) * (depth_mm - 70)", "100 * castors"],
+       "repeat": {"count": 4}},
+      {"id": "long_rail", "name": "Längszarge", "material": "frame_spruce_44x69",
+       "size": ["width_mm - 140", 44, 69],
+       "at": [70, "13 + (i % 2) * (depth_mm - 70)", "if(i < 2, height_mm - 93, 100 * castors + 150)"],
+       "repeat": {"count": "2 + 2 * lower_shelf"}},
+      {"id": "cross_rail", "name": "Querzarge", "material": "frame_spruce_44x69",
+       "size": [44, "depth_mm - 140", 69],
+       "at": ["13 + (i % 2) * (width_mm - 70)", 70, "if(i < 2, height_mm - 93, 100 * castors + 150)"],
+       "repeat": {"count": "2 + 2 * lower_shelf"}},
+      {"id": "top", "name": "Arbeitsplatte", "material": "plywood_birch_24",
+       "size": ["width_mm", "depth_mm", 24], "at": [0, 0, "height_mm - 24"]},
+      {"id": "shelf", "name": "Ablageboden", "material": "osb_18",
+       "size": ["width_mm - 140", "depth_mm - 26", 18], "at": [70, 13, "100 * castors + 219"],
+       "when": "lower_shelf"}
+    ],
+    "hardware": [],
+    "finish": "finish_hardwax_750",
+    "steps": [
+      {"title": "Seitenrahmen bauen", "text": "Je zwei Beine mit den Querzargen verbinden (oben bündig, unten 15 cm über dem Boden); vorbohren und verleimen.", "parts": ["leg", "cross_rail"]},
+      {"title": "Gestell schließen", "text": "Beide Seitenrahmen mit den Längszargen verbinden. Diagonalen prüfen, das Gestell muss rechtwinklig sein.", "parts": ["long_rail"]},
+      {"title": "Platte und Boden montieren", "text": "Arbeitsplatte von unten durch die Zargen verschrauben (Schrauben dürfen oben nicht austreten). Ablageboden auf die unteren Längszargen legen und verschrauben.", "parts": ["top", "shelf"]},
+      {"title": "Rollen anbringen", "text": "Rollen mittig unter die Beine schrauben; Feststeller vorn anordnen.", "parts": ["castor"]}
+    ],
+    "variants": [
+      {"key": "mobile", "name": "Mobil", "description": "Mit vier Lenkrollen und Feststellern", "overrides": {"castors": true}},
+      {"key": "large", "name": "Groß", "description": "2,0 × 0,8 m Arbeitsfläche", "overrides": {"width_mm": 2000, "depth_mm": 800}},
+      {"key": "basic", "name": "Einfach", "description": "Ohne Ablageboden", "overrides": {"lower_shelf": false}}
+    ]
+  }
+}

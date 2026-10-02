@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ChatData, ChatResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DocumentData, DocumentErrors, DocumentResponses, DrawingData, DrawingErrors, DrawingResponses, ExecuteCommandData, ExecuteCommandErrors, ExecuteCommandResponses, ExportData, ExportErrors, ExportResponses, GetProjectData, GetProjectErrors, GetProjectResponses, HealthData, HealthResponses, HistoryData, HistoryErrors, HistoryResponses, ListPacksData, ListPacksResponses, ListProjectsData, ListProjectsResponses, MeData, MeResponses, NoticesData, NoticesResponses, UndoData, UndoErrors, UndoResponses } from './types.gen';
+import type { ChatData, ChatResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DocumentData, DocumentErrors, DocumentResponses, DrawingData, DrawingErrors, DrawingResponses, ExecuteCommandData, ExecuteCommandErrors, ExecuteCommandResponses, ExportData, ExportErrors, ExportResponses, GetProjectData, GetProjectErrors, GetProjectResponses, HealthData, HealthResponses, HistoryData, HistoryErrors, HistoryResponses, ListPacksData, ListPacksResponses, ListProjectsData, ListProjectsResponses, ListTemplatesData, ListTemplatesResponses, MeData, MeResponses, NoticesData, NoticesResponses, UndoData, UndoErrors, UndoResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -37,6 +37,11 @@ export const notices = <ThrowOnError extends boolean = false>(options?: Options<
  * List Packs
  */
 export const listPacks = <ThrowOnError extends boolean = false>(options?: Options<ListPacksData, ThrowOnError>): RequestResult<ListPacksResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListPacksResponses, unknown, ThrowOnError>({ url: '/api/packs', ...options });
+
+/**
+ * List Templates
+ */
+export const listTemplates = <ThrowOnError extends boolean = false>(options?: Options<ListTemplatesData, ThrowOnError>): RequestResult<ListTemplatesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListTemplatesResponses, unknown, ThrowOnError>({ url: '/api/templates', ...options });
 
 /**
  * List Projects

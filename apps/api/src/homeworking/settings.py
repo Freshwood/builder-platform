@@ -26,8 +26,9 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://openrouter.ai/api/v1"
     llm_model: str = ""
     llm_api_key: SecretStr | None = None
-    agent_request_limit: int = 8
-    agent_total_tokens_limit: int = 60_000
+    # Free-form designs need a few repair rounds and long tool arguments (ADR-0004).
+    agent_request_limit: int = 12
+    agent_total_tokens_limit: int = 200_000
 
     @field_validator("cors_origins", mode="before")
     @classmethod

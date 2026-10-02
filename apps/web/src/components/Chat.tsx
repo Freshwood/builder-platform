@@ -4,12 +4,46 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-type ToolOutput = { action?: string; error?: string; project?: { project_id?: string } };
+type ToolProject = {
+  project_id?: string;
+  title?: string;
+  summary?: string;
+  trust?: string;
+  material_cost_eur?: string;
+};
+type ToolOutput = { action?: string; error?: string; errors?: string[]; project?: ToolProject };
 
 const EXAMPLES = [
   "Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche",
-  "Hochbeet 1,2 × 0,8 m mit Sitzkante",
+  "Regal 80 × 30 × 180 cm mit 5 Böden",
+  "Gartenbank 1,6 m aus Lärche",
+  "Werkbank 150 × 70 cm mit Rollen",
 ];
+
+const ACTION_LABEL: Record<string, string> = {
+  created: "Projekt erstellt",
+  changed: "Projekt geändert",
+  undone: "Änderung zurückgenommen",
+};
+
+function ProjectCard({ output }: { output: ToolOutput }) {
+  const project = output.project;
+  if (!project?.summary) return null;
+  return (
+    <div className="mt-2 rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm">
+      <span className="block text-xs font-semibold uppercase tracking-wide text-accent-strong">
+        {ACTION_LABEL[output.action ?? ""] ?? "Projekt"}
+        {project.trust === "ai_draft" && " · KI-Entwurf"}
+      </span>
+      <span className="block font-medium">{project.summary}</span>
+      {project.material_cost_eur && (
+        <span className="mt-1 inline-block rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white dark:text-black">
+          {project.material_cost_eur}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function toolOutputs(message: UIMessage): ToolOutput[] {
   const outputs: ToolOutput[] = [];
@@ -99,8 +133,10 @@ export function Chat({
       >
         {messages.map((message) => {
           const text = messageText(message);
-          const errors = toolOutputs(message).filter((o) => o.error);
-          if (!text && errors.length === 0) return null;
+          const outputs = toolOutputs(message);
+          const errors = outputs.filter((o) => o.error);
+          const cards = outputs.filter((o) => o.project?.summary);
+          if (!text && errors.length === 0 && cards.length === 0) return null;
           const isUser = message.role === "user";
           return (
             <li key={message.id} className={isUser ? "flex justify-end" : "flex justify-start"}>
@@ -117,6 +153,9 @@ export function Chat({
                   </span>
                 )}
                 {text && <p className="whitespace-pre-wrap">{text}</p>}
+                {cards.map((output, i) => (
+                  <ProjectCard key={i} output={output} />
+                ))}
                 {errors.map((e, i) => (
                   <p key={i} className="text-sm text-warning">
                     {e.error}

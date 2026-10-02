@@ -14,6 +14,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
+from construction_model.assembly import AssemblyDesign
 from construction_model.model import Note, Origin, ParamValue, ProjectInputs, Region
 
 
@@ -31,6 +32,7 @@ class CreateProject(_Command):
     title: str = Field(min_length=1, max_length=200)
     params: dict[str, ParamValue] = Field(default_factory=dict)
     region: Region | None = None
+    design: AssemblyDesign | None = None
 
 
 class SetParameters(_Command):
@@ -73,6 +75,13 @@ class AddNote(_Command):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class ReplaceDesign(_Command):
+    """Replace the free-form design (structural change). Parameters that still exist are kept."""
+
+    type: Literal["replace_design"] = "replace_design"
+    design: AssemblyDesign
+
+
 class Undo(_Command):
     type: Literal["undo"] = "undo"
 
@@ -85,18 +94,43 @@ Command = Annotated[
     | Rename
     | SetRegion
     | AddNote
+    | ReplaceDesign
     | Undo,
     Field(discriminator="type"),
 ]
 """Any command that can be stored in the command log."""
 
 EditCommand = Annotated[
-    SetParameters | ChangeParameterBy | SelectVariant | Rename | SetRegion | AddNote,
+    SetParameters
+    | ChangeParameterBy
+    | SelectVariant
+    | Rename
+    | SetRegion
+    | AddNote
+    | ReplaceDesign,
     Field(discriminator="type"),
 ]
 """Commands that clients may submit for an existing project."""
 
 command_adapter: TypeAdapter[Command] = TypeAdapter(Command)
+
+
+def _still_valid(design: AssemblyDesign, name: str, value: ParamValue) -> bool:
+    """Whether a parameter value can be carried over to a replaced design."""
+    spec = next((p for p in design.params if p.name == name), None)
+    if spec is None:
+        return False
+    match spec.kind:
+        case "bool":
+            return isinstance(value, bool)
+        case "choice":
+            return value in {o.value for o in spec.options}
+        case _:
+            if isinstance(value, bool) or not isinstance(value, int | float):
+                return False
+            low = spec.min if spec.min is not None else float("-inf")
+            high = spec.max if spec.max is not None else float("inf")
+            return low <= value <= high
 
 
 def apply_to_inputs(
@@ -118,6 +152,7 @@ def apply_to_inputs(
             pack_id=command.pack_id,
             params=dict(command.params),
             region=command.region,
+            design=command.design,
         )
     if inputs is None:
         raise CommandError("The first command must create the project")
@@ -127,6 +162,9 @@ def apply_to_inputs(
             return inputs.model_copy(update={"params": {**inputs.params, **values}})
         case ChangeParameterBy(name=name, delta=delta):
             current = inputs.params.get(name)
+            if current is None and inputs.design is not None:
+                spec = next((p for p in inputs.design.params if p.name == name), None)
+                current = spec.default if spec is not None else None
             if isinstance(current, bool) or not isinstance(current, int | float):
                 raise CommandError(f"Parameter '{name}' is not numeric or not set")
             return inputs.model_copy(update={"params": {**inputs.params, name: current + delta}})
@@ -144,6 +182,11 @@ def apply_to_inputs(
         case AddNote(text=text, origin=origin, note_id=note_id, created_at=created_at):
             note = Note(id=note_id, origin=origin, text=text, created_at=created_at)
             return inputs.model_copy(update={"notes": [*inputs.notes, note]})
+        case ReplaceDesign(design=design):
+            if inputs.design is None:
+                raise CommandError("Only free-form design projects can be redesigned")
+            kept = {k: v for k, v in inputs.params.items() if _still_valid(design, k, v)}
+            return inputs.model_copy(update={"design": design, "params": kept, "variant_key": None})
         case Undo():
             raise CommandError("Undo must be resolved via effective_commands()")
     raise CommandError(f"Unsupported command {command!r}")  # pragma: no cover

@@ -30,6 +30,69 @@ export type AddNote = {
 };
 
 /**
+ * AssemblyDesign
+ *
+ * A complete parametric design of a buildable object.
+ */
+export type AssemblyDesign = {
+    /**
+     * Object Type
+     *
+     * German, e.g. 'Wandregal'
+     */
+    object_type: string;
+    /**
+     * Summary
+     *
+     * One German sentence; may contain {param} placeholders
+     */
+    summary: string;
+    /**
+     * Use
+     */
+    use?: 'indoor' | 'outdoor';
+    /**
+     * Support
+     *
+     * floor: stands on z=0; wall: back side (max y) is fixed to a wall
+     */
+    support?: 'floor' | 'wall';
+    origin?: Origin;
+    /**
+     * Params
+     */
+    params: Array<DesignParam>;
+    /**
+     * Parts
+     */
+    parts: Array<PartSpec>;
+    /**
+     * Hardware
+     */
+    hardware?: Array<HardwareSpec>;
+    /**
+     * Auto Screws
+     *
+     * Derive screws from contact faces
+     */
+    auto_screws?: boolean;
+    /**
+     * Finish
+     *
+     * Catalog item id of an oil/glaze, or null
+     */
+    finish?: string | null;
+    /**
+     * Steps
+     */
+    steps?: Array<DesignStep>;
+    /**
+     * Variants
+     */
+    variants?: Array<DesignVariant>;
+};
+
+/**
  * BomLine
  */
 export type BomLine = {
@@ -66,6 +129,38 @@ export type BomLine = {
 };
 
 /**
+ * Callout
+ *
+ * Position bubble at (bx, by) with a leader line to the target point (x, y).
+ */
+export type Callout = {
+    /**
+     * Kind
+     */
+    kind?: 'callout';
+    /**
+     * X
+     */
+    x: number;
+    /**
+     * Y
+     */
+    y: number;
+    /**
+     * Bx
+     */
+    bx: number;
+    /**
+     * By
+     */
+    by: number;
+    /**
+     * Text
+     */
+    text: string;
+};
+
+/**
  * ChangeParameterBy
  *
  * Change a numeric parameter relatively, e.g. ``width_mm`` by +500.
@@ -83,6 +178,34 @@ export type ChangeParameterBy = {
      * Delta
      */
     delta: number;
+};
+
+/**
+ * ChoiceOption
+ */
+export type ChoiceOption = {
+    /**
+     * Value
+     */
+    value: string;
+    /**
+     * Label
+     */
+    label: string;
+};
+
+/**
+ * ChoiceSpec
+ */
+export type ChoiceSpec = {
+    /**
+     * Value
+     */
+    value: string;
+    /**
+     * Label
+     */
+    label: string;
 };
 
 /**
@@ -104,7 +227,9 @@ export type CommandRequest = {
         type: 'set_region';
     } & SetRegion) | ({
         type: 'add_note';
-    } & AddNote);
+    } & AddNote) | ({
+        type: 'replace_design';
+    } & ReplaceDesign);
 };
 
 /**
@@ -224,6 +349,18 @@ export type ConstructionResult = {
      */
     variants: Array<VariantSummary>;
     provenance: Provenance;
+    /**
+     * Trust
+     */
+    trust?: 'pack' | 'template' | 'ai_draft';
+    /**
+     * Param Specs
+     */
+    param_specs?: Array<ParamSpec>;
+    /**
+     * Solids
+     */
+    solids?: Array<Solid>;
 };
 
 /**
@@ -244,6 +381,8 @@ export type CostSummary = {
 export type CreateProjectRequest = {
     /**
      * Pack Id
+     *
+     * Construction pack id, 'design' for a free-form design or 'template'
      */
     pack_id: string;
     /**
@@ -257,6 +396,16 @@ export type CreateProjectRequest = {
         [key: string]: number | number | string | boolean;
     };
     region?: Region | null;
+    /**
+     * Required for pack_id 'design'
+     */
+    design?: AssemblyDesign | null;
+    /**
+     * Template Key
+     *
+     * Required for pack_id 'template'
+     */
+    template_key?: string | null;
 };
 
 /**
@@ -285,6 +434,102 @@ export type CutLine = {
      * Count
      */
     count: number;
+    /**
+     * Width Mm
+     *
+     * Second cut dimension for sheet parts
+     */
+    width_mm?: number | null;
+    /**
+     * Position
+     *
+     * Position number in drawings
+     */
+    position?: number | null;
+};
+
+/**
+ * DesignParam
+ *
+ * A user-adjustable parameter. Lengths are millimetres and should end in ``_mm``.
+ */
+export type DesignParam = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Label
+     *
+     * German label for the UI
+     */
+    label: string;
+    /**
+     * Kind
+     */
+    kind: 'length' | 'count' | 'angle' | 'bool' | 'choice';
+    /**
+     * Default
+     */
+    default: number | number | string | boolean;
+    /**
+     * Min
+     */
+    min?: number | null;
+    /**
+     * Max
+     */
+    max?: number | null;
+    /**
+     * Options
+     *
+     * Only for kind=choice, e.g. wood species
+     */
+    options?: Array<ChoiceOption>;
+};
+
+/**
+ * DesignStep
+ */
+export type DesignStep = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Parts
+     *
+     * Part ids used in this step
+     */
+    parts?: Array<string>;
+};
+
+/**
+ * DesignVariant
+ */
+export type DesignVariant = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Overrides
+     */
+    overrides: {
+        [key: string]: number | number | string | boolean;
+    };
 };
 
 /**
@@ -362,7 +607,11 @@ export type Drawing = {
     /**
      * Primitives
      */
-    primitives: Array<Rect | Line | Dimension | Label>;
+    primitives: Array<Rect | Line | Dimension | Label | Polygon | Callout>;
+    /**
+     * Legend
+     */
+    legend?: Array<LegendEntry>;
 };
 
 /**
@@ -402,6 +651,32 @@ export type HttpValidationError = {
      * Detail
      */
     detail?: Array<ValidationError>;
+};
+
+/**
+ * HardwareSpec
+ *
+ * Explicit hardware, e.g. hinges, castors or brackets. Screws are added automatically.
+ */
+export type HardwareSpec = {
+    /**
+     * Item
+     */
+    item: string;
+    /**
+     * Quantity
+     *
+     * Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
+     */
+    quantity: number | string;
+    /**
+     * Note
+     */
+    note?: string | null;
+    /**
+     * When
+     */
+    when?: number | string | null;
 };
 
 /**
@@ -497,6 +772,20 @@ export type LegalNotices = {
      * Document Notices
      */
     document_notices: Array<string>;
+};
+
+/**
+ * LegendEntry
+ */
+export type LegendEntry = {
+    /**
+     * Tone
+     */
+    tone: string;
+    /**
+     * Label
+     */
+    label: string;
 };
 
 /**
@@ -670,6 +959,115 @@ export type PackDescriptor = {
 };
 
 /**
+ * ParamSpec
+ *
+ * UI metadata of an adjustable parameter (packs and designs alike).
+ */
+export type ParamSpec = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Kind
+     */
+    kind: 'length' | 'count' | 'angle' | 'bool' | 'choice' | 'number';
+    /**
+     * Min
+     */
+    min?: number | null;
+    /**
+     * Max
+     */
+    max?: number | null;
+    /**
+     * Options
+     */
+    options?: Array<ChoiceSpec>;
+};
+
+/**
+ * PartSpec
+ */
+export type PartSpec = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     *
+     * German part name, e.g. 'Seitenteil'
+     */
+    name: string;
+    /**
+     * Material
+     *
+     * Catalog item id. May contain {param} placeholders for choice parameters, e.g. 'frame_{wood}_44x69'.
+     */
+    material: string;
+    /**
+     * Size
+     *
+     * Extent along x, y, z in mm
+     */
+    size: [
+        number | string,
+        number | string,
+        number | string
+    ];
+    /**
+     * At
+     *
+     * Minimum corner (x, y, z) in mm before rotation
+     */
+    at: [
+        number | string,
+        number | string,
+        number | string
+    ];
+    rotate?: Rotation | null;
+    repeat?: Repeat | null;
+    /**
+     * When
+     *
+     * Include the part only if this evaluates truthy
+     */
+    when?: number | string | null;
+};
+
+/**
+ * Polygon
+ *
+ * Filled face of a projected solid. ``tone`` names a material colour, ``shade`` 0..1 its light.
+ */
+export type Polygon = {
+    /**
+     * Kind
+     */
+    kind?: 'polygon';
+    /**
+     * Points
+     */
+    points: Array<[
+        number,
+        number
+    ]>;
+    /**
+     * Tone
+     */
+    tone: string;
+    /**
+     * Shade
+     */
+    shade?: number;
+};
+
+/**
  * Profile
  *
  * Rectangular cross-section.
@@ -718,6 +1116,10 @@ export type ProjectInputs = {
      * Notes
      */
     notes?: Array<Note>;
+    /**
+     * Free-form parametric design (pack_id 'design', ADR-0004)
+     */
+    design?: AssemblyDesign | null;
 };
 
 /**
@@ -889,6 +1291,55 @@ export type Rename = {
 };
 
 /**
+ * Repeat
+ *
+ * Repeat a part ``count`` times; ``var`` (0-based index) is usable in its expressions.
+ */
+export type Repeat = {
+    /**
+     * Count
+     *
+     * Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
+     */
+    count: number | string;
+    /**
+     * Var
+     */
+    var?: string;
+};
+
+/**
+ * ReplaceDesign
+ *
+ * Replace the free-form design (structural change). Parameters that still exist are kept.
+ */
+export type ReplaceDesign = {
+    /**
+     * Type
+     */
+    type?: 'replace_design';
+    design: AssemblyDesign;
+};
+
+/**
+ * Rotation
+ *
+ * Rotation about an axis through the part's ``at`` point (right-hand rule).
+ */
+export type Rotation = {
+    /**
+     * Axis
+     */
+    axis: 'x' | 'y' | 'z';
+    /**
+     * Deg
+     *
+     * Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
+     */
+    deg: number | string;
+};
+
+/**
  * RuleRef
  *
  * A versioned engineering rule of thumb used by the engine (provenance).
@@ -961,6 +1412,65 @@ export type SetRegion = {
 export type Severity = 'info' | 'warning' | 'critical';
 
 /**
+ * Solid
+ *
+ * A placed box for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner.
+ */
+export type Solid = {
+    /**
+     * Position
+     */
+    position: number;
+    /**
+     * Part Id
+     */
+    part_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Material
+     */
+    material: string;
+    /**
+     * Tone
+     */
+    tone: string;
+    /**
+     * Size
+     */
+    size: [
+        number,
+        number,
+        number
+    ];
+    /**
+     * At
+     */
+    at: [
+        number,
+        number,
+        number
+    ];
+    rotation?: SolidRotation | null;
+};
+
+/**
+ * SolidRotation
+ */
+export type SolidRotation = {
+    /**
+     * Axis
+     */
+    axis: 'x' | 'y' | 'z';
+    /**
+     * Deg
+     */
+    deg: number;
+};
+
+/**
  * StockPlan
  *
  * How cut pieces are distributed over purchased stock lengths.
@@ -986,12 +1496,44 @@ export type StockPlan = {
      * Length in millimetres
      */
     waste_mm: number;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Bars
+     *
+     * Cut piece lengths per purchased bar (linear stock)
+     */
+    bars?: Array<Array<number>>;
+    /**
+     * Utilization Pct
+     */
+    utilization_pct?: number | null;
 };
 
 /**
  * Stroke
  */
 export type Stroke = 'outline' | 'thin' | 'hidden' | 'center' | 'membrane';
+
+/**
+ * TemplateEntry
+ */
+export type TemplateEntry = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Description
+     */
+    description: string;
+};
 
 /**
  * Tool
@@ -1155,6 +1697,24 @@ export type ListPacksResponses = {
 };
 
 export type ListPacksResponse = ListPacksResponses[keyof ListPacksResponses];
+
+export type ListTemplatesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/templates';
+};
+
+export type ListTemplatesResponses = {
+    /**
+     * Response List Templates
+     *
+     * Successful Response
+     */
+    200: Array<TemplateEntry>;
+};
+
+export type ListTemplatesResponse = ListTemplatesResponses[keyof ListTemplatesResponses];
 
 export type ListProjectsData = {
     body?: never;

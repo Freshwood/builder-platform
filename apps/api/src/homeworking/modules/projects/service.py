@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID, uuid4
 
-from calc_engine.engine import ENGINE_VERSION, Engine
+from calc_engine.assembly.derive import DESIGN_PACK_ID
+from calc_engine.assembly.templates import template
+from calc_engine.engine import ENGINE_VERSION, Engine, UnknownPackError
+from construction_model.assembly import AssemblyDesign
 from construction_model.commands import (
     Command,
     CommandError,
@@ -72,7 +75,7 @@ class ProjectService:
             command=command,
             actor=actor,
             engine_version=ENGINE_VERSION,
-            pack_version=self._engine.pack(pack_id).version,
+            pack_version=self._engine.pack_version(pack_id),
             llm_trace_id=trace_id,
             diff=diff,
         )
@@ -85,11 +88,14 @@ class ProjectService:
         title: str,
         params: dict[str, ParamValue],
         region: Region | None = None,
+        design: AssemblyDesign | None = None,
         actor: Actor = "user",
         trace_id: str | None = None,
     ) -> CommandOutcome:
-        command = CreateProject(pack_id=pack_id, title=title, params=params, region=region)
-        self._engine.pack(pack_id)
+        command = CreateProject(
+            pack_id=pack_id, title=title, params=params, region=region, design=design
+        )
+        self._engine.ensure_known(pack_id, design)
         inputs = self._apply(None, command)
         result = self._engine.build(inputs)
         model = ProjectModel(id=uuid4(), inputs=inputs, result=result)
@@ -98,6 +104,33 @@ class ProjectService:
             owner_id, model, self._record(1, command, actor, pack_id, trace_id, diff)
         )
         return CommandOutcome(project=model, diff=diff, seq=1, can_undo=False)
+
+    async def create_from_template(
+        self,
+        owner_id: UUID,
+        *,
+        template_key: str,
+        title: str | None = None,
+        params: dict[str, ParamValue] | None = None,
+        region: Region | None = None,
+        actor: Actor = "user",
+        trace_id: str | None = None,
+    ) -> CommandOutcome:
+        """Create a free-form project from a curated design template (ADR-0004)."""
+        try:
+            tpl = template(template_key)
+        except KeyError:
+            raise UnknownPackError(template_key) from None
+        return await self.create(
+            owner_id,
+            pack_id=DESIGN_PACK_ID,
+            title=title or tpl.title,
+            params=params or {},
+            region=region,
+            design=tpl.design,
+            actor=actor,
+            trace_id=trace_id,
+        )
 
     async def get(self, owner_id: UUID, project_id: UUID) -> ProjectModel:
         return (await self._owned(owner_id, project_id)).model

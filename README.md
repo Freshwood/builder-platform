@@ -4,8 +4,19 @@
 > Bauprojekt.
 
 Vision und Schritte stehen in der [ROADMAP](ROADMAP.md). Dieses Repository enthält **Phase I**:
-die private DIY-Agent-Plattform mit Projektmodell, deterministischer Engine und dem ersten
-Construction Pack **Hochbeet**.
+die private DIY-Agent-Plattform mit Projektmodell und deterministischer Engine. Geplant werden
+kann auf drei Vertrauensstufen ([ADR-0004](docs/architecture/adr/0004-freie-entwuerfe-bauteilmodell.md)):
+
+| Stufe | Beispiele | Woher die Konstruktion kommt |
+|---|---|---|
+| Geprüftes Pack | Hochbeet | programmiertes Construction Pack mit fachlich validierten Regeln |
+| Vorlage | Regal, Gartenbank, Werkbank | parametrischer Entwurf aus `calc_engine/data/templates/` |
+| KI-Entwurf | alles aus Holz, Platten und Beschlägen | das LLM entwirft ein Bauteilmodell, die Engine prüft und berechnet |
+
+Auch bei KI-Entwürfen rechnet das LLM nicht: Es beschreibt nur Bauteile (Material, Maß,
+Position als Ausdrücke über Parameter). Die Engine prüft Katalogmaße, Kollisionen, Zusammenhang
+und Bodenkontakt und leitet Stückliste, Zuschnitt mit Schnittplan, Schrauben, Kosten, Zeichnungen
+(Ansichten, Isometrie mit Positionsnummern) und das 3D-Modell ab.
 
 ## Architektur in einem Bild
 
@@ -21,6 +32,7 @@ FastAPI-Monolith ─────────────────────
   │
   ├─ packages/construction-model   reine Domäne: Inputs, Result, Commands, Diff
   └─ packages/calc-engine          deterministische Engine + Packs (raised_bed)
+                                   + assembly/ (freie Entwürfe, Vorlagen, Projektion)
 PostgreSQL (JSONB-Dokument + Command-Log)
 ```
 
@@ -61,6 +73,13 @@ LLM_API_KEY=…
 Für die Produktion gilt: EU-Anbieter mit AV-Vertrag und Zero Data Retention, siehe
 [DSGVO-Notizen](docs/compliance/dsgvo-dpia-template.md).
 
+Ohne LLM (`LLM_MODE=test`) versteht der Offline-Planer Hochbeet und die Vorlagen, z. B.
+„Regal 80 × 30 × 180 cm mit 5 Böden“, „Gartenbank 1,6 m aus Lärche“, „Werkbank 150 × 70 cm mit
+Rollen“. Freie Entwürfe brauchen ein Modell, das zuverlässig lange, verschachtelte
+Werkzeug-Argumente erzeugt (Klasse Claude Sonnet, Mistral Medium 3.5 oder vergleichbar); für
+Vorlagen und Maßänderungen genügt ein kleines Modell. `AGENT_TOTAL_TOKENS_LIMIT` (Standard
+200 000) begrenzt einen Chat-Turn inklusive Korrekturrunden.
+
 ## Qualität
 
 | Befehl | Inhalt |
@@ -77,6 +96,16 @@ Hinweis für WSL: Liegt das Repo unter `/mnt/c`, sind Python-Imports sehr langsa
 (der erste Import von WeasyPrint dauert etwa 20 s). Abhilfe: das Repo ins Linux-Dateisystem
 legen oder `UV_PROJECT_ENVIRONMENT` auf einen Pfad unter `~` setzen (z. B. in `.env`, siehe
 `.env.example`; Task lädt `.env` automatisch).
+
+## Eine neue Vorlage hinzufügen
+
+1. JSON-Datei in `packages/calc-engine/src/calc_engine/data/templates/` anlegen (`key`, `title`,
+   `description`, `keywords`, `design` im Format `construction_model.assembly.AssemblyDesign`,
+   `origin: "engine"`). Materialien und Maße stammen aus `data/catalog.json`.
+2. In `packages/calc-engine/tests/test_assembly.py` einen hypothesis-Test über den ganzen
+   Parameterbereich ergänzen – er findet Kombinationen, bei denen Teile nicht mehr aufs
+   Plattenformat passen oder sich durchdringen.
+3. Die Schlüsselwörter machen die Vorlage auch für den Offline-Planer verfügbar.
 
 ## Ein neues Construction Pack hinzufügen
 

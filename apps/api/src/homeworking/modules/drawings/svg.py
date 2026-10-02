@@ -8,7 +8,17 @@ from __future__ import annotations
 
 from xml.sax.saxutils import escape, quoteattr
 
-from construction_model.drawing import Dimension, Drawing, Fill, Label, Line, Rect, Stroke
+from construction_model.drawing import (
+    Callout,
+    Dimension,
+    Drawing,
+    Fill,
+    Label,
+    Line,
+    Polygon,
+    Rect,
+    Stroke,
+)
 
 STROKES: dict[Stroke, str] = {
     Stroke.OUTLINE: 'stroke="#1f2937" stroke-width="1.4"',
@@ -36,6 +46,28 @@ DEFS = (
 )
 FONT = 'font-family="Inter, Helvetica, Arial, sans-serif"'
 TICK = 4.0
+# Base colours of material tones (free-form designs); faces are darkened by their light value.
+TONES: dict[str, str] = {
+    "spruce": "#ecd3a2",
+    "douglas": "#dba06e",
+    "larch": "#e3b27a",
+    "plywood": "#efd9b0",
+    "glulam": "#f2d396",
+    "osb": "#d6b26f",
+    "mdf": "#b8a48a",
+    "hdf": "#d4cfc6",
+    "steel": "#9ca3af",
+    "rubber": "#4b5563",
+    "concrete": "#bdbab4",
+}
+CALLOUT_R = 9.0
+LEGEND_ROW = 22.0
+
+
+def tone_color(tone: str, shade: float = 1.0) -> str:
+    base = TONES.get(tone, "#d1d5db")
+    r, g, b = (int(base[i : i + 2], 16) for i in (1, 3, 5))
+    return "#" + "".join(f"{max(0, min(255, round(c * shade))):02x}" for c in (r, g, b))
 
 
 def _n(value: float) -> str:
@@ -45,10 +77,10 @@ def _n(value: float) -> str:
 
 
 class _Canvas:
-    def __init__(self, drawing: Drawing, max_width_px: float) -> None:
+    def __init__(self, drawing: Drawing, max_width_px: float, max_height_px: float) -> None:
         self.d = drawing
-        self.scale = max_width_px / drawing.width
-        self.width_px = max_width_px
+        self.scale = min(max_width_px / drawing.width, max_height_px / drawing.height)
+        self.width_px = drawing.width * self.scale
         self.height_px = drawing.height * self.scale
 
     def x(self, value: float) -> str:
@@ -82,6 +114,54 @@ def _label(c: _Canvas, label: Label) -> str:
         f'<text x="{c.x(label.x)}" y="{c.y(label.y)}" font-size="{size}" {FONT} '
         f'fill="#111827" text-anchor="{label.anchor}">{escape(label.text)}</text>'
     )
+
+
+def _polygon(c: _Canvas, poly: Polygon) -> str:
+    points = " ".join(f"{c.x(x)},{c.y(y)}" for x, y in poly.points)
+    return (
+        f'<polygon points="{points}" fill="{tone_color(poly.tone, poly.shade)}" '
+        'stroke="#374151" stroke-width="0.6" stroke-linejoin="round"/>'
+    )
+
+
+def _callout(c: _Canvas, call: Callout) -> str:
+    tx, ty, bx, by = (
+        float(c.x(call.x)),
+        float(c.y(call.y)),
+        float(c.x(call.bx)),
+        float(c.y(call.by)),
+    )
+    dist = max(((tx - bx) ** 2 + (ty - by) ** 2) ** 0.5, 1e-6)
+    ex, ey = bx + (tx - bx) / dist * CALLOUT_R, by + (ty - by) / dist * CALLOUT_R
+    return (
+        f'<line x1="{_n(ex)}" y1="{_n(ey)}" x2="{_n(tx)}" y2="{_n(ty)}" stroke="#1f2937" '
+        'stroke-width="0.8"/>'
+        f'<circle cx="{_n(tx)}" cy="{_n(ty)}" r="1.8" fill="#1f2937"/>'
+        f'<circle cx="{_n(bx)}" cy="{_n(by)}" r="{_n(CALLOUT_R)}" fill="#ffffff" '
+        'stroke="#1f2937" stroke-width="1.2"/>'
+        f'<text x="{_n(bx)}" y="{_n(by + 3.6)}" font-size="10" font-weight="700" {FONT} '
+        f'fill="#111827" text-anchor="middle">{escape(call.text)}</text>'
+    )
+
+
+def _legend(drawing: Drawing, width_px: float, top: float) -> tuple[str, float]:
+    """Material legend below the drawing; returns markup and its height."""
+    if not drawing.legend:
+        return "", 0.0
+    parts: list[str] = []
+    x, y = 10.0, top + 8
+    for entry in drawing.legend:
+        item_width = 22 + 6.5 * len(entry.label) + 18
+        if x + item_width > width_px - 10 and x > 10:
+            x, y = 10.0, y + LEGEND_ROW
+        parts.append(
+            f'<rect x="{_n(x)}" y="{_n(y)}" width="14" height="14" rx="2" '
+            f'fill="{tone_color(entry.tone, 0.9)}" stroke="#374151" stroke-width="0.6"/>'
+            f'<text x="{_n(x + 20)}" y="{_n(y + 11)}" font-size="11" {FONT} fill="#111827">'
+            f"{escape(entry.label)}</text>"
+        )
+        x += item_width
+    return "".join(parts), y + LEGEND_ROW - top + 16
 
 
 def _dimension(c: _Canvas, dim: Dimension) -> str:
@@ -128,8 +208,15 @@ def _dimension(c: _Canvas, dim: Dimension) -> str:
     return "".join(parts)
 
 
-def render_svg(drawing: Drawing, *, max_width_px: float = 760, element_id: str = "drawing") -> str:
-    c = _Canvas(drawing, max_width_px)
+def render_svg(
+    drawing: Drawing,
+    *,
+    max_width_px: float = 760,
+    max_height_px: float | None = None,
+    element_id: str = "drawing",
+) -> str:
+    """Render a drawing; tall drawings are limited to ``max_height_px`` (default: square)."""
+    c = _Canvas(drawing, max_width_px, max_height_px or max_width_px)
     body: list[str] = []
     for prim in drawing.primitives:
         match prim:
@@ -141,8 +228,14 @@ def render_svg(drawing: Drawing, *, max_width_px: float = 760, element_id: str =
                 body.append(_dimension(c, prim))
             case Label():
                 body.append(_label(c, prim))
+            case Polygon():
+                body.append(_polygon(c, prim))
+            case Callout():
+                body.append(_callout(c, prim))
+    legend, legend_height = _legend(drawing, c.width_px, c.height_px)
+    total_height = c.height_px + legend_height
     title_id, desc_id = f"{element_id}-title", f"{element_id}-desc"
-    width, height = _n(c.width_px), _n(c.height_px)
+    width, height = _n(c.width_px), _n(total_height)
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
         f'width="{width}" height="{height}" role="img" '
@@ -152,7 +245,8 @@ def render_svg(drawing: Drawing, *, max_width_px: float = 760, element_id: str =
         f"{DEFS.replace('{eid}', element_id)}"
         f'<rect x="0" y="0" width="{width}" height="{height}" fill="#ffffff"/>'
         f"{''.join(body)}"
-        f'<text x="{_n(c.width_px - 8)}" y="{_n(c.height_px - 8)}" font-size="10" {FONT} '
+        f"{legend}"
+        f'<text x="{_n(c.width_px - 8)}" y="{_n(total_height - 8)}" font-size="10" {FONT} '
         f'fill="#6b7280" text-anchor="end">{escape(drawing.title)} · Maße in mm · '
         "Darstellung nicht maßstäblich</text>"
         "</svg>\n"

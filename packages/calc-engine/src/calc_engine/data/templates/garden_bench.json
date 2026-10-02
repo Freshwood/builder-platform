@@ -1,0 +1,55 @@
+{
+  "key": "garden_bench",
+  "title": "Gartenbank",
+  "description": "Massive Gartenbank aus Douglasie oder Lärche mit Sitzlatten, optional mit Rückenlehne",
+  "keywords": ["gartenbank", "bank", "sitzbank", "parkbank", "terrassenbank"],
+  "design": {
+    "object_type": "Gartenbank",
+    "summary": "Gartenbank mit {slats} Sitzlatten",
+    "use": "outdoor",
+    "support": "floor",
+    "origin": "engine",
+    "params": [
+      {"name": "length_mm", "label": "Länge (mm)", "kind": "length", "default": 1600, "min": 800, "max": 2400},
+      {"name": "seat_height_mm", "label": "Sitzhöhe (mm)", "kind": "length", "default": 450, "min": 380, "max": 500},
+      {"name": "slats", "label": "Sitzlatten", "kind": "count", "default": 3, "min": 2, "max": 4},
+      {"name": "backrest", "label": "Rückenlehne", "kind": "bool", "default": true},
+      {"name": "wood", "label": "Holzart", "kind": "choice", "default": "douglas",
+       "options": [{"value": "douglas", "label": "Douglasie"}, {"value": "larch", "label": "Lärche"}]}
+    ],
+    "parts": [
+      {"id": "front_leg", "name": "Bein vorne", "material": "square_{wood}_70x70",
+       "size": [70, 70, "seat_height_mm - 28"], "at": ["i * (length_mm - 70) / (n - 1)", 0, 0],
+       "repeat": {"count": "if(length_mm > 1400, 3, 2)"}},
+      {"id": "back_leg", "name": "Bein hinten", "material": "square_{wood}_70x70",
+       "size": [70, 70, "if(backrest, seat_height_mm + 420, seat_height_mm - 28)"],
+       "at": ["i * (length_mm - 70) / (n - 1)", "if(backrest, slats * 155 - 10, slats * 155 - 80)", 0],
+       "repeat": {"count": "if(length_mm > 1400, 3, 2)"}},
+      {"id": "rail", "name": "Querzarge", "material": "frame_{wood}_45x70",
+       "size": [45, "if(backrest, slats * 155 - 80, slats * 155 - 150)", 70],
+       "at": ["12.5 + i * (length_mm - 70) / (n - 1)", 70, "seat_height_mm - 98"],
+       "repeat": {"count": "if(length_mm > 1400, 3, 2)"}},
+      {"id": "slat", "name": "Sitzlatte", "material": "board_{wood}_28x145",
+       "size": ["length_mm", 145, 28], "at": [0, "i * 155", "seat_height_mm - 28"],
+       "repeat": {"count": "slats"}},
+      {"id": "back_board", "name": "Lehnenbrett", "material": "board_{wood}_28x145",
+       "size": ["length_mm", 28, 145],
+       "at": [0, "slats * 155 - 38", "seat_height_mm + 90 + i * 185"],
+       "repeat": {"count": "2 * backrest"}}
+    ],
+    "hardware": [
+      {"item": "foot_rubber_40", "quantity": "2 * if(length_mm > 1400, 3, 2)", "note": "unter die Beine, gegen Staunässe"}
+    ],
+    "finish": "finish_oil_outdoor_750",
+    "steps": [
+      {"title": "Seitenrahmen bauen", "text": "Je ein vorderes und hinteres Bein mit einer Querzarge verschrauben; Oberkante der Zarge bündig mit der Oberkante des vorderen Beins.", "parts": ["front_leg", "back_leg", "rail"]},
+      {"title": "Sitzlatten montieren", "text": "Sitzlatten mit 10 mm Fuge auflegen (Abstandshölzer nutzen) und mit je zwei Edelstahlschrauben pro Auflager befestigen.", "parts": ["slat"]},
+      {"title": "Lehne anschrauben", "text": "Lehnenbretter von vorn an die hinteren Beine schrauben, unteres Brett 9 cm über der Sitzfläche.", "parts": ["back_board"]}
+    ],
+    "variants": [
+      {"key": "larch", "name": "Lärche", "description": "Lärche statt Douglasie – sehr witterungsbeständig", "overrides": {"wood": "larch"}},
+      {"key": "stool", "name": "Ohne Lehne", "description": "Einfache Sitzbank ohne Rückenlehne", "overrides": {"backrest": false}},
+      {"key": "long", "name": "Lang", "description": "2 m für vier Personen", "overrides": {"length_mm": 2000}}
+    ]
+  }
+}

@@ -74,7 +74,34 @@ class Label(_Frozen):
     size: Literal["small", "normal"] = "normal"
 
 
-Primitive = Annotated[Rect | Line | Dimension | Label, Field(discriminator="kind")]
+class Polygon(_Frozen):
+    """Filled face of a projected solid. ``tone`` names a material colour, ``shade`` 0..1 its light."""
+
+    kind: Literal["polygon"] = "polygon"
+    points: list[tuple[float, float]]
+    tone: str
+    shade: float = Field(1.0, ge=0, le=1)
+
+
+class Callout(_Frozen):
+    """Position bubble at (bx, by) with a leader line to the target point (x, y)."""
+
+    kind: Literal["callout"] = "callout"
+    x: float
+    y: float
+    bx: float
+    by: float
+    text: str
+
+
+Primitive = Annotated[
+    Rect | Line | Dimension | Label | Polygon | Callout, Field(discriminator="kind")
+]
+
+
+class LegendEntry(_Frozen):
+    tone: str
+    label: str
 
 
 class Drawing(_Frozen):
@@ -87,3 +114,4 @@ class Drawing(_Frozen):
     width: float
     height: float
     primitives: list[Primitive]
+    legend: list[LegendEntry] = Field(default_factory=list)

@@ -24,6 +24,8 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 
+from calc_engine.assembly.templates import DesignTemplate, templates
+
 _NUM = r"(\d+(?:[.,]\d+)?)"
 _UNIT = r"(mm|cm|m)\b"
 _DIMS = re.compile(rf"{_NUM}\s*(?:{_UNIT})?\s*[x×*]\s*{_NUM}\s*(?:{_UNIT})?", re.IGNORECASE)
@@ -53,7 +55,17 @@ _VARIANTS = {
     "langlebig": "durable",
     "komfort": "comfort",
 }
-_OTHER_PROJECTS = ("terrasse", "carport", "gartenhaus", "schuppen", "zaun", "regal", "werkbank")
+_OTHER_PROJECTS = ("terrasse", "carport", "gartenhaus", "schuppen", "zaun", "pergola", "schrank")
+_DIMS3 = re.compile(
+    rf"{_NUM}\s*(?:{_UNIT})?\s*[x×*]\s*{_NUM}\s*(?:{_UNIT})?\s*[x×*]\s*{_NUM}\s*(?:{_UNIT})?",
+    re.IGNORECASE,
+)
+_COUNT = re.compile(
+    r"(\d+)\s*(?:fach)?(?:böden|boeden|fächer|faecher|sitzlatten|latten)", re.IGNORECASE
+)
+_LENGTH = re.compile(rf"{_NUM}\s*{_UNIT}\s*(?:lang|breit)", re.IGNORECASE)
+# Order in which dimensions of "a × b × c" map to template parameters.
+_DIM_ORDER = ("width_mm", "length_mm", "depth_mm", "height_mm")
 
 
 def _to_mm(value: str, unit: str | None) -> int:
@@ -84,6 +96,66 @@ def _feature_params(text: str) -> dict[str, Any]:
         params["vole_mesh"] = False
     if re.search(r"sitzkante|abdeckleiste", text):
         params["top_cap"] = True
+    return params
+
+
+def _match_template(text: str) -> DesignTemplate | None:
+    best: tuple[int, DesignTemplate] | None = None
+    for tpl in templates().values():
+        for keyword in tpl.keywords:
+            if re.search(rf"\b{re.escape(keyword)}", text) and (
+                best is None or len(keyword) > best[0]
+            ):
+                best = (len(keyword), tpl)
+    return best[1] if best else None
+
+
+def _template_params(tpl: DesignTemplate, text: str) -> dict[str, Any]:
+    """Map simple phrasings to template parameters (names that the template actually has)."""
+    names = [p.name for p in tpl.design.params]
+    dims = [n for n in _DIM_ORDER if n in names]
+    params: dict[str, Any] = {}
+    if m := _DIMS3.search(text):
+        unit = m.group(6) or m.group(4) or m.group(2)
+        values = [
+            _to_mm(m.group(1), m.group(2) or unit),
+            _to_mm(m.group(3), m.group(4) or unit),
+            _to_mm(m.group(5), unit),
+        ]
+        params |= dict(zip(dims, values, strict=False))
+    elif m := _DIMS.search(text):
+        unit = m.group(4) or m.group(2)
+        values = [_to_mm(m.group(1), m.group(2) or unit), _to_mm(m.group(3), unit)]
+        params |= dict(zip(dims, values, strict=False))
+    elif (m := _LENGTH.search(text)) and dims:
+        params[dims[0]] = _to_mm(m.group(1), m.group(2))
+    if (m := _HEIGHT.search(text)) and "height_mm" in names:
+        value, unit = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+        params["height_mm"] = _to_mm(value, unit)
+    if m := _COUNT.search(text):
+        counts = [p.name for p in tpl.design.params if p.kind == "count"]
+        if counts:
+            params[counts[0]] = int(m.group(1))
+    bools = {p.name for p in tpl.design.params if p.kind == "bool"}
+    for name, words in {
+        "backrest": ("lehne",),
+        "castors": ("rollen",),
+        "back_panel": ("rückwand", "rueckwand"),
+        "lower_shelf": ("ablage",),
+    }.items():
+        if name not in bools:
+            continue
+        for word in words:
+            if re.search(rf"ohne\s+(\w+\s+)?{word}", text):
+                params[name] = False
+            elif re.search(rf"mit\s+(\w+\s+)?{word}", text):
+                params[name] = True
+    choices = {o.value: p.name for p in tpl.design.params if p.kind == "choice" for o in p.options}
+    for value, wood in _feature_params(text).items():
+        if value == "wood" and wood in choices:
+            params[choices[wood]] = wood
+    if "multiplex" in text and "plywood_birch_18" in choices:
+        params[choices["plywood_birch_18"]] = "plywood_birch_18"
     return params
 
 
@@ -128,6 +200,18 @@ def decide_for_user_text(raw: str) -> Decision:
             )
         ]
 
+    if tpl := _match_template(text):
+        return [
+            ToolCall(
+                "create_from_template",
+                {
+                    "template_key": tpl.key,
+                    "title": tpl.title,
+                    "params": _template_params(tpl, text),
+                },
+            )
+        ]
+
     for word, key in _VARIANTS.items():
         if word in text and "variante" in text:
             return [
@@ -143,13 +227,15 @@ def decide_for_user_text(raw: str) -> Decision:
 
     if any(word in text for word in _OTHER_PROJECTS):
         return (
-            "Das klingt nach einem spannenden Vorhaben! Aktuell kann ich Hochbeete vollständig "
-            "planen – weitere Bauprojekte wie Terrasse, Carport oder Gartenhaus folgen bald. "
-            "Möchtest du ein Hochbeet planen?"
+            "Das klingt nach einem spannenden Vorhaben! Im Offline-Modus kenne ich nur das "
+            "Hochbeet und die Vorlagen Regal, Gartenbank und Werkbank. Mit angebundenem "
+            "Sprachmodell entwerfe ich auch freie Projekte aus Holz und Platten. Tragende "
+            "Bauwerke wie Carport oder Gartenhaus brauchen eine Fachplanung."
         )
     return (
         "Ich helfe dir, dein Bauvorhaben zu planen. Beschreibe mir, was du bauen möchtest – "
-        "zum Beispiel: „Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche“."
+        "zum Beispiel: „Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche“ oder „Regal 80 × 30 × 180 cm "
+        "mit 5 Böden“."
     )
 
 
@@ -172,11 +258,14 @@ def _format_tool_result(content: Any) -> str:
         content.get("action", ""), "geladen"
     )
     figures = project.get("key_figures", {})
-    lines = [
-        f"Ich habe dein Projekt {verb}: {project['summary']}.",
-        f"Innenmaß {figures.get('Innenmaß', '–')}, Füllvolumen {figures.get('Füllvolumen', '–')}.",
-        f"Materialkosten (Richtwert): {project['material_cost_eur']}.",
-    ]
+    lines = [f"Ich habe dein Projekt {verb}: {project['summary']}."]
+    if "Innenmaß" in figures:
+        lines.append(
+            f"Innenmaß {figures['Innenmaß']}, Füllvolumen {figures.get('Füllvolumen', '–')}."
+        )
+    elif figures:
+        lines.append(" · ".join(f"{k} {v}" for k, v in list(figures.items())[1:3]) + ".")
+    lines.append(f"Materialkosten (Richtwert): {project['material_cost_eur']}.")
     diff = content.get("diff")
     if diff and diff.get("material_cost_before_eur"):
         lines.append(f"Vorher lagen die Materialkosten bei {diff['material_cost_before_eur']}.")
