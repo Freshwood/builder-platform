@@ -1,0 +1,176 @@
+# Homeworking task runner (https://taskfile.dev). Run `task` to list tasks.
+version: "3"
+
+dotenv: [".env"]
+
+# Prefix every line with the task name so parallel output (dev, check) stays readable.
+output: prefixed
+
+vars:
+  PG_URL: postgresql+psycopg://homeworking:homeworking@localhost:5433/homeworking
+  PNPM: corepack pnpm
+
+tasks:
+  default:
+    silent: true
+    cmds:
+      - task --list
+
+  # --- Setup ---------------------------------------------------------------------------------
+
+  setup:
+    desc: First-time setup (.env from template, all dependencies)
+    cmds:
+      - cmd: cp -n .env.example .env || true
+        platforms: [linux, darwin]
+      - task: install
+
+  install:
+    desc: Install all dependencies (skipped when lockfiles are unchanged)
+    deps: [install:py, install:web]
+
+  install:py:
+    run: once
+    desc: Install Python dependencies with uv
+    sources: [uv.lock, pyproject.toml, apps/api/pyproject.toml, "packages/*/pyproject.toml"]
+    generates: ['{{.UV_PROJECT_ENVIRONMENT | default ".venv"}}/pyvenv.cfg']
+    cmds:
+      - uv sync --locked
+
+  install:web:
+    run: once
+    desc: Install Node dependencies with pnpm
+    sources: [pnpm-lock.yaml, package.json, "apps/*/package.json", "packages/*/package.json"]
+    generates: [node_modules/.modules.yaml]
+    cmds:
+      - "{{.PNPM}} install --frozen-lockfile"
+
+  # --- Infrastructure ------------------------------------------------------------------------
+
+  infra:
+    desc: Start local infrastructure (PostgreSQL)
+    cmds:
+      - docker compose up -d --wait postgres
+
+  infra:down:
+    desc: Stop local infrastructure (data volumes are kept)
+    cmds:
+      - docker compose down
+
+  migrate:
+    desc: Apply database migrations
+    deps: [install:py, infra]
+    cmds:
+      - uv run --package homeworking-api alembic -c apps/api/alembic.ini upgrade head
+
+  # --- Development ---------------------------------------------------------------------------
+
+  dev:
+    desc: Run API (:8000) and web app (:3000) in development mode
+    deps: [install:web, migrate]
+    cmds:
+      - task: dev:servers
+
+  dev:servers:
+    internal: true
+    deps: [dev:api, dev:web]
+
+  dev:api:
+    desc: Run only the API with auto-reload
+    cmds:
+      # Watch only the source trees; the default (whole repo incl. .venv, node_modules) is slow.
+      - >-
+        uv run uvicorn homeworking.main:app --reload --port 8000
+        --reload-dir apps/api/src
+        --reload-dir packages/construction-model/src
+        --reload-dir packages/calc-engine/src
+
+  dev:web:
+    desc: Run only the web app
+    cmds:
+      - "{{.PNPM}} --filter web dev"
+
+  # --- Quality -------------------------------------------------------------------------------
+
+  check:
+    desc: Lint, format check, type check, architecture contracts (Python and web in parallel)
+    deps: [check:py, check:web]
+
+  check:py:
+    desc: ruff, mypy (strict), import-linter
+    deps: [install:py]
+    cmds:
+      - uv run ruff format --check .
+      - uv run ruff check .
+      - uv run mypy
+      - uv run lint-imports
+
+  check:web:
+    desc: eslint and tsc
+    deps: [install:web]
+    cmds:
+      - "{{.PNPM}} -r lint"
+      - "{{.PNPM}} -r typecheck"
+
+  fmt:
+    desc: Format and auto-fix Python and web code
+    cmds:
+      - uv run ruff format .
+      - uv run ruff check --fix .
+      - "{{.PNPM}} -r format"
+
+  test:
+    desc: "Python tests (SQLite). Extra pytest args: task test -- -k undo"
+    deps: [install:py]
+    cmds:
+      - uv run pytest {{.CLI_ARGS}}
+
+  test:pg:
+    desc: Python tests including PostgreSQL integration tests
+    deps: [install:py, infra]
+    env:
+      TEST_DATABASE_URL: "{{.PG_URL}}"
+    cmds:
+      - uv run pytest {{.CLI_ARGS}}
+
+  e2e:
+    desc: Browser end-to-end tests with accessibility checks (offline LLM)
+    deps: [install:py, install:web]
+    cmds:
+      - mkdir -p var
+      - "{{.PNPM}} --filter web e2e {{.CLI_ARGS}}"
+
+  e2e:install:
+    desc: Install the Playwright browser (once)
+    cmds:
+      - "{{.PNPM}} --filter web exec playwright install --with-deps chromium --only-shell"
+
+  # --- API client ----------------------------------------------------------------------------
+
+  openapi:
+    desc: Export OpenAPI schema and regenerate the TypeScript client (only when the API changed)
+    deps: [install:py, install:web]
+    sources: ["apps/api/src/**/*.py", "packages/*/src/**/*.py", packages/api-client/openapi-ts.config.ts]
+    generates: [packages/api-client/openapi.json, "packages/api-client/src/gen/**/*.ts"]
+    cmds:
+      - uv run python -m homeworking.openapi > packages/api-client/openapi.json
+      - "{{.PNPM}} --filter @homeworking/api-client generate"
+
+  openapi:check:
+    desc: Fail if the committed OpenAPI schema is out of date (as in CI)
+    cmds:
+      - uv run python -m homeworking.openapi | diff -u packages/api-client/openapi.json -
+
+  # --- Aggregates ----------------------------------------------------------------------------
+
+  ci:
+    desc: Run what CI runs (checks, tests, schema drift) before pushing
+    cmds:
+      - task: check
+      - task: test
+      - task: openapi:check
+
+  clean:
+    desc: Remove caches and build output (keeps .venv and node_modules)
+    cmds:
+      - rm -rf .mypy_cache .ruff_cache .pytest_cache .import_linter_cache .hypothesis .task apps/web/.next apps/web/test-results var/e2e.db

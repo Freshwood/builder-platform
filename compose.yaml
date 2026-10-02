@@ -1,4 +1,4 @@
-# Local infrastructure for development. Application processes run on the host (just dev).
+# Local infrastructure for development. Application processes run on the host (task dev).
 name: homeworking
 
 services:

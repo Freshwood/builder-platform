@@ -1,4 +1,4 @@
-"""Integration test against PostgreSQL (JSONB). Run with `just test-pg`."""
+"""Integration test against PostgreSQL (JSONB). Run with `task test:pg`."""
 
 import os
 

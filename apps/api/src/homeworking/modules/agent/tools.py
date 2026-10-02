@@ -191,13 +191,16 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
         """Store a short explanation of the design for the project document (labelled as AI)."""
         if ctx.deps.project_id is None:
             return _error("Es ist kein Projekt aktiv.")
-        await ctx.deps.projects.execute(
-            ctx.deps.owner_id,
-            ctx.deps.project_id,
-            AddNote(text=text[:2000], origin=Origin.AI),
-            actor="agent",
-            trace_id=ctx.deps.trace_id,
-        )
+        try:
+            await ctx.deps.projects.execute(
+                ctx.deps.owner_id,
+                ctx.deps.project_id,
+                AddNote(text=text[:2000], origin=Origin.AI),
+                actor="agent",
+                trace_id=ctx.deps.trace_id,
+            )
+        except (CommandError, ProjectNotFoundError) as exc:
+            return _error(f"Notiz nicht gespeichert: {exc}")
         return {"action": "note_added"}
 
     return agent

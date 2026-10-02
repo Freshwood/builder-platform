@@ -7,11 +7,15 @@ from datetime import datetime
 from typing import Literal, Protocol
 from uuid import UUID
 
-from construction_model.commands import Command
+from construction_model.commands import Command, CommandError
 from construction_model.diff import ModelDiff
 from construction_model.model import ProjectModel
 
 Actor = Literal["user", "agent"]
+
+
+class ConcurrentModificationError(CommandError):
+    """Another command was appended to the project in the meantime (optimistic locking)."""
 
 
 @dataclass(frozen=True)

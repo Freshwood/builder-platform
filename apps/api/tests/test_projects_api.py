@@ -1,4 +1,5 @@
 import httpx
+import pytest
 
 CREATE = {
     "pack_id": "raised_bed",
@@ -89,3 +90,37 @@ async def test_svg_export_and_delete(client: httpx.AsyncClient) -> None:
 
     assert (await client.delete(f"/api/projects/{project_id}")).status_code == 204
     assert (await client.get(f"/api/projects/{project_id}")).status_code == 404
+
+
+async def test_list_projects_has_summary(client: httpx.AsyncClient) -> None:
+    project_id = (await _create(client))["project"]["id"]
+    listing = (await client.get("/api/projects")).json()
+    assert [p["id"] for p in listing] == [project_id]
+    assert listing[0]["summary"].startswith("Hochbeet")
+
+
+async def test_concurrent_append_is_rejected(settings) -> None:  # type: ignore[no-untyped-def]
+    from construction_model.commands import Rename
+    from homeworking.bootstrap import build_container
+    from homeworking.modules.projects.ports import ConcurrentModificationError
+
+    container = build_container(settings)
+    await container.create_schema()
+    try:
+        owner = (await container.identity.create_guest()).id
+        created = await container.projects.create(owner, pack_id="raised_bed", title="A", params={})
+        first = await container.projects.execute(owner, created.project.id, Rename(title="B"))
+        # A second writer that read the log before `first` was appended reuses its seq.
+        stale = container.projects._record(
+            first.seq, Rename(title="C"), "user", "raised_bed", None, first.diff
+        )
+        inputs = first.project.inputs.model_copy(update={"title": "C"})
+        with pytest.raises(ConcurrentModificationError):
+            await container.projects._repo.append(
+                first.project.model_copy(update={"inputs": inputs}), stale
+            )
+        model, undoable = await container.projects.view(owner, created.project.id)
+        assert model.inputs.title == "B"
+        assert undoable is True
+    finally:
+        await container.close()

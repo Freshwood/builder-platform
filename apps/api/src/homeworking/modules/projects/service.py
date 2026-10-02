@@ -14,6 +14,7 @@ from construction_model.commands import (
     SelectVariant,
     Undo,
     apply_to_inputs,
+    can_undo,
     command_adapter,
     effective_commands,
 )
@@ -37,6 +38,7 @@ class CommandOutcome:
     project: ProjectModel
     diff: ModelDiff
     seq: int
+    can_undo: bool
 
 
 class ProjectService:
@@ -95,10 +97,16 @@ class ProjectService:
         await self._repo.add(
             owner_id, model, self._record(1, command, actor, pack_id, trace_id, diff)
         )
-        return CommandOutcome(project=model, diff=diff, seq=1)
+        return CommandOutcome(project=model, diff=diff, seq=1, can_undo=False)
 
     async def get(self, owner_id: UUID, project_id: UUID) -> ProjectModel:
         return (await self._owned(owner_id, project_id)).model
+
+    async def view(self, owner_id: UUID, project_id: UUID) -> tuple[ProjectModel, bool]:
+        """Return the project and whether it has something to undo."""
+        stored = await self._owned(owner_id, project_id)
+        records = await self._repo.commands(project_id)
+        return stored.model, can_undo([r.command for r in records])
 
     async def list_projects(self, owner_id: UUID) -> list[ProjectListItem]:
         return await self._repo.list_for_owner(owner_id)
@@ -126,11 +134,13 @@ class ProjectService:
         result = self._engine.build(inputs)
         model = old.model_copy(update={"inputs": inputs, "result": result})
         diff = diff_results(old.result, result)
-        seq = await self._next_seq(project_id)
+        records = await self._repo.commands(project_id)
+        seq = (records[-1].seq if records else 0) + 1
         await self._repo.append(
             model, self._record(seq, command, actor, inputs.pack_id, trace_id, diff)
         )
-        return CommandOutcome(project=model, diff=diff, seq=seq)
+        undoable = can_undo([*(r.command for r in records), command])
+        return CommandOutcome(project=model, diff=diff, seq=seq, can_undo=undoable)
 
     async def undo(
         self,
@@ -155,7 +165,7 @@ class ProjectService:
         await self._repo.append(
             model, self._record(seq, Undo(), actor, inputs.pack_id, trace_id, diff)
         )
-        return CommandOutcome(project=model, diff=diff, seq=seq)
+        return CommandOutcome(project=model, diff=diff, seq=seq, can_undo=len(effective) > 1)
 
     async def delete(self, owner_id: UUID, project_id: UUID) -> None:
         await self._owned(owner_id, project_id)
@@ -188,7 +198,3 @@ class ProjectService:
         if stored is None or stored.owner_id != owner_id:
             raise ProjectNotFoundError(project_id)
         return stored
-
-    async def _next_seq(self, project_id: UUID) -> int:
-        records = await self._repo.commands(project_id)
-        return (records[-1].seq if records else 0) + 1

@@ -6,13 +6,19 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from construction_model.commands import command_adapter
 from construction_model.diff import ModelDiff
 from construction_model.model import ProjectModel
 from homeworking.db.schema import ProjectCommandRow, ProjectRow
-from homeworking.modules.projects.ports import CommandRecord, ProjectListItem, StoredProject
+from homeworking.modules.projects.ports import (
+    CommandRecord,
+    ConcurrentModificationError,
+    ProjectListItem,
+    StoredProject,
+)
 
 # Upcasters migrate stored documents from older schema versions: {from_version: fn}.
 UPCASTERS: dict[int, Any] = {}
@@ -81,32 +87,47 @@ class SqlProjectRepository:
             )
 
     async def list_for_owner(self, owner_id: UUID) -> list[ProjectListItem]:
+        # Extract the summary in the database instead of loading every full model document.
+        summary = ProjectRow.model["result"]["summary"].as_string()
         async with self._sessions() as session:
-            rows = await session.scalars(
-                select(ProjectRow)
+            rows = await session.execute(
+                select(
+                    ProjectRow.id,
+                    ProjectRow.title,
+                    ProjectRow.pack_id,
+                    summary,
+                    ProjectRow.updated_at,
+                )
                 .where(ProjectRow.owner_id == owner_id)
                 .order_by(ProjectRow.updated_at.desc(), ProjectRow.created_at.desc())
             )
             return [
                 ProjectListItem(
-                    id=row.id,
-                    title=row.title,
-                    pack_id=row.pack_id,
-                    summary=str(row.model.get("result", {}).get("summary", "")),
-                    updated_at=row.updated_at,
+                    id=id_, title=title, pack_id=pack_id, summary=text or "", updated_at=updated
                 )
-                for row in rows
+                for id_, title, pack_id, text, updated in rows
             ]
 
     async def append(self, model: ProjectModel, record: CommandRecord) -> None:
-        async with self._sessions.begin() as session:
-            row = await session.get(ProjectRow, model.id)
-            if row is None:
-                raise LookupError(model.id)
-            row.title = model.inputs.title
-            row.schema_version = model.schema_version
-            row.model = model.model_dump(mode="json")
-            session.add(_command_row(model.id, record))
+        """Store the new model and log entry atomically.
+
+        ``record.seq`` must be the next free sequence number. If a concurrent request took it,
+        the unique constraint on (project_id, seq) rolls back the whole transaction, so the
+        stored model never diverges from its command log.
+        """
+        try:
+            async with self._sessions.begin() as session:
+                row = await session.get(ProjectRow, model.id)
+                if row is None:
+                    raise LookupError(model.id)
+                row.title = model.inputs.title
+                row.schema_version = model.schema_version
+                row.model = model.model_dump(mode="json")
+                session.add(_command_row(model.id, record))
+        except IntegrityError as exc:
+            raise ConcurrentModificationError(
+                "Das Projekt wurde zwischenzeitlich geändert. Bitte neu laden."
+            ) from exc
 
     async def commands(self, project_id: UUID) -> list[CommandRecord]:
         async with self._sessions() as session:

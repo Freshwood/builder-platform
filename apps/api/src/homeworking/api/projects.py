@@ -11,7 +11,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from calc_engine.pack import PackDescriptor
-from construction_model.commands import EditCommand, can_undo
+from construction_model.commands import EditCommand, command_adapter
 from construction_model.diff import ModelDiff
 from construction_model.model import ParamValue, ProjectModel, Region
 from homeworking.api.deps import ContainerDep, UserDep
@@ -22,6 +22,7 @@ from homeworking.modules.compliance.disclosure import (
 )
 from homeworking.modules.documents.pdf import render_pdf
 from homeworking.modules.drawings.svg import render_svg
+from homeworking.modules.projects.service import CommandOutcome
 
 router = APIRouter(prefix="/api", tags=["projects"])
 
@@ -74,9 +75,10 @@ class LegalNotices(BaseModel):
     document_notices: list[str]
 
 
-async def _view(container: ContainerDep, owner: UUID, model: ProjectModel) -> ProjectView:
-    history = await container.projects.history(owner, model.id)
-    return ProjectView(project=model, can_undo=can_undo([h.command for h in history]))
+def _command_response(outcome: CommandOutcome) -> CommandResponse:
+    return CommandResponse(
+        project=outcome.project, can_undo=outcome.can_undo, diff=outcome.diff, seq=outcome.seq
+    )
 
 
 @router.get("/me", response_model=MeResponse)
@@ -116,35 +118,29 @@ async def create_project(
     outcome = await container.projects.create(
         user.id, pack_id=body.pack_id, title=body.title, params=body.params, region=body.region
     )
-    return CommandResponse(project=outcome.project, can_undo=False, diff=outcome.diff, seq=1)
+    return _command_response(outcome)
 
 
 @router.get("/projects/{project_id}", response_model=ProjectView)
 async def get_project(project_id: UUID, container: ContainerDep, user: UserDep) -> ProjectView:
-    model = await container.projects.get(user.id, project_id)
-    return await _view(container, user.id, model)
+    model, undoable = await container.projects.view(user.id, project_id)
+    return ProjectView(project=model, can_undo=undoable)
 
 
 @router.post("/projects/{project_id}/commands", response_model=CommandResponse)
 async def execute_command(
     project_id: UUID, body: CommandRequest, container: ContainerDep, user: UserDep
 ) -> CommandResponse:
-    outcome = await container.projects.execute(user.id, project_id, body.command)
-    view = await _view(container, user.id, outcome.project)
-    return CommandResponse(**view.model_dump(), diff=outcome.diff, seq=outcome.seq)
+    return _command_response(await container.projects.execute(user.id, project_id, body.command))
 
 
 @router.post("/projects/{project_id}/undo", response_model=CommandResponse)
 async def undo(project_id: UUID, container: ContainerDep, user: UserDep) -> CommandResponse:
-    outcome = await container.projects.undo(user.id, project_id)
-    view = await _view(container, user.id, outcome.project)
-    return CommandResponse(**view.model_dump(), diff=outcome.diff, seq=outcome.seq)
+    return _command_response(await container.projects.undo(user.id, project_id))
 
 
 @router.get("/projects/{project_id}/history", response_model=list[HistoryEntry])
 async def history(project_id: UUID, container: ContainerDep, user: UserDep) -> list[HistoryEntry]:
-    from construction_model.commands import command_adapter
-
     records = await container.projects.history(user.id, project_id)
     return [
         HistoryEntry(

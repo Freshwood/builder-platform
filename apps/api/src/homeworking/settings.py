@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from functools import cache
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import SecretStr, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import SecretStr, field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 DEV_SECRET = "dev-only-insecure-session-secret"  # noqa: S105
 
@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
     database_url: str = "postgresql+psycopg://homeworking:homeworking@localhost:5433/homeworking"
     session_secret: SecretStr = SecretStr(DEV_SECRET)
-    cors_origins: list[str] = ["http://localhost:3000"]
+    # Comma-separated in the environment (CORS_ORIGINS=http://a,http://b), not JSON.
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
     # Create tables on startup instead of running Alembic (SQLite dev / E2E only).
     auto_create_schema: bool = False
 
@@ -27,6 +28,13 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr | None = None
     agent_request_limit: int = 8
     agent_total_tokens_limit: int = 60_000
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _split_cors_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
 
     @model_validator(mode="after")
     def _check_production(self) -> Settings:
