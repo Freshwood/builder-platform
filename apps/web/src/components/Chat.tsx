@@ -1,24 +1,17 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent, type KeyboardEvent } from "react";
 
-type ToolProject = {
-  project_id?: string;
-  title?: string;
-  summary?: string;
-  trust?: string;
-  material_cost_eur?: string;
-};
-type ToolOutput = { action?: string; error?: string; errors?: string[]; project?: ToolProject };
-
-const EXAMPLES = [
-  "Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche",
-  "Regal 80 × 30 × 180 cm mit 5 Böden",
-  "Gartenbank 1,6 m aus Lärche",
-  "Werkbank 150 × 70 cm mit Rollen",
-];
+import { ActivityList } from "@/components/Activity";
+import { AutoTextarea } from "@/components/AutoTextarea";
+import { messageBlocks } from "@/lib/activity";
+import {
+  formatElapsed,
+  toolOutputs,
+  useElapsed,
+  type Assistant,
+  type ToolOutput,
+} from "@/lib/assistant";
 
 const ACTION_LABEL: Record<string, string> = {
   created: "Projekt erstellt",
@@ -45,69 +38,39 @@ function ProjectCard({ output }: { output: ToolOutput }) {
   );
 }
 
-function toolOutputs(message: UIMessage): ToolOutput[] {
-  const outputs: ToolOutput[] = [];
-  for (const part of message.parts) {
-    if (
-      (part.type.startsWith("tool-") || part.type === "dynamic-tool") &&
-      "state" in part &&
-      part.state === "output-available" &&
-      "output" in part
-    ) {
-      outputs.push(part.output as ToolOutput);
-    }
-  }
-  return outputs;
-}
-
-function messageText(message: UIMessage): string {
-  return message.parts
-    .map((part) => (part.type === "text" ? part.text : ""))
-    .join("")
-    .trim();
-}
-
-export function Chat({
-  projectId,
-  onProjectChanged,
-  autoFocus = false,
-}: {
-  projectId: string | null;
-  onProjectChanged: (projectId: string) => void;
-  autoFocus?: boolean;
-}) {
-  const [transport] = useState(
-    () => new DefaultChatTransport({ api: "/api/chat", credentials: "include" }),
+function WorkingIndicator({ startedAt, waiting }: { startedAt: number | null; waiting: boolean }) {
+  const elapsed = useElapsed(startedAt);
+  return (
+    <li className="flex items-center gap-2 text-sm text-muted" aria-live="polite">
+      <span
+        aria-hidden="true"
+        className="h-3 w-3 animate-spin rounded-full border-2 border-ai/30 border-t-ai"
+      />
+      {waiting ? "Der Assistent liest deine Angaben …" : "Der Assistent arbeitet …"}
+      <span className="font-mono tabular-nums">{formatElapsed(elapsed)}</span>
+    </li>
   );
-  const { messages, sendMessage, status, error } = useChat({ transport });
+}
+
+export function Chat({ assistant, projectId }: { assistant: Assistant; projectId: string | null }) {
+  const { messages, status, error, busy, submit, startedAt } = assistant;
   const [input, setInput] = useState("");
-  const handled = useRef(new Set<string>());
-  const busy = status === "submitted" || status === "streaming";
 
-  useEffect(() => {
-    for (const message of messages) {
-      toolOutputs(message).forEach((output, index) => {
-        const key = `${message.id}:${index}`;
-        const id = output.project?.project_id;
-        if (id && !handled.current.has(key)) {
-          handled.current.add(key);
-          onProjectChanged(id);
-        }
-      });
-    }
-  }, [messages, onProjectChanged]);
-
-  function submit(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed || busy) return;
-    // The active project travels with each request so the agent edits the right model.
-    void sendMessage({ text: trimmed }, { body: { projectId } });
-    setInput("");
+  function send() {
+    if (submit(input)) setInput("");
   }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    submit(input);
+    send();
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    // Enter sends, Shift+Enter starts a new line.
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      send();
+    }
   }
 
   return (
@@ -131,20 +94,29 @@ export function Chat({
         className="max-h-[60vh] space-y-3 overflow-y-auto lg:max-h-none lg:flex-1"
         data-testid="messages"
       >
-        {messages.map((message) => {
-          const text = messageText(message);
-          const outputs = toolOutputs(message);
-          const errors = outputs.filter((o) => o.error);
-          const cards = outputs.filter((o) => o.project?.summary);
-          if (!text && errors.length === 0 && cards.length === 0) return null;
+        {messages.map((message, index) => {
           const isUser = message.role === "user";
+          const live = busy && index === messages.length - 1;
+          const blocks = isUser
+            ? [
+                {
+                  kind: "text" as const,
+                  key: "t",
+                  text: message.parts.map((p) => (p.type === "text" ? p.text : "")).join(""),
+                },
+              ]
+            : messageBlocks(message, live);
+          const outputs = toolOutputs(message);
+          const errors = outputs.filter((o) => o.error && !o.errors);
+          const cards = outputs.filter((o) => o.project?.summary);
+          if (!blocks.length && errors.length === 0 && cards.length === 0) return null;
           return (
             <li key={message.id} className={isUser ? "flex justify-end" : "flex justify-start"}>
               <div
                 className={
                   isUser
                     ? "max-w-[85%] rounded-2xl rounded-br-sm bg-accent px-4 py-2 text-white dark:text-black"
-                    : "max-w-[85%] rounded-2xl rounded-bl-sm border border-border bg-surface px-4 py-2"
+                    : "w-full max-w-[92%] rounded-2xl rounded-bl-sm border border-border bg-surface px-4 py-2"
                 }
               >
                 {!isUser && (
@@ -152,7 +124,15 @@ export function Chat({
                     KI-Assistent
                   </span>
                 )}
-                {text && <p className="whitespace-pre-wrap">{text}</p>}
+                {blocks.map((block) =>
+                  block.kind === "text" ? (
+                    <p key={block.key} className="whitespace-pre-wrap">
+                      {block.text.trim()}
+                    </p>
+                  ) : (
+                    <ActivityList key={block.key} steps={block.steps} reasoning={block.reasoning} />
+                  ),
+                )}
                 {cards.map((output, i) => (
                   <ProjectCard key={i} output={output} />
                 ))}
@@ -165,11 +145,7 @@ export function Chat({
             </li>
           );
         })}
-        {status === "submitted" && (
-          <li className="text-sm text-muted" aria-live="polite">
-            Der Assistent plant …
-          </li>
-        )}
+        {busy && <WorkingIndicator startedAt={startedAt} waiting={status === "submitted"} />}
       </ol>
 
       {error && (
@@ -178,41 +154,36 @@ export function Chat({
         </p>
       )}
 
-      {messages.length === 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {EXAMPLES.map((example) => (
-            <button
-              key={example}
-              type="button"
-              onClick={() => submit(example)}
-              className="rounded-full border border-border bg-surface px-3 py-1 text-sm hover:bg-surface-muted"
-            >
-              {example}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <form onSubmit={onSubmit} className="mt-3 flex gap-2">
+      <form onSubmit={onSubmit} className="mt-3">
         <label htmlFor="chat-input" className="sr-only">
           Was möchtest du bauen oder reparieren?
         </label>
-        <input
-          id="chat-input"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder={projectId ? "z. B. „Mach es 50 cm breiter“" : "Beschreibe dein Vorhaben …"}
-          autoFocus={autoFocus}
-          autoComplete="off"
-          className="flex-1 rounded-lg border border-border bg-surface px-3 py-2"
-        />
-        <button
-          type="submit"
-          disabled={busy || !input.trim()}
-          className="rounded-lg bg-accent px-4 py-2 font-medium text-white disabled:opacity-50 dark:text-black"
-        >
-          Senden
-        </button>
+        <div className="flex items-end gap-2 rounded-2xl border border-border bg-surface p-2 shadow-sm focus-within:border-accent">
+          <AutoTextarea
+            id="chat-input"
+            value={input}
+            onChange={setInput}
+            onKeyDown={onKeyDown}
+            minRows={2}
+            maxRows={8}
+            placeholder={
+              projectId
+                ? "Was soll anders werden? z. B. „Mach es 50 cm breiter“ oder „Mit Rückwand“"
+                : "Antworte dem Assistenten oder beschreibe weitere Wünsche …"
+            }
+            className="flex-1 resize-none bg-transparent px-2 py-1 outline-none"
+          />
+          <button
+            type="submit"
+            disabled={busy || !input.trim()}
+            className="rounded-xl bg-accent px-4 py-2 font-medium text-white disabled:opacity-50 dark:text-black"
+          >
+            Senden
+          </button>
+        </div>
+        <p className="mt-1 px-1 text-xs text-muted">
+          Enter sendet, Umschalt + Enter für eine neue Zeile.
+        </p>
       </form>
     </section>
   );

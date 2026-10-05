@@ -41,7 +41,7 @@ async def test_parallel_tool_calls_do_not_conflict(settings: Settings) -> None:
     try:
         owner = (await container.identity.create_guest()).id
         created = await container.projects.create(owner, pack_id="raised_bed", title="A", params={})
-        agent = build_agent(FunctionModel(respond))
+        agent = build_agent(FunctionModel(respond), container.engine)
         deps = AgentDeps(
             owner_id=owner, projects=container.projects, project_id=created.project.id, trace_id="t"
         )
@@ -49,5 +49,44 @@ async def test_parallel_tool_calls_do_not_conflict(settings: Settings) -> None:
         model = await container.projects.get(owner, created.project.id)
         assert model.inputs.params["width_mm"] == 1500
         assert [n.text for n in model.inputs.notes] == ["Breiter für mehr Pflanzfläche."]
+    finally:
+        await container.close()
+
+
+async def test_create_stores_explanation_without_extra_round_trip(settings: Settings) -> None:
+    """The explanation travels with the creating call, so no second model request is needed."""
+    requests = 0
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        nonlocal requests
+        requests += 1
+        if requests == 1:
+            assert "Vorlage shelf" in (info.instructions or "")
+            return ModelResponse(
+                parts=[
+                    ToolCallPart(
+                        "create_from_template",
+                        {
+                            "template_key": "shelf",
+                            "title": "Regal",
+                            "params": {},
+                            "explanation": "Leimholz, stumpf verschraubt.",
+                        },
+                    )
+                ]
+            )
+        return ModelResponse(parts=[TextPart("Fertig.")])
+
+    container = build_container(settings)
+    await container.create_schema()
+    try:
+        owner = (await container.identity.create_guest()).id
+        agent = build_agent(FunctionModel(respond), container.engine)
+        deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
+        await agent.run("Ein Regal", deps=deps)
+        assert requests == 2
+        assert deps.project_id is not None
+        model = await container.projects.get(owner, deps.project_id)
+        assert [n.text for n in model.inputs.notes] == ["Leimholz, stumpf verschraubt."]
     finally:
         await container.close()

@@ -15,7 +15,8 @@ async function expectNoSeriousA11yViolations(page: Page) {
 
 async function send(page: Page, text: string) {
   await page.getByLabel("Was möchtest du bauen oder reparieren?").fill(text);
-  await page.getByRole("button", { name: "Senden" }).click();
+  // The first request goes through the project brief, follow-ups through the chat.
+  await page.getByRole("button", { name: /^(Planung starten|Senden)$/ }).click();
 }
 
 test("plan a raised bed, change it via chat and undo", async ({ page }) => {
@@ -94,4 +95,34 @@ test("plan a shelf from a template with 3D model and cutting plan", async ({ pag
   await expect(summary).toHaveText("Standregal mit 6 Böden – 1000 × 300 × 1800 mm");
 
   await expectNoSeriousA11yViolations(page);
+});
+
+test("project brief collects details and sends them with the request", async ({ page }) => {
+  await page.goto("/");
+  const brief = page.getByTestId("project-brief");
+  await brief.getByRole("button", { name: "Bücherregal" }).click();
+  await expect(page.getByLabel("Was möchtest du bauen oder reparieren?")).toHaveValue(
+    /Bücherregal mit 5 Böden/,
+  );
+  await brief.getByRole("button", { name: "Geölt" }).click();
+  await expect(brief.getByRole("button", { name: "Geölt" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(brief).toContainText("5 von 9 Angaben");
+  await expectNoSeriousA11yViolations(page);
+  await page.screenshot({ path: "test-results/brief.png", fullPage: true });
+
+  await brief.getByRole("button", { name: "Planung starten" }).click();
+  const messages = page.getByTestId("messages");
+  await expect(messages).toContainText("Maße: 80 × 30 cm (Breite × Tiefe), Höhe 180 cm");
+  await expect(messages).toContainText("Oberfläche: geölt");
+  await expect(page.getByTestId("project-summary")).toHaveText(
+    "Standregal mit 5 Böden – 800 × 300 × 1800 mm",
+  );
+  await expect(page.getByRole("list", { name: "Arbeitsschritte des Assistenten" })).toContainText(
+    "Projekt berechnet",
+  );
+  await expect(page.getByLabel("Was möchtest du bauen oder reparieren?")).toBeVisible();
+  await page.screenshot({ path: "test-results/after.png", fullPage: true });
 });

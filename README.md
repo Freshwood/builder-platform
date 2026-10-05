@@ -89,6 +89,14 @@ Werkzeug-Argumente erzeugt (Klasse Claude Sonnet, Mistral Medium 3.5 oder vergle
 Vorlagen und Maßänderungen genügt ein kleines Modell. `AGENT_TOTAL_TOKENS_LIMIT` (Standard
 200 000) begrenzt einen Chat-Turn inklusive Korrekturrunden.
 
+Die Startseite fragt neben der freien Beschreibung einen optionalen Steckbrief ab (Einsatzort,
+Montage, Maße, Holzart, Oberfläche, Budget, Erfahrung, Werkzeug, Nutzung); er wird als
+strukturierte Liste an die erste Chat-Nachricht angehängt. Während der Assistent arbeitet, zeigt
+der Chat jeden Arbeitsschritt live (Werkzeugaufrufe, Gedankengang, beim freien Entwurf die
+Anzahl der bereits geschriebenen Bauteile), rechts erscheint ein Fortschrittspanel mit Laufzeit.
+Um Modell-Runden zu sparen, stehen Packs und Vorlagen direkt in den Instruktionen, und die
+Erläuterung wird beim Erstellen mitgegeben (`explanation`) statt per eigenem Aufruf.
+
 ## Qualität
 
 | Befehl | Inhalt |

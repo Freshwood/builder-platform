@@ -14,7 +14,7 @@ from pydantic_ai.models import Model
 from calc_engine.assembly.derive import DESIGN_PACK_ID
 from calc_engine.assembly.templates import template, templates
 from calc_engine.catalog import Catalog
-from calc_engine.engine import DesignRejectedError, ParameterError, UnknownPackError
+from calc_engine.engine import DesignRejectedError, Engine, ParameterError, UnknownPackError
 from construction_model.assembly import AssemblyDesign
 from construction_model.commands import (
     AddNote,
@@ -175,9 +175,48 @@ def _design_json(design: AssemblyDesign) -> dict[str, Any]:
     return design.model_dump(mode="json", exclude_defaults=True)
 
 
-def build_agent(model: Model) -> Agent[AgentDeps, str]:
+def planning_overview(engine: Engine) -> str:
+    """Packs and templates as compact text for the instructions (saves a tool round trip)."""
+    lines = ["Planbar ohne freien Entwurf (Parameter in Klammern, Längen in mm):"]
+    for pack in engine.describe_packs():
+        props = pack.params_schema.get("properties", {})
+        lines.append(
+            f"- Pack {pack.id} – {pack.title}: {pack.description} ({', '.join(props)}) "
+            "→ create_project"
+        )
+    for tpl in templates().values():
+        params = ", ".join(
+            f"{p.name}={'|'.join(str(o.value) for o in p.options)}" if p.options else p.name
+            for p in tpl.design.params
+        )
+        lines.append(
+            f"- Vorlage {tpl.key} – {tpl.title}: {tpl.description} ({params}) "
+            "→ create_from_template"
+        )
+    return "\n".join(lines)
+
+
+async def _store_explanation(
+    ctx: RunContext[AgentDeps], project_id: UUID, text: str | None
+) -> None:
+    """Store the AI explanation passed along with a create/redesign call (caller holds the lock)."""
+    if not text or not text.strip():
+        return
+    await ctx.deps.projects.execute(
+        ctx.deps.owner_id,
+        project_id,
+        AddNote(text=text.strip()[:2000], origin=Origin.AI),
+        actor="agent",
+        trace_id=ctx.deps.trace_id,
+    )
+
+
+def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
     agent: Agent[AgentDeps, str] = Agent(
-        model, deps_type=AgentDeps, instructions=INSTRUCTIONS, retries=2
+        model,
+        deps_type=AgentDeps,
+        instructions=[INSTRUCTIONS, planning_overview(engine)],
+        retries=2,
     )
 
     @agent.tool
@@ -219,13 +258,15 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
         template_key: str,
         title: str,
         params: dict[str, ParamValue],
+        explanation: str | None = None,
     ) -> dict[str, Any]:
         """Create a project from a design template; omitted parameters use template defaults.
 
         Args:
-            template_key: Template key from list_construction_packs, e.g. "shelf".
+            template_key: Template key, e.g. "shelf".
             title: Short German project title.
             params: Template parameters (lengths in mm).
+            explanation: Optional short German explanation of the construction (labelled as AI).
         """
         async with ctx.deps.write_lock:
             try:
@@ -241,6 +282,7 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
                 return _error("Ungültige Parameter: " + "; ".join(exc.errors))
             except UnknownPackError:
                 return _error(f"Unbekannte Vorlage '{template_key}'")
+            await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
         return {"action": "created", "project": project_summary(outcome.project)}
@@ -251,6 +293,7 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
         title: str,
         design: AssemblyDesign,
         params: dict[str, ParamValue] | None = None,
+        explanation: str | None = None,
     ) -> dict[str, Any]:
         """Create a project from a free-form parametric design (when no pack or template fits).
 
@@ -263,6 +306,8 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
             design: The complete design. Coordinates in mm: x = width (right), y = depth (back),
                 z = height (up), floor z = 0; ``at`` is the part's minimum corner.
             params: Optional initial parameter values (otherwise the design defaults).
+            explanation: Short German explanation of why the construction looks like this
+                (material, cross-sections, joints); stored only if the engine accepts the design.
         """
         design = design.model_copy(update={"origin": Origin.AI})
         async with ctx.deps.write_lock:
@@ -280,6 +325,7 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
                 return _design_rejected(exc)
             except ParameterError as exc:
                 return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+            await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
         return {"action": "created", "project": project_summary(outcome.project)}
@@ -299,12 +345,12 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
 
     @agent.tool(retries=3)
     async def redesign_project(
-        ctx: RunContext[AgentDeps], design: AssemblyDesign
+        ctx: RunContext[AgentDeps], design: AssemblyDesign, explanation: str | None = None
     ) -> dict[str, Any]:
         """Replace the design of the current free-form project (structural changes such as an
         extra drawer or a different construction). Pure dimension changes use change_project.
 
-        The previous AI explanation is removed; call add_explanation afterwards."""
+        The previous AI explanation is removed and replaced by ``explanation`` if given."""
         design = design.model_copy(update={"origin": Origin.AI})
         async with ctx.deps.write_lock:
             if ctx.deps.project_id is None:
@@ -323,6 +369,7 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
                 return _error("Ungültige Parameter: " + "; ".join(exc.errors))
             except (CommandError, ProjectNotFoundError) as exc:
                 return _error(f"Änderung nicht möglich: {exc}")
+            await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.changed_projects.add(outcome.project.id)
         return {
             "action": "changed",
@@ -336,6 +383,7 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
         pack_id: str,
         title: str,
         params: dict[str, ParamValue],
+        explanation: str | None = None,
     ) -> dict[str, Any]:
         """Create a new project from a construction pack. Lengths in millimetres.
 
@@ -343,6 +391,7 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
             pack_id: Id of the construction pack, e.g. "raised_bed".
             title: Short project title in German, e.g. "Hochbeet am Gartenhaus".
             params: Pack parameters; omitted parameters use the pack defaults.
+            explanation: Optional short German explanation of the construction (labelled as AI).
         """
         async with ctx.deps.write_lock:
             try:
@@ -358,6 +407,7 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
                 return _error("Ungültige Parameter: " + "; ".join(exc.errors))
             except UnknownPackError:
                 return _error(f"Unbekanntes Construction Pack '{pack_id}'")
+            await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
         return {"action": "created", "project": project_summary(outcome.project)}
