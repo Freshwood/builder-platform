@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -160,7 +161,38 @@ def test_templates_build_with_defaults_and_variants(key: str) -> None:
     assert r.trust == "template"
     assert r.variants, "templates offer variants"
     assert all(v.material_cost.min > 0 for v in r.variants)
-    assert r.instructions[0].title == "Material besorgen und zuschneiden"
+    assert [s.title for s in r.instructions[:2]] == [
+        "Material einkaufen",
+        "Teile zuschneiden und beschriften",
+    ]
+    # Every position is laid out in exactly one assembly step.
+    laid_out = [
+        int(n)
+        for step in r.instructions
+        for detail in step.details
+        if detail.startswith("Bereitlegen:")
+        for n in re.findall(r"Pos\. (\d+)", detail)
+    ]
+    assert sorted(laid_out) == sorted({s.position for s in r.solids})
+
+
+def test_instructions_are_step_by_step() -> None:
+    r = build(templates()["window_shutter"].design)
+    buy, cut = r.instructions[0], r.instructions[1]
+    assert len(buy.details) == len(r.bom)
+    # Cutting goes bar by bar with lengths and position numbers.
+    assert any(re.search(r"Stange 1 von \d+ .*\d+× 800 mm \(Pos\. 1\)", d) for d in cut.details)
+    battens = next(s for s in r.instructions if s.title == "Querleisten aufschrauben")
+    screwing = next(d for d in battens.details if "schrauben:" in d)
+    assert screwing.startswith("Pos. 2 Querleiste von hinten in Pos. 1 Brett schrauben")
+    assert "vorbohren" in screwing
+    # Screw counts in the steps add up to the screws in the key figures.
+    total = sum(
+        int(m) for s in r.instructions for d in s.details for m in re.findall(r"\((\d+) Stk\)", d)
+    )
+    assert r.key_figures["Schrauben"] == f"ca. {total} Stk"
+    latch = next(s for s in r.instructions if s.title.startswith("Verschluss"))
+    assert any("Sturmhaken" in d for d in latch.details)
 
 
 @settings(max_examples=25, deadline=None)

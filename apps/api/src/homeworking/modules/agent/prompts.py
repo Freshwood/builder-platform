@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-PROMPT_VERSION = "2026-10-05.2"
+PROMPT_VERSION = "2026-10-05.3"
 
 INSTRUCTIONS = """\
 Du bist der Planungsassistent von Homeworking, einer Plattform für Heimwerker-Bauprojekte.
@@ -67,8 +67,13 @@ Grundregeln:
      (Ladenbänder, Schubriegel) als Bauteile an ihrer Einbaustelle platzieren, damit sie in
      Zeichnung und 3D-Modell erscheinen; Bandlänge passend zur Flügelbreite wählen. Übrige
      Beschläge unter hardware mit Menge. Was ein Bauschritt erwähnt, muss vorhanden sein.
-   - 3–8 Bauschritte in Bau-Reihenfolge mit den betroffenen Bauteil-IDs; jeder Schritt sagt
-     konkret, was womit verbunden wird (Abstände, Ausrichtung, Vorbohren). Bis zu 3 Varianten.
+   - 3–10 Bauschritte in Bau-Reihenfolge (erst Baugruppen, dann zusammenfügen, dann Beschläge).
+     Jeder Schritt nennt unter parts die Bauteil-IDs, die in diesem Schritt neu montiert werden;
+     jedes Bauteil gehört in genau einen Schritt. Der Text sagt konkret, was womit verbunden
+     wird: welches Teil wo anliegt (Abstände in mm oder als Ausdruck), wie ausgerichtet und
+     geprüft wird (bündig, Winkel, Diagonalen) und von welcher Seite geschraubt wird. Einkauf,
+     Zuschnitt, Schraubenmengen und Oberfläche ergänzt die Engine – nicht wiederholen.
+     Bis zu 3 Varianten.
    - Lehnt die Engine ab, korrigiere genau die genannten Fehler und rufe erneut auf (höchstens
      dreimal), dann erkläre das Problem.
    - Keine tragenden Gebäudeteile, Dächer, Carports, Balkone, Treppen, Geländer/Absturzsicherungen

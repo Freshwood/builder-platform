@@ -93,3 +93,24 @@ KI-Erläuterung beschrieb nach einem Umbau noch die alte Konstruktion.
    ebenso wie Einträge unter `hardware`. Wandmontierte Entwürfe erhalten zusätzlich die Ansichten
    „Isometrie Wandseite“ (`iso_back`) und „Rückansicht (Wandseite)“ (`back`), weil Querleisten
    und Beschläge dort sitzen; eine Vorderansicht allein zeigt z. B. bei Fensterläden nur Bretter.
+
+## Ergänzung 2026-10-05: Schritt-für-Schritt-Anleitung
+
+Anlass: Die Anleitung eines KI-Fensterladens bestand aus Sätzen wie „Material laut Liste kaufen
+und zuschneiden“ und „Rahmen je Flügel montieren (Pos. 1–9)“. Was wie zugeschnitten und in
+welcher Reihenfolge womit verschraubt wird, stand nirgends.
+
+1. **Die Engine schreibt die konkreten Unterschritte** (`InstructionStep.details`), das LLM bzw.
+   die Vorlage nur Reihenfolge und Montagehinweise (`DesignStep.text`):
+   - *Material einkaufen*: jede Stücklistenzeile mit Menge und Spezifikation.
+   - *Teile zuschneiden*: Stange für Stange aus dem Schnittplan, z. B. „Stange 1 von 2 (5,00 m):
+     6× 800 mm (Pos. 1) · … – Rest ca. 180 mm“; Platten je Position mit Zuschnittmaß.
+   - *Montageschritte*: Ein Bauteil wird im ersten Bauschritt montiert, der es unter `parts`
+     nennt (sonst in „Restliche Teile anbauen“). Je Schritt: Teile zum Bereitlegen mit Maßen,
+     jede Verschraubung als „Pos. A von <Seite> in Pos. B schrauben: n Stellen mit je k
+     Schrauben <Größe>; Ø … vorbohren“. Eine Verbindung gehört zu dem Schritt, in dem ihr
+     späteres Teil montiert wird; geschraubt wird durch das dünnere (bei Gleichstand kleinere)
+     Teil. Platzierte Beschläge nennen das Teil, auf dem sie sitzen; unplatzierte Beschläge
+     erscheinen in dem Schritt, der sie erwähnt.
+   - *Oberfläche* und *Kippsicherung* mit Arbeitsgängen.
+2. Die Schraubenmengen der Unterschritte ergeben in Summe die Kennzahl „Schrauben“.

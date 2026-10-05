@@ -160,6 +160,9 @@
     <div class="step">
       <h3>{{ step.number }}. {{ step.title }}</h3>
       <p>{{ step.text }}</p>
+      {% if step.details %}
+        <ul>{% for d in step.details %}<li>{{ d }}</li>{% endfor %}</ul>
+      {% endif %}
     </div>
   {% endfor %}
 </section>

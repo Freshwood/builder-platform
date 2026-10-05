@@ -150,6 +150,10 @@ class InstructionStep(Frozen):
     title: str
     text: str
     origin: Origin = Origin.ENGINE
+    details: list[str] = Field(
+        default_factory=list,
+        description="Concrete sub-steps in working order (what to buy/cut, which parts, which screws)",
+    )
 
 
 class Notice(Frozen):

@@ -702,6 +702,13 @@ export function ProjectPanel({ projectId }: { projectId: string }) {
                     )}
                   </p>
                   <p className="text-sm text-muted">{step.text}</p>
+                  {step.details && step.details.length > 0 && (
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                      {step.details.map((detail, index) => (
+                        <li key={index}>{detail}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </li>
             ))}

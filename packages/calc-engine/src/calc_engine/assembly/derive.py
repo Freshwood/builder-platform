@@ -25,6 +25,7 @@ from calc_engine.cutting import plan_cuts
 from calc_engine.pack import PackBuild
 from construction_model.assembly import AssemblyDesign
 from construction_model.model import (
+    BomLine,
     Component,
     CostSummary,
     CutLine,
@@ -244,30 +245,42 @@ def _screw_for(thickness: float, cap: float, screws: list[CatalogItem]) -> Catal
     return fitting[-1] if fitting else by_length[0]
 
 
-def _screws(
-    checked: CheckedDesign, outdoor: bool, catalog: Catalog
-) -> tuple[dict[str, int], int, bool]:
+@dataclass(frozen=True)
+class Joint:
+    """A screwed contact: ``through`` is screwed into ``into`` with ``count`` screws."""
+
+    through: int
+    into: int
+    screw: CatalogItem
+    count: int
+    axis: int | None
+
+
+def _screws(checked: CheckedDesign, outdoor: bool, catalog: Catalog) -> tuple[list[Joint], bool]:
     screws = [i for i in catalog.items if i.kind == "screw" and i.outdoor == outdoor]
     longest = max(s.screw_length_mm or 0 for s in screws)
-    counts: dict[str, int] = defaultdict(int)
-    joints = 0
+    joints: list[Joint] = []
     too_thick = False
     for contact in checked.contacts:
         a, b = checked.infos[contact.a], checked.infos[contact.b]
         if a.kind == "piece" or b.kind == "piece":
             continue
-        joints += 1
         n = _screw_count(contact)
         if contact.axis is None:
-            t = min(min(a.part.size), min(b.part.size))
-            cap = t + max(min(a.part.size), min(b.part.size)) - 5
+            ta, tb = min(a.part.size), min(b.part.size)
+            t = min(ta, tb)
+            cap = t + max(ta, tb) - 5
         else:
             ta, tb = a.part.size[contact.axis], b.part.size[contact.axis]
             t, cap = min(ta, tb), ta + tb - 5
         if t + 24.0 > longest:
             too_thick = True
-        counts[_screw_for(t, cap, screws).id] += n
-    return counts, joints, too_thick
+        # Screw through the thinner part (on a tie the smaller one, e.g. a batten) into the other.
+        va, vb = checked.boxes[contact.a].volume_mm3, checked.boxes[contact.b].volume_mm3
+        swap = tb < ta or (tb == ta and vb < va)
+        through, into = (contact.b, contact.a) if swap else (contact.a, contact.b)
+        joints.append(Joint(through, into, _screw_for(t, cap, screws), n, contact.axis))
+    return joints, too_thick
 
 
 def _screw_count(contact: Contact) -> int:
@@ -344,53 +357,311 @@ def _tip_risk(checked: CheckedDesign, design: AssemblyDesign) -> tuple[bool, str
     return anchor, warning
 
 
+_DIRECTIONS = {
+    0: ("von links", "von rechts"),
+    1: ("von vorne", "von hinten"),
+    2: ("von unten", "von oben"),
+}
+_SCREW_SIZE = re.compile(r"(\d+(?:[.,]\d+)?)\s*×\s*(\d+)\s*mm")
+
+
+def _qty(value: Decimal) -> str:
+    text = f"{value:f}"
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text.replace(".", ",")
+
+
+def _dims(info: PartInfo) -> str:
+    if info.kind == "linear":
+        return f"{info.thickness_mm} × {info.width_mm} mm, {info.length_mm} mm lang"
+    if info.kind == "sheet":
+        return f"{info.length_mm} × {info.width_mm} mm, {info.thickness_mm} mm stark"
+    return info.item.spec
+
+
+def _screw_text(screw: CatalogItem) -> tuple[str, str]:
+    """Screw size (e.g. '4 × 40 mm') and a matching pilot drill diameter."""
+    match = _SCREW_SIZE.search(screw.spec)
+    if not match:
+        return screw.spec.split(",")[0], "2/3 des Schraubendurchmessers"
+    diameter = float(match.group(1).replace(",", "."))
+    pilot = f"{round(diameter * 0.6 * 2) / 2:g}".replace(".", ",")
+    return f"{match.group(1)} × {match.group(2)} mm", f"Ø {pilot} mm"
+
+
+def _direction(joint: Joint, checked: CheckedDesign) -> str:
+    if joint.axis is None:
+        return ""
+    through = checked.boxes[joint.through].center()[joint.axis]
+    into = checked.boxes[joint.into].center()[joint.axis]
+    low, high = _DIRECTIONS[joint.axis]
+    return f" {low if through < into else high}"
+
+
+def _cut_details(
+    checked: CheckedDesign, numbers: list[int], stock_plan: list[StockPlan]
+) -> list[str]:
+    """Bar by bar what to saw, and which sheet pieces to cut, with position numbers."""
+    infos = checked.infos
+    details: list[str] = []
+    for plan in stock_plan:
+        if not plan.bars:
+            continue
+        item_id = plan.item_id.split("@")[0]
+        by_length: dict[int, list[int]] = defaultdict(list)
+        for info, number in sorted(zip(infos, numbers, strict=True), key=lambda x: x[1]):
+            if info.kind == "linear" and info.item.id == item_id:
+                by_length[info.length_mm].append(number)
+        for k, bar in enumerate(plan.bars, start=1):
+            cuts = [(length, by_length[length].pop(0)) for length in bar]
+            # Identical consecutive cuts read better as "6× 800 mm (Pos. 1)".
+            runs: list[tuple[int, int, int]] = []
+            for length, number in cuts:
+                if runs and runs[-1][1:] == (length, number):
+                    runs[-1] = (runs[-1][0] + 1, length, number)
+                else:
+                    runs.append((1, length, number))
+            pieces = [
+                f"{count}× {length} mm (Pos. {number})"
+                if count > 1
+                else f"{length} mm (Pos. {number})"
+                for count, length, number in runs
+            ]
+            rest = plan.stock_length_mm - sum(bar) - 4 * max(0, len(bar) - 1)
+            details.append(
+                f"{plan.name}, Stange {k} von {plan.stock_count} ({_m(plan.stock_length_mm)}): "
+                f"{' · '.join(pieces)} – Rest ca. {max(0, rest)} mm"
+            )
+    sheet_counts: dict[int, int] = defaultdict(int)
+    sheet_infos: dict[int, PartInfo] = {}
+    for info, number in zip(infos, numbers, strict=True):
+        if info.kind == "sheet":
+            sheet_counts[number] += 1
+            sheet_infos[number] = info
+    for number in sorted(sheet_counts):
+        info = sheet_infos[number]
+        details.append(
+            f"Pos. {number} {info.part.name}: {sheet_counts[number]}× "
+            f"{info.length_mm} × {info.width_mm} mm aus {info.item.name} {info.thickness_mm} mm"
+        )
+    return details
+
+
+def _assembly_details(
+    indices: list[int],
+    joints: list[tuple[Joint, bool]],
+    checked: CheckedDesign,
+    numbers: list[int],
+    glue: bool,
+) -> list[str]:
+    """``joints`` carries whether both parts are new in this step (those are listed first)."""
+    infos = checked.infos
+    counts: dict[int, int] = defaultdict(int)
+    sample: dict[int, PartInfo] = {}
+    for i in indices:
+        counts[numbers[i]] += 1
+        sample[numbers[i]] = infos[i]
+    details: list[str] = []
+    if counts:
+        parts = ", ".join(
+            f"{counts[n]}× Pos. {n} {sample[n].part.name} ({_dims(sample[n])})"
+            for n in sorted(counts)
+        )
+        details.append(f"Bereitlegen: {parts}")
+
+    groups: dict[tuple[int, int, str, int, str], int] = {}
+    screw_of: dict[str, CatalogItem] = {}
+    for joint, _ in sorted(joints, key=lambda j: not j[1]):
+        key = (
+            numbers[joint.through],
+            numbers[joint.into],
+            joint.screw.id,
+            joint.count,
+            _direction(joint, checked),
+        )
+        groups[key] = groups.get(key, 0) + 1
+        screw_of[joint.screw.id] = joint.screw
+    for (a, b, screw_id, count, direction), places in groups.items():
+        size, pilot = _screw_text(screw_of[screw_id])
+        name_a, name_b = _name_of(a, infos, numbers), _name_of(b, infos, numbers)
+        where = "Stelle" if places == 1 else "Stellen"
+        details.append(
+            f"Pos. {a} {name_a}{direction} in Pos. {b} {name_b} schrauben: {places} {where} "
+            f"mit je {count} Schrauben {size} ({places * count} Stk); {pilot} vorbohren, ansenken"
+            + ("; Kontaktflächen vorher dünn mit Holzleim bestreichen" if glue else "")
+        )
+
+    pieces = {i for i in indices if infos[i].kind == "piece"}
+    piece_counts: dict[int, int] = defaultdict(int)
+    partners: dict[int, set[int]] = defaultdict(set)
+    for i in pieces:
+        piece_counts[numbers[i]] += 1
+    for contact in checked.contacts:
+        for p, other in ((contact.a, contact.b), (contact.b, contact.a)):
+            if p in pieces and infos[other].kind != "piece":
+                partners[numbers[p]].add(numbers[other])
+    for n in sorted(piece_counts):
+        on = ", ".join(f"Pos. {o} {_name_of(o, infos, numbers)}" for o in sorted(partners[n]))
+        details.append(
+            f"{piece_counts[n]}× Pos. {n} {sample[n].part.name}"
+            + (f" auf {on}" if on else "")
+            + " anschrauben, Lage siehe Zeichnung (Schrauben passend zum Beschlag, meist beiliegend)"
+        )
+    return details
+
+
+def _name_of(number: int, infos: list[PartInfo], numbers: list[int]) -> str:
+    return infos[numbers.index(number)].part.name
+
+
 def _instructions(
     design: AssemblyDesign,
     params: dict[str, ParamValue],
-    infos: list[PartInfo],
+    checked: CheckedDesign,
     numbers: list[int],
-    has_sheets: bool,
+    joints: list[Joint],
+    bom_lines: list[BomLine],
+    stock_plan: list[StockPlan],
+    hardware: dict[str, int],
+    catalog: Catalog,
     anchor: bool,
 ) -> list[InstructionStep]:
+    """Step-by-step instructions: buy, cut bar by bar, assemble with concrete connections."""
     origin = Origin.AI if design.origin == Origin.AI else Origin.ENGINE
-    by_spec: dict[str, set[int]] = defaultdict(set)
-    for info, number in zip(infos, numbers, strict=True):
-        by_spec[info.part.spec_id].add(number)
+    infos = checked.infos
     steps: list[InstructionStep] = []
 
-    def add(title: str, text: str, step_origin: Origin = Origin.ENGINE) -> None:
+    def add(title: str, text: str, details: list[str], step_origin: Origin = Origin.ENGINE) -> None:
         steps.append(
-            InstructionStep(number=len(steps) + 1, title=title, text=text, origin=step_origin)
+            InstructionStep(
+                number=len(steps) + 1,
+                title=title,
+                text=text,
+                origin=step_origin,
+                details=details,
+            )
         )
 
     add(
-        "Material besorgen und zuschneiden",
-        "Kaufe das Material laut Materialliste und schneide alle Teile nach der Zuschnittliste "
-        "zu; beschrifte sie mit ihrer Positionsnummer."
-        + (" Platten kannst du im Baumarkt nach Maß zuschneiden lassen." if has_sheets else "")
-        + " Kanten leicht brechen und die Teile vor dem Zusammenbau schleifen.",
+        "Material einkaufen",
+        "Kaufe alles laut Einkaufsliste und wähle gerade, möglichst astarme Hölzer."
+        + (
+            " Maßholz in Sonderquerschnitten rechtzeitig im Holzfachhandel bestellen."
+            if any(info.item.made_to_order for info in infos)
+            else ""
+        ),
+        [f"{_qty(line.quantity)}× {line.name} ({line.spec})" for line in bom_lines],
     )
-    for step in design.steps:
-        numbers = sorted({n for part_id in step.parts for n in by_spec.get(part_id, [])})
-        suffix = f" (Pos. {', '.join(str(n) for n in numbers)})" if numbers else ""
-        add(substitute(step.title, params), substitute(step.text, params) + suffix, origin)
-    if not design.steps:
-        add(
-            "Zusammenbauen",
-            "Setze die Teile gemäß Isometrie und Ansichten zusammen. Verschraube jede "
-            "Kontaktfläche mit mindestens zwei Schrauben; Schraubenlöcher vorbohren und ansenken.",
+    has_sheets = any(info.kind == "sheet" for info in infos)
+    add(
+        "Teile zuschneiden und beschriften",
+        "Säge die Teile Stange für Stange in der angegebenen Reihenfolge zu, längste Teile zuerst. "
+        "Miss jedes Maß neu vom frisch gesägten Ende und zeichne mit dem Winkel an; der "
+        "Sägeschnitt kostet ca. 4 mm. Schreibe die Positionsnummer sofort mit Bleistift auf jedes "
+        "Teil, brich alle Kanten mit Schleifpapier (Körnung 120) und schleife die Flächen vor."
+        + (" Platten kannst du im Baumarkt nach Maß zuschneiden lassen." if has_sheets else ""),
+        _cut_details(checked, numbers, stock_plan),
+    )
+
+    # Each part is mounted in the first design step that names it; the rest at the end.
+    step_of = [len(design.steps)] * len(infos)
+    for i, info in enumerate(infos):
+        for k, step in enumerate(design.steps):
+            if info.part.spec_id in step.parts:
+                step_of[i] = k
+                break
+    placed_kinds: dict[str, set[str]] = defaultdict(set)
+    mentioned: set[str] = set()
+    stages: list[tuple[str, str, Origin, list[int]]] = [
+        (substitute(step.title, params), substitute(step.text, params), origin, [])
+        for step in design.steps
+    ]
+    rest = [i for i, k in enumerate(step_of) if k == len(design.steps)]
+    if rest:
+        if design.steps:
+            stages.append(
+                (
+                    "Restliche Teile anbauen",
+                    "Bringe die übrigen Teile gemäß Isometrie und Ansichten an.",
+                    Origin.ENGINE,
+                    [],
+                )
+            )
+        else:
+            stages.append(
+                (
+                    "Zusammenbauen",
+                    "Setze die Teile gemäß Isometrie und Ansichten in der Reihenfolge der "
+                    "Positionsnummern zusammen. Richte jedes Teil vor dem Verschrauben mit dem "
+                    "Winkel aus und fixiere es mit Zwingen.",
+                    Origin.ENGINE,
+                    [],
+                )
+            )
+    for i, k in enumerate(step_of):
+        stages[k][3].append(i)
+    for item_id in hardware:
+        hardware_type = catalog.item(item_id).hardware_type
+        if hardware_type:
+            placed_kinds[hardware_type].add(item_id)
+
+    for k, (title, text, step_origin, indices) in enumerate(stages):
+        # A joint is made when its later part gets mounted.
+        step_joints = [
+            (j, step_of[j.through] == step_of[j.into])
+            for j in joints
+            if max(step_of[j.through], step_of[j.into]) == k
+        ]
+        details = _assembly_details(
+            indices,
+            step_joints,
+            checked,
+            numbers,
+            any(line.item_id == "glue_d3_750" for line in bom_lines),
         )
+        for kind, (pattern, _) in _HARDWARE_MENTIONS.items():
+            if pattern.search(f"{title} {text}"):
+                for item_id in sorted(placed_kinds.get(kind, set()) - mentioned):
+                    item = catalog.item(item_id)
+                    details.append(f"Beschlag: {hardware[item_id]}× {item.name} ({item.spec})")
+                    mentioned.add(item_id)
+        if k == len(stages) - 1:
+            for item_id, quantity in hardware.items():
+                if item_id in mentioned or item_id == "wall_anchor_set":
+                    continue
+                item = catalog.item(item_id)
+                details.append(f"Außerdem anbringen: {quantity}× {item.name} ({item.spec})")
+        add(title, text, details, step_origin)
+
     if design.finish:
+        finish = catalog.find(design.finish)
+        finish_name = finish.name if finish else "Holzschutz"
         add(
             "Oberfläche behandeln",
-            f"Alle Holzflächen staubfrei schleifen und {FINISH_COATS}× dünn streichen; "
-            "Zwischenschliff nach dem ersten Anstrich.",
+            f"Alle Holzflächen staubfrei schleifen und {FINISH_COATS}× dünn mit {finish_name} "
+            + (
+                "streichen; Hirnholz und Unterkanten besonders satt."
+                if design.use == "outdoor"
+                else "streichen."
+            ),
+            [
+                "Staub mit Handfeger und feuchtem Tuch entfernen",
+                "1. Anstrich dünn auftragen und nach Herstellerangabe trocknen lassen",
+                "Zwischenschliff mit Körnung 180–240, Schleifstaub entfernen",
+                f"{FINISH_COATS}. Anstrich auftragen und vollständig trocknen lassen",
+            ],
         )
     if anchor:
         add(
             "Gegen Kippen sichern",
             "Das Objekt ist hoch und schmal: mit der Kippsicherung an der Wand befestigen "
             "(Dübel passend zum Mauerwerk wählen, keine Leitungen anbohren).",
+            [
+                "Aufstellen und mit der Wasserwaage lotrecht ausrichten",
+                "Winkel oben an der Rückseite anschrauben, Bohrlöcher an der Wand anzeichnen",
+                "Leitungen mit einem Ortungsgerät prüfen, bohren, dübeln und festschrauben",
+            ],
         )
     return steps
 
@@ -456,8 +727,13 @@ def build_design(
 
     screw_total = 0
     joints = 0
+    screw_joints: list[Joint] = []
     if design.auto_screws:
-        screw_counts, joints, too_thick = _screws(checked, outdoor, catalog)
+        screw_joints, too_thick = _screws(checked, outdoor, catalog)
+        joints = len(screw_joints)
+        screw_counts: dict[str, int] = defaultdict(int)
+        for joint in screw_joints:
+            screw_counts[joint.screw.id] += joint.count
         for item_id, count in sorted(screw_counts.items()):
             item = catalog.item(item_id)
             assert item.pack_size is not None
@@ -647,7 +923,18 @@ def build_design(
             ),
         ),
         drawings=drawings,
-        instructions=_instructions(design, params, infos, numbers, bool(sheets), anchor),
+        instructions=_instructions(
+            design,
+            params,
+            checked,
+            numbers,
+            screw_joints,
+            bom.lines,
+            stock_plan,
+            {item_id: q for item_id, q in hardware.items() if q > 0},
+            catalog,
+            anchor,
+        ),
         notices=notices,
         rules=list(RULES.values()),
         solids=solids,

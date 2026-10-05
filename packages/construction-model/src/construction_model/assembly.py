@@ -112,7 +112,10 @@ class HardwareSpec(_Frozen):
 class DesignStep(_Frozen):
     title: str = Field(min_length=1, max_length=80)
     text: str = Field(min_length=1, max_length=800)
-    parts: list[Identifier] = Field(default_factory=list, description="Part ids used in this step")
+    parts: list[Identifier] = Field(
+        default_factory=list,
+        description="Part ids newly mounted in this step (each part in one step); the engine adds parts, screws and hardware per step",
+    )
 
 
 class DesignVariant(_Frozen):

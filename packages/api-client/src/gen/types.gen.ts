@@ -503,7 +503,7 @@ export type DesignStep = {
     /**
      * Parts
      *
-     * Part ids used in this step
+     * Part ids newly mounted in this step (each part in one step); the engine adds parts, screws and hardware per step
      */
     parts?: Array<string>;
 };
@@ -724,6 +724,12 @@ export type InstructionStep = {
      */
     text: string;
     origin?: Origin;
+    /**
+     * Details
+     *
+     * Concrete sub-steps in working order (what to buy/cut, which parts, which screws)
+     */
+    details?: Array<string>;
 };
 
 /**

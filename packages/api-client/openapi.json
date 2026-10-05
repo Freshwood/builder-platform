@@ -1422,7 +1422,7 @@
             },
             "type": "array",
             "title": "Parts",
-            "description": "Part ids used in this step"
+            "description": "Part ids newly mounted in this step (each part in one step); the engine adds parts, screws and hardware per step"
           }
         },
         "additionalProperties": false,
@@ -1796,6 +1796,14 @@
           "origin": {
             "$ref": "#/components/schemas/Origin",
             "default": "engine"
+          },
+          "details": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Details",
+            "description": "Concrete sub-steps in working order (what to buy/cut, which parts, which screws)"
           }
         },
         "additionalProperties": false,
