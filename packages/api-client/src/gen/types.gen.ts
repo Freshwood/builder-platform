@@ -1007,7 +1007,7 @@ export type PartSpec = {
     /**
      * Material
      *
-     * Catalog item id. May contain {param} placeholders for choice parameters, e.g. 'frame_{wood}_44x69'.
+     * Catalog item id or made-to-order lumber 'lumber_<species>_<thickness>x<width>' (any species, any section, e.g. 'lumber_douglas_18x96'). May contain {param} placeholders for choice parameters, e.g. 'lumber_{wood}_18x96'.
      */
     material: string;
     /**
@@ -1311,7 +1311,7 @@ export type Repeat = {
 /**
  * ReplaceDesign
  *
- * Replace the free-form design (structural change). Parameters that still exist are kept.
+ * Replace the free-form design; keeps valid params and user notes, drops AI explanations.
  */
 export type ReplaceDesign = {
     /**

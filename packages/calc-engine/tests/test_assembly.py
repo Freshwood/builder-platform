@@ -11,8 +11,13 @@ from calc_engine.assembly.sheets import plan_sheets
 from calc_engine.assembly.templates import templates
 from calc_engine.engine import DesignRejectedError, default_engine
 from construction_model.assembly import AssemblyDesign
-from construction_model.commands import ChangeParameterBy, ReplaceDesign, apply_to_inputs
-from construction_model.model import ConstructionResult, ProjectInputs
+from construction_model.commands import (
+    AddNote,
+    ChangeParameterBy,
+    ReplaceDesign,
+    apply_to_inputs,
+)
+from construction_model.model import ConstructionResult, Origin, ProjectInputs
 
 FIXED_NOW = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
 engine = default_engine(clock=lambda: FIXED_NOW)
@@ -221,6 +226,15 @@ def test_replace_design_keeps_valid_parameters() -> None:
     assert replaced.params == {"shelves": 4}
 
 
+def test_replace_design_drops_stale_ai_explanations() -> None:
+    design = templates()["shelf"].design
+    inputs = ProjectInputs(title="t", pack_id="design", params={}, design=design)
+    inputs = apply_to_inputs(inputs, AddNote(text="Lamellen aus Kantholz", origin=Origin.AI))
+    inputs = apply_to_inputs(inputs, AddNote(text="Bitte in Grün", origin=Origin.USER))
+    replaced = apply_to_inputs(inputs, ReplaceDesign(design=design))
+    assert [n.text for n in replaced.notes] == ["Bitte in Grün"]
+
+
 def test_expressions() -> None:
     env = {"w": 800.0, "n": 3.0, "flag": 1.0}
     assert evaluate("w - 2 * 18", env) == 764
@@ -290,3 +304,158 @@ def test_workbench_is_valid_for_all_parameters(
         castors=castors,
     )
     assert r.key_figures["Außenmaße (B × T × H)"] == f"{width} × {depth} × {height} mm"
+
+
+def shutter_wing(**overrides: Any) -> dict[str, Any]:
+    """A board shutter wing as an LLM would write it: vertical boards and two battens."""
+    design: dict[str, Any] = {
+        "object_type": "Fensterladen",
+        "summary": "Fensterladen",
+        "use": "outdoor",
+        "support": "wall",
+        "params": [
+            {"name": "height_mm", "label": "Höhe", "kind": "length", "default": 380},
+            {
+                "name": "wood",
+                "label": "Holzart",
+                "kind": "choice",
+                "default": "douglas",
+                "options": [
+                    {"value": "douglas", "label": "Douglasie"},
+                    {"value": "oak", "label": "Eiche"},
+                ],
+            },
+        ],
+        "parts": [
+            {
+                "id": "board",
+                "name": "Brett",
+                "material": "lumber_{wood}_18x96",
+                "size": [96, 18, "height_mm"],
+                "at": ["i * 99", 0, 0],
+                "repeat": {"count": 2},
+            },
+            {
+                "id": "batten",
+                "name": "Querleiste",
+                "material": "lumber_{wood}",
+                "size": [151, 18, 70],
+                "at": [20, 18, "60 + i * (height_mm - 190)"],
+                "repeat": {"count": 2},
+            },
+        ],
+        "hardware": [
+            {"item": "hinge_strap_200", "quantity": 2},
+            {"item": "latch_barrel_80", "quantity": 1},
+        ],
+        "steps": [
+            {
+                "title": "Querleisten aufschrauben",
+                "text": "Leisten auf die Bretter schrauben.",
+                "parts": ["batten"],
+            },
+            {
+                "title": "Scharniere montieren",
+                "text": "Zwei Ladenbänder anschrauben, Verschluss innen anbringen.",
+            },
+        ],
+    }
+    for param in design["params"]:
+        if param["kind"] == "length":
+            param |= {"min": 300, "max": 1200}
+    design.update(overrides)
+    return design
+
+
+def test_made_to_order_lumber_in_any_species_and_section() -> None:
+    r = build(shutter_wing())
+    boards = [line for line in r.bom if line.name.startswith("Brett Douglasie")]
+    assert {line.spec.split(",")[0] for line in boards} == {"18 × 96 mm", "18 × 70 mm"}
+    assert all("Holzfachhandel" in (line.note or "") for line in boards)
+    assert "Kantholz" not in " ".join(line.name for line in r.bom)
+    # Price per metre comes from the volume: 18 × 96 mm Douglas at 1000–1600 €/m³
+    board = next(line for line in boards if line.spec.startswith("18 × 96"))
+    metres = Decimal(board.spec.split("Länge ")[1].removesuffix(" m").replace(",", "."))
+    assert board.unit_price.min == (Decimal("1.73") * metres).quantize(Decimal("0.01"))
+    oak = build(shutter_wing(), wood="oak")
+    assert oak.costs.material.min > r.costs.material.min
+    assert any(line.name.startswith("Brett Eiche") for line in oak.bom)
+
+
+@pytest.mark.parametrize(
+    ("material", "message"),
+    [
+        ("lumber_teak_18x96", "Holzart 'teak' ist unbekannt"),
+        ("lumber_douglas_4x96", "nicht lieferbar"),
+        ("lumber_douglas_18x", "Format"),
+    ],
+)
+def test_invalid_lumber_is_rejected(material: str, message: str) -> None:
+    design = shutter_wing()
+    design["parts"][0]["material"] = material
+    with pytest.raises(DesignRejectedError) as exc:
+        build(design)
+    assert message in " ".join(exc.value.errors)
+
+
+def test_hardware_named_in_steps_must_be_in_bom() -> None:
+    with pytest.raises(DesignRejectedError) as exc:
+        build(shutter_wing(hardware=[]))
+    errors = " ".join(exc.value.errors)
+    assert "Scharniere/Bänder" in errors
+    assert "Verschluss" in errors
+    assert "hinge_strap_200" in errors
+
+
+def test_wall_mounted_groups_may_be_separate() -> None:
+    wing = shutter_wing()
+    second = [
+        {**part, "id": f"{part['id']}_b", "at": [f"200 + {part['at'][0]}", *part["at"][1:]]}
+        for part in wing["parts"]
+    ]
+    two_wings = shutter_wing(parts=[*wing["parts"], *second])
+    assert build(two_wings).key_figures["Bauteile"].startswith("8 Teile")
+    with pytest.raises(DesignRejectedError, match="Nicht alle Bauteile"):
+        build({**two_wings, "support": "floor"})
+
+
+def test_window_shutter_template_matches_the_reported_case() -> None:
+    """31 × 38 cm, two wings of boards with hinges and a latch (docs: construction problem)."""
+    design = templates()["window_shutter"].design
+    r = build(design, width_mm=310, height_mm=380, wings=2, board_mm=18)
+    assert r.trust == "template"
+    # Automatic board count: two boards of about 75 mm per 155 mm wing, not 49 mm battens
+    assert {c.cross_section for c in r.cut_list} == {"18 × 75", "18 × 70"}
+    names = " ".join(line.name for line in r.bom)
+    assert "Ladenband" in names
+    assert "Schubriegel" in names
+    hinges = next(line for line in r.bom if line.name.startswith("Ladenband"))
+    assert hinges.quantity == 4
+    assert hinges.spec.startswith("Länge 100 mm")
+    # Hinges and latch are placed parts, so the drawings show them on the wall side
+    assert {s.name for s in r.solids} >= {"Ladenband", "Schubriegel"}
+    assert [d.view for d in r.drawings][-2:] == ["iso_back", "back"]
+    boards = sorted(s.at[0] for s in r.solids if s.name == "Brett")
+    assert len(boards) == 4
+    # Two wings of 153.5 mm with a 3 mm joint: the right wing starts at 156.5 mm
+    assert boards[2] == pytest.approx(156.5, abs=0.1)
+    assert not any(n.severity == "warning" for n in r.notices)
+
+
+@settings(max_examples=40, deadline=None)
+@given(
+    width=st.integers(300, 1600),
+    height=st.integers(300, 1600),
+    wings=st.integers(1, 2),
+    board_mm=st.integers(18, 28),
+    wood=st.sampled_from(["douglas", "larch", "oak"]),
+)
+def test_window_shutter_is_valid_for_all_parameters(
+    width: int, height: int, wings: int, board_mm: int, wood: str
+) -> None:
+    """With the automatic board count every size builds, with hinges for each wing."""
+    design = templates()["window_shutter"].design
+    r = build(design, width_mm=width, height_mm=height, wings=wings, board_mm=board_mm, wood=wood)
+    assert r.key_figures["Außenmaße (B × T × H)"].startswith(f"{width} ×")
+    assert sum(1 for s in r.solids if s.name == "Ladenband") == 2 * wings
+    assert sum(1 for s in r.solids if s.name == "Schubriegel") == 1

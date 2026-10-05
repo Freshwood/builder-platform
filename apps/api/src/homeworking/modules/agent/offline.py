@@ -61,9 +61,11 @@ _DIMS3 = re.compile(
     re.IGNORECASE,
 )
 _COUNT = re.compile(
-    r"(\d+)\s*(?:fach)?(?:böden|boeden|fächer|faecher|sitzlatten|latten)", re.IGNORECASE
+    r"(\d+)\s*(?:fach)?(?:böden|boeden|fächer|faecher|sitzlatten|latten|flügel|fluegel)",
+    re.IGNORECASE,
 )
 _LENGTH = re.compile(rf"{_NUM}\s*{_UNIT}\s*(?:lang|breit)", re.IGNORECASE)
+_WIDTH = re.compile(rf"breite\s*(?:von\s*)?(?:ca\.?\s*)?{_NUM}\s*{_UNIT}", re.IGNORECASE)
 # Order in which dimensions of "a × b × c" map to template parameters.
 _DIM_ORDER = ("width_mm", "length_mm", "depth_mm", "height_mm")
 
@@ -129,6 +131,8 @@ def _template_params(tpl: DesignTemplate, text: str) -> dict[str, Any]:
         params |= dict(zip(dims, values, strict=False))
     elif (m := _LENGTH.search(text)) and dims:
         params[dims[0]] = _to_mm(m.group(1), m.group(2))
+    elif (m := _WIDTH.search(text)) and "width_mm" in names:
+        params["width_mm"] = _to_mm(m.group(1), m.group(2))
     if (m := _HEIGHT.search(text)) and "height_mm" in names:
         value, unit = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
         params["height_mm"] = _to_mm(value, unit)
@@ -228,7 +232,7 @@ def decide_for_user_text(raw: str) -> Decision:
     if any(word in text for word in _OTHER_PROJECTS):
         return (
             "Das klingt nach einem spannenden Vorhaben! Im Offline-Modus kenne ich nur das "
-            "Hochbeet und die Vorlagen Regal, Gartenbank und Werkbank. Mit angebundenem "
+            "Hochbeet und die Vorlagen Regal, Gartenbank, Werkbank und Fensterladen. Mit angebundenem "
             "Sprachmodell entwerfe ich auch freie Projekte aus Holz und Platten. Tragende "
             "Bauwerke wie Carport oder Gartenhaus brauchen eine Fachplanung."
         )

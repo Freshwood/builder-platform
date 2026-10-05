@@ -13,7 +13,7 @@ from calc_engine.assembly.geometry import (
     components,
 )
 from calc_engine.assembly.resolve import DesignError, ResolvedPart
-from calc_engine.catalog import Catalog, CatalogItem
+from calc_engine.catalog import LUMBER_PREFIX, Catalog, CatalogItem
 from construction_model.assembly import AssemblyDesign
 
 MAX_EDGE_MM = 4000
@@ -54,7 +54,14 @@ def _close(a: float, b: float, tol: float = DIM_TOL) -> bool:
 def classify(part: ResolvedPart, catalog: Catalog) -> PartInfo | str:
     """Match a part to its catalog item; returns an error message if it does not fit."""
     label = f"Bauteil '{part.key}' ({part.name})"
-    item = catalog.find(part.material)
+    item: CatalogItem | None
+    if part.material.startswith(LUMBER_PREFIX):
+        lumber = catalog.resolve_lumber(part.material, part.size)
+        if isinstance(lumber, str):
+            return f"{label}: {lumber}"
+        item = lumber
+    else:
+        item = catalog.find(part.material)
     if item is None or not item.designable:
         return f"{label}: unbekanntes Material '{part.material}' (siehe list_materials)"
     dims = part.size
@@ -141,9 +148,17 @@ def check_design(
         )
 
     groups = components(len(boxes), contacts)
-    if len(groups) > 1:
-        main = max(groups, key=len)
-        loose = [boxes[i].part.key for g in groups if g is not main for i in g]
+    main = max(groups, key=len)
+    wall_y = hi[1] - TOUCH_TOL
+    loose = [
+        boxes[i].part.key
+        for g in groups
+        if g is not main
+        # Separate groups are fine on a wall (e.g. two shutter wings) if each is fixed to it.
+        and not (design.support == "wall" and any(boxes[j].bounds()[1][1] >= wall_y for j in g))
+        for i in g
+    ]
+    if loose:
         errors.append(
             "Nicht alle Bauteile sind verbunden (keine Kontaktfläche): "
             f"{', '.join(loose[:8])}{' …' if len(loose) > 8 else ''}"

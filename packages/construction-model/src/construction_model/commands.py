@@ -76,7 +76,7 @@ class AddNote(_Command):
 
 
 class ReplaceDesign(_Command):
-    """Replace the free-form design (structural change). Parameters that still exist are kept."""
+    """Replace the free-form design; keeps valid params and user notes, drops AI explanations."""
 
     type: Literal["replace_design"] = "replace_design"
     design: AssemblyDesign
@@ -186,7 +186,11 @@ def apply_to_inputs(
             if inputs.design is None:
                 raise CommandError("Only free-form design projects can be redesigned")
             kept = {k: v for k, v in inputs.params.items() if _still_valid(design, k, v)}
-            return inputs.model_copy(update={"design": design, "params": kept, "variant_key": None})
+            # AI explanations describe the replaced construction; user notes stay.
+            notes = [n for n in inputs.notes if n.origin is not Origin.AI]
+            return inputs.model_copy(
+                update={"design": design, "params": kept, "variant_key": None, "notes": notes}
+            )
         case Undo():
             raise CommandError("Undo must be resolved via effective_commands()")
     raise CommandError(f"Unsupported command {command!r}")  # pragma: no cover

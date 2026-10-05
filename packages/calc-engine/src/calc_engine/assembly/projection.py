@@ -71,6 +71,26 @@ VIEWS = (
     ),
     View("plan", "Draufsicht", (0.0, 0.0, 1.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), ("x", "y")),
 )
+# Wall-mounted objects carry battens, hinges and latches on the wall side; show it as well.
+WALL_SIDE_VIEWS = (
+    View(
+        "iso_back",
+        "Isometrie Wandseite mit Positionsnummern",
+        (-1 / _S3, 1 / _S3, 1 / _S3),
+        (-1 / _S2, -1 / _S2, 0.0),
+        (1 / _S6, -1 / _S6, 2 / _S6),
+        None,
+    ),
+    View(
+        "back",
+        "Rückansicht (Wandseite)",
+        (0.0, 1.0, 0.0),
+        (-1.0, 0.0, 0.0),
+        (0.0, 0.0, 1.0),
+        ("x", "z"),
+        "x",
+    ),
+)
 _AXIS = {"x": 0, "y": 1, "z": 2}
 
 
@@ -262,7 +282,7 @@ def build_view(
                     )
                 pad_right = offset + 0.07 * size
 
-    if view.key == "iso" and largest:
+    if view.key.startswith("iso") and largest:
         gap = 0.07 * size
         mid = (min_x + max_x) / 2
         spacing = 0.055 * size
@@ -316,5 +336,7 @@ def build_drawings(
     names: list[str],
     solids: list[Solid],
     legend: dict[str, str],
+    wall_side: bool = False,
 ) -> list[Drawing]:
-    return [build_view(v, object_type, boxes, numbers, names, solids, legend) for v in VIEWS]
+    views = (*VIEWS, *WALL_SIDE_VIEWS) if wall_side else VIEWS
+    return [build_view(v, object_type, boxes, numbers, names, solids, legend) for v in views]

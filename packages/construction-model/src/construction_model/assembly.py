@@ -87,8 +87,9 @@ class PartSpec(_Frozen):
     )
     material: str = Field(
         description=(
-            "Catalog item id. May contain {param} placeholders for choice parameters, "
-            "e.g. 'frame_{wood}_44x69'."
+            "Catalog item id or made-to-order lumber 'lumber_<species>_<thickness>x<width>' "
+            "(any species, any section, e.g. 'lumber_douglas_18x96'). May contain {param} "
+            "placeholders for choice parameters, e.g. 'lumber_{wood}_18x96'."
         ),
         max_length=80,
     )

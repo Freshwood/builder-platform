@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
@@ -49,6 +50,22 @@ FINISH_COATS = 2
 JOINTS_PER_GLUE = 60
 TIP_RATIO = 2.5
 TIP_MIN_HEIGHT = 900
+LUMBER_NOTE = "Maßholz: im Holzfachhandel/Hobelwerk in diesem Querschnitt bestellen"
+# Hardware that building steps talk about must also be in the BOM (FD-HW).
+_HARDWARE_MENTIONS: dict[str, tuple[re.Pattern[str], str]] = {
+    "hinge": (
+        re.compile(r"scharnier|kreuzgeh[äa]nge|ladenband|türband|topfband", re.IGNORECASE),
+        "Scharniere/Bänder",
+    ),
+    "latch": (
+        re.compile(
+            r"verschluss|schubriegel|kantriegel|sturmhaken|ladenhaken|überwurf|schnäpper",
+            re.IGNORECASE,
+        ),
+        "einen Verschluss",
+    ),
+    "handle": (re.compile(r"\bgriff|\bknauf", re.IGNORECASE), "Griffe"),
+}
 
 RULES: dict[str, RuleRef] = {
     r.id: r
@@ -84,6 +101,16 @@ RULES: dict[str, RuleRef] = {
             id="FD-TIP", version="1", title="Kippsicherung ab Höhe ≥ 900 mm und Höhe/Tiefe > 2,5"
         ),
         RuleRef(id="FD-FINISH", version="1", title="Oberfläche: 2 Anstriche auf alle Holzflächen"),
+        RuleRef(
+            id="FD-LUMBER",
+            version="1",
+            title="Maßholz: jede Holzart in jedem Querschnitt, Preis aus Holzvolumen × Preis je m³",
+        ),
+        RuleRef(
+            id="FD-HW",
+            version="1",
+            title="In Bauschritten genannte Beschläge (Scharniere, Verschlüsse, Griffe) sind platziert oder in der Stückliste",
+        ),
     ]
 }
 
@@ -176,6 +203,7 @@ def _linear_stock(item: CatalogItem, pieces: list[int], bom: BomBuilder) -> Stoc
         "Stk",
         per_m_min * factor,
         per_m_max * factor,
+        note=LUMBER_NOTE if item.made_to_order else None,
     )
     waste = sum(stock - sum(bar) - 4 * max(0, len(bar) - 1) for bar in layout)
     return StockPlan(
@@ -247,6 +275,32 @@ def _screw_count(contact: Contact) -> int:
     if long_side < SCREW_SPACING_MM - 50:
         return 2
     return max(2, math.ceil(long_side / SCREW_SPACING_MM) + 1)
+
+
+def _missing_hardware(
+    design: AssemblyDesign,
+    params: dict[str, ParamValue],
+    hardware: dict[str, int],
+    catalog: Catalog,
+) -> list[str]:
+    """Steps that mention hinges, latches or handles need that hardware (listed or placed)."""
+    present = {catalog.item(item_id).hardware_type for item_id, qty in hardware.items() if qty > 0}
+    errors: list[str] = []
+    for kind, (pattern, label) in _HARDWARE_MENTIONS.items():
+        if kind in present:
+            continue
+        for step in design.steps:
+            text = substitute(f"{step.title} {step.text}", params)
+            if pattern.search(text):
+                options = ", ".join(
+                    i.id for i in catalog.items if i.designable and i.hardware_type == kind
+                )
+                errors.append(
+                    f"Bauschritt '{step.title}' nennt {label}, aber unter hardware fehlt ein "
+                    f"passender Beschlag mit Menge (z. B. {options})"
+                )
+                break
+    return errors
 
 
 def _surface_m2(infos: list[PartInfo]) -> float:
@@ -388,6 +442,7 @@ def build_design(
         hardware[item.id] += quantity
         if spec.note:
             notes[item.id] = spec.note
+    errors.extend(_missing_hardware(design, params, {**placed_pieces, **hardware}, catalog))
     if errors:
         raise DesignError(errors)
 
@@ -432,6 +487,13 @@ def build_design(
     if outdoor:
         unsuitable = sorted(
             {i.item.name for i in infos if i.kind != "piece" and not i.item.outdoor}
+        )
+        unsuitable += sorted(
+            {
+                catalog.item(item_id).name
+                for item_id in hardware
+                if not catalog.item(item_id).outdoor
+            }
         )
         if unsuitable:
             warnings.append(
@@ -558,7 +620,13 @@ def build_design(
     ]
     legend = {_tone(info, catalog): _material_label(info, catalog) for info in infos}
     drawings = build_drawings(
-        design.object_type, checked.boxes, numbers, [p.name for p in positions], solids, legend
+        design.object_type,
+        checked.boxes,
+        numbers,
+        [p.name for p in positions],
+        solids,
+        legend,
+        wall_side=design.support == "wall",
     )
 
     return PackBuild(

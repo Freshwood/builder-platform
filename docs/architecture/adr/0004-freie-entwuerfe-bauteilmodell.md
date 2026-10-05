@@ -37,7 +37,7 @@ reproduzierbar und passen nicht zur Stückliste.
    Positionsnummern, automatische Bemaßung, Materiallegende) und 3D-Daten für den Browser.
 5. **Vertrauensstufen** werden im Ergebnis geführt (`ConstructionResult.trust`) und angezeigt:
    - `pack` – programmiertes Pack mit fachlich validierten Regeln (Hochbeet),
-   - `template` – vom Team erstellte Vorlage im Entwurfsformat (Regal, Gartenbank, Werkbank),
+   - `template` – vom Team erstellte Vorlage im Entwurfsformat (Regal, Gartenbank, Werkbank, Fensterladen),
    - `ai_draft` – vom LLM frei erzeugter Entwurf, gekennzeichnet als „KI-Entwurf, nicht fachlich
      geprüft“ (Transparenz nach Art. 50 KI-Verordnung).
    Häufig genutzte KI-Entwürfe können zu Vorlagen und später zu Packs reifen.
@@ -61,3 +61,35 @@ reproduzierbar und passen nicht zur Stückliste.
   Ausklinkungen und Holzverbindungen werden nicht modelliert; die Schraubenmenge ist ein Richtwert.
 - Painter-Sortierung der Zeichnung ist für achsparallele Quader exakt, für gedrehte Teile eine
   Näherung.
+
+## Ergänzung 2026-10-05: Maßholz, Beschläge, Wandmontage
+
+Anlass: Ein Fensterladen „aus Brettern“ wurde als Kantholzrahmen (45 × 70 mm) entworfen, weil
+der Katalog Douglasie/Lärche nur als 28-mm-Brett bzw. Kantholz führte und 18 mm nur als Fichte
+(innen). Scharniere und Verschluss standen nur im Anleitungstext, nicht in der Stückliste, und die
+KI-Erläuterung beschrieb nach einem Umbau noch die alte Konstruktion.
+
+1. **Maßholz statt fester Artikel.** Jede Holzart mit `lumber_price_m3` im Katalog ist in jedem
+   Querschnitt bestellbar (Stärke 8–200 mm, Breite bis 400 mm): `lumber_<holzart>_<t>x<b>` oder
+   `lumber_<holzart>` (Querschnitt aus den zwei kleineren Bauteilmaßen, damit er Parametern folgen
+   kann). Der Meterpreis ist Holzvolumen × Preis je m³; die Stückliste weist auf Bestellung im
+   Holzfachhandel hin (Regel `FD-LUMBER`). Teure Holzarten kosten mehr, werden aber nicht ersetzt.
+2. **Beschläge sind Pflicht, wenn die Anleitung sie nennt** (`FD-HW`). Katalogbeschläge tragen einen
+   `hardware_type` (`hinge`, `latch`, `handle`, …). Nennt ein Bauschritt Scharniere/Bänder,
+   Verschlüsse oder Griffe ohne passenden Beschlag unter `hardware`, wird der Entwurf mit den
+   passenden Katalog-IDs abgelehnt. Außenprojekte warnen bei nicht außentauglichen Beschlägen.
+3. **Wandmontage mit getrennten Baugruppen.** Bei `support="wall"` dürfen mehrere Baugruppen
+   unverbunden sein (z. B. zwei Ladenflügel), sofern jede an der Wand anliegt.
+4. **Erläuterungen folgen dem Entwurf.** `replace_design` entfernt KI-Erläuterungen des alten
+   Entwurfs (Nutzernotizen bleiben). Schreibende Agent-Werkzeuge laufen pro Agent-Lauf
+   nacheinander, damit parallele Tool-Aufrufe nicht um dieselbe Sequenznummer konkurrieren.
+5. **Prompt:** Material-, Holzart-, Stärke- und Bauweisewünsche des Nutzers sind verbindlich;
+   interne Begriffe (Pack, Katalog, IDs) werden dem Nutzer gegenüber nicht verwendet.
+6. **Vorlage `window_shutter`:** Brett-Fensterladen mit Querleisten, 1–2 Flügel, Ladenbänder,
+   Schubriegel und Sturmhaken; die Brettanzahl je Flügel ergibt sich automatisch (Bretter ca.
+   100 mm breit), die Bandlänge (100/200/300 mm) aus der Flügelbreite.
+7. **Beschläge sichtbar machen.** Ladenbänder und Schubriegel haben feste Maße und werden als
+   Bauteile an der Einbaustelle platziert (Zeichnung, 3D, Positionsnummer); sie erfüllen `FD-HW`
+   ebenso wie Einträge unter `hardware`. Wandmontierte Entwürfe erhalten zusätzlich die Ansichten
+   „Isometrie Wandseite“ (`iso_back`) und „Rückansicht (Wandseite)“ (`back`), weil Querleisten
+   und Beschläge dort sitzen; eine Vorderansicht allein zeigt z. B. bei Fensterläden nur Bretter.

@@ -121,3 +121,12 @@ def test_offline_template_matching_prefers_longest_keyword() -> None:
     assert decision[0].name == "create_from_template"
     assert decision[0].args["template_key"] == "workbench"
     assert decision[0].args["params"] == {"width_mm": 1500, "depth_mm": 700, "castors": True}
+
+
+def test_offline_planner_uses_shutter_template() -> None:
+    decision = decide_for_user_text(
+        "Ich möchte Fensterläden mit 2 Flügeln bauen, Breite 31cm Höhe 38cm"
+    )
+    assert isinstance(decision, list)
+    assert decision[0].args["template_key"] == "window_shutter"
+    assert decision[0].args["params"] == {"width_mm": 310, "height_mm": 380, "wings": 2}

@@ -10,13 +10,22 @@ kann auf drei Vertrauensstufen ([ADR-0004](docs/architecture/adr/0004-freie-entw
 | Stufe | Beispiele | Woher die Konstruktion kommt |
 |---|---|---|
 | Geprüftes Pack | Hochbeet | programmiertes Construction Pack mit fachlich validierten Regeln |
-| Vorlage | Regal, Gartenbank, Werkbank | parametrischer Entwurf aus `calc_engine/data/templates/` |
+| Vorlage | Regal, Gartenbank, Werkbank, Fensterladen | parametrischer Entwurf aus `calc_engine/data/templates/` |
 | KI-Entwurf | alles aus Holz, Platten und Beschlägen | das LLM entwirft ein Bauteilmodell, die Engine prüft und berechnet |
 
 Auch bei KI-Entwürfen rechnet das LLM nicht: Es beschreibt nur Bauteile (Material, Maß,
 Position als Ausdrücke über Parameter). Die Engine prüft Katalogmaße, Kollisionen, Zusammenhang
-und Bodenkontakt und leitet Stückliste, Zuschnitt mit Schnittplan, Schrauben, Kosten, Zeichnungen
-(Ansichten, Isometrie mit Positionsnummern) und das 3D-Modell ab.
+und Boden- bzw. Wandkontakt und leitet Stückliste, Zuschnitt mit Schnittplan, Schrauben, Kosten,
+Zeichnungen (Ansichten, Isometrie mit Positionsnummern) und das 3D-Modell ab.
+
+Holz ist nicht auf die Katalogartikel beschränkt: **Maßholz** `lumber_<holzart>_<stärke>x<breite>`
+(z. B. `lumber_douglas_18x96`, oder `lumber_<holzart>` mit Querschnitt aus dem Bauteilmaß) gibt es
+in jeder Holzart mit Preis je m³ (`materials` in `data/catalog.json`: Fichte, Kiefer, Douglasie,
+Lärche, Eiche, Buche, Robinie) und jedem Querschnitt; der Meterpreis folgt aus dem Holzvolumen.
+Beschläge, die eine Bauanleitung nennt (Scharniere/Bänder, Verschlüsse, Griffe), müssen in der
+Stückliste stehen, sonst lehnt die Engine den Entwurf ab. Beschläge mit festen Maßen (Ladenbänder,
+Schubriegel) werden als Bauteile platziert und erscheinen in Zeichnung und 3D-Modell; bei
+Wandmontage gibt es zusätzlich eine Isometrie und eine Rückansicht der Wandseite.
 
 ## Architektur in einem Bild
 
@@ -101,7 +110,8 @@ legen oder `UV_PROJECT_ENVIRONMENT` auf einen Pfad unter `~` setzen (z. B. in `.
 
 1. JSON-Datei in `packages/calc-engine/src/calc_engine/data/templates/` anlegen (`key`, `title`,
    `description`, `keywords`, `design` im Format `construction_model.assembly.AssemblyDesign`,
-   `origin: "engine"`). Materialien und Maße stammen aus `data/catalog.json`.
+   `origin: "engine"`). Materialien und Maße stammen aus `data/catalog.json`; Holz in beliebigem
+   Querschnitt als Maßholz `lumber_{wood}` (Querschnitt aus dem Bauteilmaß).
 2. In `packages/calc-engine/tests/test_assembly.py` einen hypothesis-Test über den ganzen
    Parameterbereich ergänzen – er findet Kombinationen, bei denen Teile nicht mehr aufs
    Plattenformat passen oder sich durchdringen.

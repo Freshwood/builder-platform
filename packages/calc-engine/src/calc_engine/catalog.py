@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from decimal import ROUND_HALF_UP, Decimal
 from functools import cache
 from importlib import resources
@@ -13,6 +14,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from construction_model.model import BomLine, Money
 
 CENT = Decimal("0.01")
+LUMBER_PREFIX = "lumber_"
+_LUMBER_ID = re.compile(r"^lumber_([a-z_]+?)_(\d{1,3})x(\d{1,3})$")
+_LUMBER_SPECIES = re.compile(r"^lumber_([a-z_]+)$")
+HardwareType = Literal["hinge", "latch", "handle", "bracket", "castor"]
 
 
 class CatalogItem(BaseModel):
@@ -38,6 +43,10 @@ class CatalogItem(BaseModel):
     coverage_m2: Decimal | None = Field(None, description="Finish: area per unit and coat")
     outdoor: bool = False
     designable: bool = Field(False, description="Offered to the LLM for free-form designs")
+    hardware_type: HardwareType | None = Field(
+        None, description="Function of a hardware piece, e.g. hinge or latch"
+    )
+    made_to_order: bool = Field(False, description="Lumber cut to any section (``lumber_…``)")
 
 
 class MaterialInfo(BaseModel):
@@ -47,6 +56,35 @@ class MaterialInfo(BaseModel):
     tone: str
     density_kg_m3: int
     outdoor: bool
+    lumber_price_m3: tuple[Decimal, Decimal] | None = Field(
+        None, description="Price range per m³ of planed lumber; enables ``lumber_…`` ids"
+    )
+    lumber_stock_lengths_mm: list[int] = Field(default_factory=list)
+
+
+class LumberRules(BaseModel):
+    """Bounds for made-to-order lumber: every species with a m³ price in any section."""
+
+    model_config = ConfigDict(frozen=True)
+
+    note: str = ""
+    min_thickness_mm: int = 8
+    max_thickness_mm: int = 200
+    max_width_mm: int = 400
+
+
+def lumber_id(species: str, thickness_mm: int, width_mm: int) -> str:
+    t, w = sorted((thickness_mm, width_mm))
+    return f"{LUMBER_PREFIX}{species}_{t}x{w}"
+
+
+def _lumber_kind(t: int, w: int) -> str:
+    """German trade name of a section (t ≤ w)."""
+    if t < 40:
+        return "Leiste" if w <= 60 else "Brett"
+    if w >= 2.5 * t:
+        return "Bohle"
+    return "Kantholz"
 
 
 class CatalogTool(BaseModel):
@@ -67,15 +105,73 @@ class Catalog(BaseModel):
     items: list[CatalogItem]
     tools: list[CatalogTool]
     materials: dict[str, MaterialInfo] = Field(default_factory=dict)
+    lumber: LumberRules = Field(default_factory=LumberRules)
 
     def item(self, item_id: str) -> CatalogItem:
-        for item in self.items:
-            if item.id == item_id:
-                return item
-        raise KeyError(f"Catalog item '{item_id}' not found")
+        item = self.find(item_id)
+        if item is None:
+            raise KeyError(f"Catalog item '{item_id}' not found")
+        return item
 
     def find(self, item_id: str) -> CatalogItem | None:
-        return next((item for item in self.items if item.id == item_id), None)
+        found = next((item for item in self.items if item.id == item_id), None)
+        if found is None and item_id.startswith(LUMBER_PREFIX):
+            lumber = self.resolve_lumber(item_id)
+            return lumber if isinstance(lumber, CatalogItem) else None
+        return found
+
+    def lumber_species(self) -> dict[str, MaterialInfo]:
+        return {k: m for k, m in self.materials.items() if m.lumber_price_m3}
+
+    def resolve_lumber(
+        self, item_id: str, size: tuple[float, float, float] | None = None
+    ) -> CatalogItem | str:
+        """Made-to-order lumber; returns an error text if invalid.
+
+        ``lumber_<species>_<t>x<w>`` has a fixed section. ``lumber_<species>`` takes the section
+        from the two smaller dimensions of ``size`` (the part), so it can follow parameters.
+        """
+        match = _LUMBER_ID.match(item_id)
+        species_only = _LUMBER_SPECIES.match(item_id)
+        if match is not None:
+            species, a, b = match.group(1), int(match.group(2)), int(match.group(3))
+        elif species_only is not None and size is not None:
+            d0, d1, _ = sorted(size)
+            species, a, b = species_only.group(1), round(d0), round(d1)
+        else:
+            return (
+                f"'{item_id}' hat nicht das Format lumber_<holzart>_<stärke>x<breite> "
+                "(z. B. lumber_douglas_18x96) bzw. lumber_<holzart>"
+            )
+        material = self.lumber_species().get(species)
+        if material is None or material.lumber_price_m3 is None:
+            known = ", ".join(sorted(self.lumber_species()))
+            return f"Holzart '{species}' ist unbekannt (verfügbar: {known})"
+        t, w = sorted((a, b))
+        rules = self.lumber
+        if t < rules.min_thickness_mm or t > rules.max_thickness_mm or w > rules.max_width_mm:
+            return (
+                f"Querschnitt {t} × {w} mm ist nicht lieferbar (Stärke {rules.min_thickness_mm}–"
+                f"{rules.max_thickness_mm} mm, Breite bis {rules.max_width_mm} mm)"
+            )
+        m3_per_m = Decimal(t * w) / Decimal(1_000_000)
+        low, high = material.lumber_price_m3
+        return CatalogItem(
+            id=lumber_id(species, t, w),
+            name=f"{_lumber_kind(t, w)} {material.label}, gehobelt",
+            spec=f"{t} × {w} mm",
+            unit="m",
+            price_min=(low * m3_per_m).quantize(CENT, ROUND_HALF_UP),
+            price_max=(high * m3_per_m).quantize(CENT, ROUND_HALF_UP),
+            category="wood",
+            kind="linear",
+            material=species,
+            section_mm=(t, w),
+            stock_lengths_mm=material.lumber_stock_lengths_mm or [2000, 2500, 3000],
+            outdoor=material.outdoor,
+            designable=True,
+            made_to_order=True,
+        )
 
     def tool(self, tool_id: str) -> CatalogTool:
         for tool in self.tools:

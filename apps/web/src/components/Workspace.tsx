@@ -59,7 +59,7 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
                 <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200">
                   Vorlagen
                 </span>
-                <p className="mt-2 text-sm text-text">Regal, Gartenbank, Werkbank</p>
+                <p className="mt-2 text-sm text-text">Regal, Gartenbank, Werkbank, Fensterladen</p>
               </li>
               <li className="rounded-xl border border-border bg-surface p-3">
                 <span className="rounded-full bg-ai-soft px-2 py-0.5 text-xs font-semibold text-ai">

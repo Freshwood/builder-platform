@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from typing import Annotated, Any
 from uuid import UUID
@@ -43,6 +44,9 @@ class AgentDeps:
     project_id: UUID | None
     trace_id: str
     changed_projects: set[UUID] = field(default_factory=set)
+    # The model may call several tools in parallel; project writes must run one after another,
+    # otherwise they race for the next command sequence number.
+    write_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 def _eur(value: Any) -> str:
@@ -117,9 +121,9 @@ def _design_rejected(exc: ParameterError) -> dict[str, Any]:
     }
 
 
-def design_materials(catalog: Catalog) -> list[dict[str, Any]]:
-    """Catalog items usable in free-form designs, in a compact form for the LLM."""
-    out: list[dict[str, Any]] = []
+def design_materials(catalog: Catalog) -> dict[str, Any]:
+    """Materials usable in free-form designs, in a compact form for the LLM."""
+    items: list[dict[str, Any]] = []
     for item in catalog.items:
         if not item.designable:
             continue
@@ -137,9 +141,34 @@ def design_materials(catalog: Catalog) -> list[dict[str, Any]]:
             entry["placeable"] = True
         else:
             entry["use"] = "finish" if item.kind == "finish" else "hardware"
+        if item.hardware_type:
+            entry["hardware_type"] = item.hardware_type
         entry["outdoor"] = item.outdoor
-        out.append(entry)
-    return out
+        items.append(entry)
+    rules = catalog.lumber
+    lumber = {
+        "id_format": "lumber_<species>_<thickness>x<width>",
+        "example": "lumber_douglas_18x96",
+        "explanation": (
+            "Made-to-order lumber: every species below is available in ANY cross-section "
+            "(boards, battens, beams). Use it whenever the catalog items above do not have the "
+            "species or section the user wants. Price is derived from the wood volume."
+        ),
+        "thickness_mm": [rules.min_thickness_mm, rules.max_thickness_mm],
+        "max_width_mm": rules.max_width_mm,
+        "species": [
+            {
+                "species": key,
+                "label": m.label,
+                "eur_per_m3": f"{m.lumber_price_m3[0]}–{m.lumber_price_m3[1]}",
+                "max_length_mm": max(m.lumber_stock_lengths_mm or [3000]),
+                "outdoor": m.outdoor,
+            }
+            for key, m in catalog.lumber_species().items()
+            if m.lumber_price_m3
+        ],
+    }
+    return {"catalog_items": items, "lumber": lumber}
 
 
 def _design_json(design: AssemblyDesign) -> dict[str, Any]:
@@ -171,9 +200,9 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
         }
 
     @agent.tool
-    def list_materials(ctx: RunContext[AgentDeps]) -> list[dict[str, Any]]:
-        """Catalog materials for free-form designs: profiles (linear), sheets, placeable pieces,
-        hardware and finishes. Use exactly these ids and dimensions."""
+    def list_materials(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
+        """Materials for free-form designs: catalog items (profiles, sheets, placeable pieces,
+        hardware, finishes) and made-to-order lumber in any species and cross-section."""
         return design_materials(ctx.deps.projects.engine.catalog)
 
     @agent.tool_plain
@@ -198,19 +227,20 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
             title: Short German project title.
             params: Template parameters (lengths in mm).
         """
-        try:
-            outcome = await ctx.deps.projects.create_from_template(
-                ctx.deps.owner_id,
-                template_key=template_key,
-                title=title,
-                params=params,
-                actor="agent",
-                trace_id=ctx.deps.trace_id,
-            )
-        except ParameterError as exc:
-            return _error("Ungültige Parameter: " + "; ".join(exc.errors))
-        except UnknownPackError:
-            return _error(f"Unbekannte Vorlage '{template_key}'")
+        async with ctx.deps.write_lock:
+            try:
+                outcome = await ctx.deps.projects.create_from_template(
+                    ctx.deps.owner_id,
+                    template_key=template_key,
+                    title=title,
+                    params=params,
+                    actor="agent",
+                    trace_id=ctx.deps.trace_id,
+                )
+            except ParameterError as exc:
+                return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+            except UnknownPackError:
+                return _error(f"Unbekannte Vorlage '{template_key}'")
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
         return {"action": "created", "project": project_summary(outcome.project)}
@@ -235,20 +265,21 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
             params: Optional initial parameter values (otherwise the design defaults).
         """
         design = design.model_copy(update={"origin": Origin.AI})
-        try:
-            outcome = await ctx.deps.projects.create(
-                ctx.deps.owner_id,
-                pack_id=DESIGN_PACK_ID,
-                title=title,
-                params=params or {},
-                design=design,
-                actor="agent",
-                trace_id=ctx.deps.trace_id,
-            )
-        except DesignRejectedError as exc:
-            return _design_rejected(exc)
-        except ParameterError as exc:
-            return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+        async with ctx.deps.write_lock:
+            try:
+                outcome = await ctx.deps.projects.create(
+                    ctx.deps.owner_id,
+                    pack_id=DESIGN_PACK_ID,
+                    title=title,
+                    params=params or {},
+                    design=design,
+                    actor="agent",
+                    trace_id=ctx.deps.trace_id,
+                )
+            except DesignRejectedError as exc:
+                return _design_rejected(exc)
+            except ParameterError as exc:
+                return _error("Ungültige Parameter: " + "; ".join(exc.errors))
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
         return {"action": "created", "project": project_summary(outcome.project)}
@@ -271,24 +302,27 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
         ctx: RunContext[AgentDeps], design: AssemblyDesign
     ) -> dict[str, Any]:
         """Replace the design of the current free-form project (structural changes such as an
-        extra drawer or a different construction). Pure dimension changes use change_project."""
-        if ctx.deps.project_id is None:
-            return _error("Es ist kein Projekt aktiv.")
+        extra drawer or a different construction). Pure dimension changes use change_project.
+
+        The previous AI explanation is removed; call add_explanation afterwards."""
         design = design.model_copy(update={"origin": Origin.AI})
-        try:
-            outcome = await ctx.deps.projects.execute(
-                ctx.deps.owner_id,
-                ctx.deps.project_id,
-                ReplaceDesign(design=design),
-                actor="agent",
-                trace_id=ctx.deps.trace_id,
-            )
-        except DesignRejectedError as exc:
-            return _design_rejected(exc)
-        except ParameterError as exc:
-            return _error("Ungültige Parameter: " + "; ".join(exc.errors))
-        except (CommandError, ProjectNotFoundError) as exc:
-            return _error(f"Änderung nicht möglich: {exc}")
+        async with ctx.deps.write_lock:
+            if ctx.deps.project_id is None:
+                return _error("Es ist kein Projekt aktiv.")
+            try:
+                outcome = await ctx.deps.projects.execute(
+                    ctx.deps.owner_id,
+                    ctx.deps.project_id,
+                    ReplaceDesign(design=design),
+                    actor="agent",
+                    trace_id=ctx.deps.trace_id,
+                )
+            except DesignRejectedError as exc:
+                return _design_rejected(exc)
+            except ParameterError as exc:
+                return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+            except (CommandError, ProjectNotFoundError) as exc:
+                return _error(f"Änderung nicht möglich: {exc}")
         ctx.deps.changed_projects.add(outcome.project.id)
         return {
             "action": "changed",
@@ -310,19 +344,20 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
             title: Short project title in German, e.g. "Hochbeet am Gartenhaus".
             params: Pack parameters; omitted parameters use the pack defaults.
         """
-        try:
-            outcome = await ctx.deps.projects.create(
-                ctx.deps.owner_id,
-                pack_id=pack_id,
-                title=title,
-                params=params,
-                actor="agent",
-                trace_id=ctx.deps.trace_id,
-            )
-        except ParameterError as exc:
-            return _error("Ungültige Parameter: " + "; ".join(exc.errors))
-        except UnknownPackError:
-            return _error(f"Unbekanntes Construction Pack '{pack_id}'")
+        async with ctx.deps.write_lock:
+            try:
+                outcome = await ctx.deps.projects.create(
+                    ctx.deps.owner_id,
+                    pack_id=pack_id,
+                    title=title,
+                    params=params,
+                    actor="agent",
+                    trace_id=ctx.deps.trace_id,
+                )
+            except ParameterError as exc:
+                return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+            except UnknownPackError:
+                return _error(f"Unbekanntes Construction Pack '{pack_id}'")
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
         return {"action": "created", "project": project_summary(outcome.project)}
@@ -330,20 +365,21 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
     @agent.tool
     async def change_project(ctx: RunContext[AgentDeps], command: AgentCommand) -> dict[str, Any]:
         """Change the current project with a typed command (lengths in millimetres)."""
-        if ctx.deps.project_id is None:
-            return _error("Es ist noch kein Projekt aktiv. Erstelle zuerst ein Projekt.")
-        try:
-            outcome = await ctx.deps.projects.execute(
-                ctx.deps.owner_id,
-                ctx.deps.project_id,
-                command,
-                actor="agent",
-                trace_id=ctx.deps.trace_id,
-            )
-        except ParameterError as exc:
-            return _error("Ungültige Parameter: " + "; ".join(exc.errors))
-        except (CommandError, ProjectNotFoundError) as exc:
-            return _error(f"Änderung nicht möglich: {exc}")
+        async with ctx.deps.write_lock:
+            if ctx.deps.project_id is None:
+                return _error("Es ist noch kein Projekt aktiv. Erstelle zuerst ein Projekt.")
+            try:
+                outcome = await ctx.deps.projects.execute(
+                    ctx.deps.owner_id,
+                    ctx.deps.project_id,
+                    command,
+                    actor="agent",
+                    trace_id=ctx.deps.trace_id,
+                )
+            except ParameterError as exc:
+                return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+            except (CommandError, ProjectNotFoundError) as exc:
+                return _error(f"Änderung nicht möglich: {exc}")
         ctx.deps.changed_projects.add(outcome.project.id)
         return {
             "action": "changed",
@@ -354,17 +390,18 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
     @agent.tool
     async def undo_last_change(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
         """Undo the last change of the current project."""
-        if ctx.deps.project_id is None:
-            return _error("Es ist kein Projekt aktiv.")
-        try:
-            outcome = await ctx.deps.projects.undo(
-                ctx.deps.owner_id,
-                ctx.deps.project_id,
-                actor="agent",
-                trace_id=ctx.deps.trace_id,
-            )
-        except (CommandError, ProjectNotFoundError) as exc:
-            return _error(f"Rückgängig nicht möglich: {exc}")
+        async with ctx.deps.write_lock:
+            if ctx.deps.project_id is None:
+                return _error("Es ist kein Projekt aktiv.")
+            try:
+                outcome = await ctx.deps.projects.undo(
+                    ctx.deps.owner_id,
+                    ctx.deps.project_id,
+                    actor="agent",
+                    trace_id=ctx.deps.trace_id,
+                )
+            except (CommandError, ProjectNotFoundError) as exc:
+                return _error(f"Rückgängig nicht möglich: {exc}")
         ctx.deps.changed_projects.add(outcome.project.id)
         return {
             "action": "undone",
@@ -386,18 +423,19 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
     @agent.tool
     async def add_explanation(ctx: RunContext[AgentDeps], text: str) -> dict[str, Any]:
         """Store a short explanation of the design for the project document (labelled as AI)."""
-        if ctx.deps.project_id is None:
-            return _error("Es ist kein Projekt aktiv.")
-        try:
-            await ctx.deps.projects.execute(
-                ctx.deps.owner_id,
-                ctx.deps.project_id,
-                AddNote(text=text[:2000], origin=Origin.AI),
-                actor="agent",
-                trace_id=ctx.deps.trace_id,
-            )
-        except (CommandError, ProjectNotFoundError) as exc:
-            return _error(f"Notiz nicht gespeichert: {exc}")
+        async with ctx.deps.write_lock:
+            if ctx.deps.project_id is None:
+                return _error("Es ist kein Projekt aktiv.")
+            try:
+                await ctx.deps.projects.execute(
+                    ctx.deps.owner_id,
+                    ctx.deps.project_id,
+                    AddNote(text=text[:2000], origin=Origin.AI),
+                    actor="agent",
+                    trace_id=ctx.deps.trace_id,
+                )
+            except (CommandError, ProjectNotFoundError) as exc:
+                return _error(f"Notiz nicht gespeichert: {exc}")
         return {"action": "note_added"}
 
     return agent

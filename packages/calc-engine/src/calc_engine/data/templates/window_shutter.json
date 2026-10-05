@@ -1,0 +1,263 @@
+{
+  "key": "window_shutter",
+  "title": "Fensterladen",
+  "description": "Brett-Fensterladen mit Querleisten, ein- oder zweiflügelig, mit Ladenbändern, Verschluss und Sturmhaken; Breite = gesamte Fensteröffnung",
+  "keywords": [
+    "fensterladen",
+    "fensterläden",
+    "fensterlaeden",
+    "klappladen",
+    "klappläden",
+    "schlagladen"
+  ],
+  "design": {
+    "object_type": "Fensterladen",
+    "summary": "Brett-Fensterladen mit {wings} Flügel(n)",
+    "use": "outdoor",
+    "support": "wall",
+    "origin": "engine",
+    "params": [
+      {
+        "name": "width_mm",
+        "label": "Breite gesamt (mm)",
+        "kind": "length",
+        "default": 600,
+        "min": 300,
+        "max": 1600
+      },
+      {
+        "name": "height_mm",
+        "label": "Höhe (mm)",
+        "kind": "length",
+        "default": 800,
+        "min": 300,
+        "max": 1600
+      },
+      {
+        "name": "wings",
+        "label": "Anzahl Flügel",
+        "kind": "count",
+        "default": 2,
+        "min": 1,
+        "max": 2
+      },
+      {
+        "name": "boards",
+        "label": "Bretter je Flügel (0 = automatisch, ca. 10 cm breit)",
+        "kind": "count",
+        "default": 0,
+        "min": 0,
+        "max": 8
+      },
+      {
+        "name": "board_mm",
+        "label": "Brettstärke (mm)",
+        "kind": "length",
+        "default": 18,
+        "min": 18,
+        "max": 28
+      },
+      {
+        "name": "wood",
+        "label": "Holzart",
+        "kind": "choice",
+        "default": "douglas",
+        "options": [
+          {
+            "value": "douglas",
+            "label": "Douglasie"
+          },
+          {
+            "value": "larch",
+            "label": "Lärche"
+          },
+          {
+            "value": "oak",
+            "label": "Eiche"
+          }
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "id": "board",
+        "name": "Brett",
+        "material": "lumber_{wood}",
+        "size": [
+          "(width_mm + 3) / wings / if(boards > 0, boards, max(1, round(((width_mm + 3) / wings - 3) / 100))) - 3",
+          "board_mm",
+          "height_mm"
+        ],
+        "at": [
+          "i * (width_mm + 3) / wings / if(boards > 0, boards, max(1, round(((width_mm + 3) / wings - 3) / 100)))",
+          0,
+          0
+        ],
+        "repeat": {
+          "count": "wings * if(boards > 0, boards, max(1, round(((width_mm + 3) / wings - 3) / 100)))",
+          "var": "i"
+        }
+      },
+      {
+        "id": "batten",
+        "name": "Querleiste",
+        "material": "lumber_{wood}",
+        "size": [
+          "(width_mm + 3) / wings - 3 - 2 * min(20, ((width_mm + 3) / wings / if(boards > 0, boards, max(1, round(((width_mm + 3) / wings - 3) / 100))) - 3) / 2)",
+          "board_mm",
+          70
+        ],
+        "at": [
+          "(i // (n / wings)) * (width_mm + 3) / wings + min(20, ((width_mm + 3) / wings / if(boards > 0, boards, max(1, round(((width_mm + 3) / wings - 3) / 100))) - 3) / 2)",
+          "board_mm",
+          "60 + (i % (n / wings)) * (height_mm - 190) / (n / wings - 1)"
+        ],
+        "repeat": {
+          "count": "wings * if(height_mm > 900, 3, 2)",
+          "var": "i"
+        }
+      },
+      {
+        "id": "hinge_s",
+        "name": "Ladenband",
+        "material": "hinge_strap_100",
+        "size": [
+          100,
+          3,
+          30
+        ],
+        "at": [
+          "if(i // 2 == 0, 0, width_mm - 100)",
+          "2 * board_mm",
+          "if(i % 2 == 0, 60, height_mm - 130) + (70 - 30) / 2"
+        ],
+        "repeat": {
+          "count": "2 * wings",
+          "var": "i"
+        },
+        "when": "(width_mm + 3) / wings - 3 < 260"
+      },
+      {
+        "id": "hinge_m",
+        "name": "Ladenband",
+        "material": "hinge_strap_200",
+        "size": [
+          200,
+          3,
+          40
+        ],
+        "at": [
+          "if(i // 2 == 0, 0, width_mm - 200)",
+          "2 * board_mm",
+          "if(i % 2 == 0, 60, height_mm - 130) + (70 - 40) / 2"
+        ],
+        "repeat": {
+          "count": "2 * wings",
+          "var": "i"
+        },
+        "when": "(width_mm + 3) / wings - 3 >= 260 and (width_mm + 3) / wings - 3 < 450"
+      },
+      {
+        "id": "hinge_l",
+        "name": "Ladenband",
+        "material": "hinge_strap_300",
+        "size": [
+          300,
+          3,
+          45
+        ],
+        "at": [
+          "if(i // 2 == 0, 0, width_mm - 300)",
+          "2 * board_mm",
+          "if(i % 2 == 0, 60, height_mm - 130) + (70 - 45) / 2"
+        ],
+        "repeat": {
+          "count": "2 * wings",
+          "var": "i"
+        },
+        "when": "(width_mm + 3) / wings - 3 >= 450"
+      },
+      {
+        "id": "latch",
+        "name": "Schubriegel",
+        "material": "latch_barrel_80",
+        "size": [
+          80,
+          12,
+          30
+        ],
+        "at": [
+          "if(wings == 2, (width_mm + 3) / wings - 41.5, (width_mm + 3) / wings - 3 - 80)",
+          "2 * board_mm",
+          "height_mm - 130 + 20"
+        ]
+      }
+    ],
+    "hardware": [
+      {
+        "item": "hook_storm_100",
+        "quantity": "wings",
+        "note": "hält den geöffneten Laden an der Wand"
+      }
+    ],
+    "finish": "finish_oil_outdoor_750",
+    "steps": [
+      {
+        "title": "Bretter auslegen",
+        "text": "Lege je Flügel die Bretter mit der Außenseite nach unten auf eine ebene Unterlage. Zwischen den Brettern 3 mm Fuge lassen (Pappstreifen als Abstandshalter), Ober- und Unterkanten bündig ausrichten und die Bretter mit Zwingen zusammenhalten.",
+        "parts": [
+          "board"
+        ]
+      },
+      {
+        "title": "Querleisten aufschrauben",
+        "text": "Querleisten 20 mm vom Seitenrand eingerückt auflegen: die untere 60 mm über der Unterkante, die obere 60 mm unter der Oberkante (über 90 cm Höhe eine dritte mittig). Diagonalen messen, beide müssen gleich lang sein. Je Brett und Leiste zwei Schrauben von der Leistenseite eindrehen; 3 mm vorbohren, die Spitzen dürfen außen nicht durchstehen.",
+        "parts": [
+          "batten"
+        ]
+      },
+      {
+        "title": "Ladenbänder anschrauben",
+        "text": "Je Flügel zwei Ladenbänder auf die Querleisten schrauben, das Gelenkauge bündig an der äußeren Flügelkante (siehe Isometrie Wandseite). Die Kloben am Fensterrahmen so setzen, dass der Laden 3–5 mm Luft zur Fensterbank hat: erst je Kloben eine Schraube, Laden einhängen, Lauf prüfen, dann alle Schrauben setzen.",
+        "parts": [
+          "hinge_s",
+          "hinge_m",
+          "hinge_l"
+        ]
+      },
+      {
+        "title": "Verschluss und Sturmhaken montieren",
+        "text": "Läden schließen. Den Schubriegel innen auf die obere Querleiste schrauben, bei zwei Flügeln mittig über der Fuge, sodass der Riegel in das Schließblech am anderen Flügel greift; bei einem Flügel greift er in den Fensterrahmen. Sturmhaken an der Außenwand setzen, damit die geöffneten Läden nicht schlagen.",
+        "parts": [
+          "latch"
+        ]
+      }
+    ],
+    "variants": [
+      {
+        "key": "larch",
+        "name": "Lärche",
+        "description": "Besonders witterungsbeständige Lärche.",
+        "overrides": {
+          "wood": "larch"
+        }
+      },
+      {
+        "key": "oak",
+        "name": "Eiche",
+        "description": "Massive Eiche, sehr haltbar, deutlich teurer.",
+        "overrides": {
+          "wood": "oak"
+        }
+      },
+      {
+        "key": "thick",
+        "name": "22 mm Bretter",
+        "description": "Stärkere Bretter für größere Läden.",
+        "overrides": {
+          "board_mm": 22
+        }
+      }
+    ]
+  }
+}
