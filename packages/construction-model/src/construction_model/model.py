@@ -90,6 +90,9 @@ class Money(Frozen):
     currency: Literal["EUR"] = "EUR"
 
 
+PriceSource = Literal["estimate", "user"]
+
+
 class BomLine(Frozen):
     position: int
     item_id: str
@@ -100,6 +103,16 @@ class BomLine(Frozen):
     unit_price: Money
     total: Money
     note: str | None = None
+    price_source: PriceSource = Field(
+        "estimate",
+        description="estimate = catalog guide price (range), user = price entered by the user",
+    )
+    used_share: Decimal | None = Field(
+        None,
+        description="Share of the purchased quantity this project uses (e.g. 0.12 of a screw "
+        "pack); None = all of it",
+    )
+    search_query: str = Field("", description="Search text to look the product up at retailers")
 
 
 class CutLine(Frozen):
@@ -143,6 +156,11 @@ class CostSummary(Frozen):
     material: Money
     tools_optional: Money
     note: str
+    material_used: Money | None = Field(
+        None,
+        description="Cost of what the project actually consumes (opened packs counted pro rata)",
+    )
+    user_priced: int = Field(0, description="Number of BOM lines priced by the user")
 
 
 class InstructionStep(Frozen):
@@ -260,6 +278,10 @@ class ProjectInputs(Frozen):
     variant_key: str | None = None
     region: Region | None = None
     notes: list[Note] = Field(default_factory=list)
+    prices: dict[str, Decimal] = Field(
+        default_factory=dict,
+        description="Unit prices in EUR entered by the user, keyed by BOM item id",
+    )
     design: AssemblyDesign | None = Field(
         None, description="Free-form parametric design (pack_id 'design', ADR-0004)"
     )

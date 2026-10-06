@@ -126,6 +126,24 @@ export type BomLine = {
      * Note
      */
     note?: string | null;
+    /**
+     * Price Source
+     *
+     * estimate = catalog guide price (range), user = price entered by the user
+     */
+    price_source?: 'estimate' | 'user';
+    /**
+     * Used Share
+     *
+     * Share of the purchased quantity this project uses (e.g. 0.12 of a screw pack); None = all of it
+     */
+    used_share?: string | null;
+    /**
+     * Search Query
+     *
+     * Search text to look the product up at retailers
+     */
+    search_query?: string;
 };
 
 /**
@@ -229,7 +247,9 @@ export type CommandRequest = {
         type: 'add_note';
     } & AddNote) | ({
         type: 'replace_design';
-    } & ReplaceDesign);
+    } & ReplaceDesign) | ({
+        type: 'set_price';
+    } & SetPrice);
 };
 
 /**
@@ -373,6 +393,16 @@ export type CostSummary = {
      * Note
      */
     note: string;
+    /**
+     * Cost of what the project actually consumes (opened packs counted pro rata)
+     */
+    material_used?: Money | null;
+    /**
+     * User Priced
+     *
+     * Number of BOM lines priced by the user
+     */
+    user_priced?: number;
 };
 
 /**
@@ -1123,6 +1153,14 @@ export type ProjectInputs = {
      */
     notes?: Array<Note>;
     /**
+     * Prices
+     *
+     * Unit prices in EUR entered by the user, keyed by BOM item id
+     */
+    prices?: {
+        [key: string]: string;
+    };
+    /**
      * Free-form parametric design (pack_id 'design', ADR-0004)
      */
     design?: AssemblyDesign | null;
@@ -1399,6 +1437,26 @@ export type SetParameters = {
     values: {
         [key: string]: number | number | string | boolean;
     };
+};
+
+/**
+ * SetPrice
+ *
+ * Set the user's own unit price for a BOM item (EUR); ``None`` returns to the guide price.
+ */
+export type SetPrice = {
+    /**
+     * Type
+     */
+    type?: 'set_price';
+    /**
+     * Item Id
+     */
+    item_id: string;
+    /**
+     * Unit Price
+     */
+    unit_price?: number | string | null;
 };
 
 /**

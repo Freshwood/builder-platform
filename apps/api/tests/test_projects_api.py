@@ -221,3 +221,27 @@ async def test_pdf_download_headers(client: httpx.AsyncClient) -> None:
     assert pdf.headers["content-type"] == "application/pdf"
     assert pdf.headers["content-disposition"].endswith('.pdf"')
     assert pdf.content.startswith(b"%PDF-")
+
+
+async def test_user_price_via_command_and_undo(client: httpx.AsyncClient) -> None:
+    created = await client.post(
+        "/api/projects", json={"pack_id": "template", "template_key": "shelf", "title": "Regal"}
+    )
+    project = created.json()["project"]
+    line = project["result"]["bom"][0]
+    assert line["price_source"] == "estimate"
+    assert line["search_query"]
+
+    priced = await client.post(
+        f"/api/projects/{project['id']}/commands",
+        json={"command": {"type": "set_price", "item_id": line["item_id"], "unit_price": "39.90"}},
+    )
+    assert priced.status_code == 200, priced.text
+    result = priced.json()["project"]["result"]
+    new_line = next(b for b in result["bom"] if b["item_id"] == line["item_id"])
+    assert new_line["price_source"] == "user"
+    assert new_line["unit_price"] == {"min": "39.90", "max": "39.90", "currency": "EUR"}
+    assert result["costs"]["user_priced"] == 1
+
+    undone = await client.post(f"/api/projects/{project['id']}/undo")
+    assert undone.json()["project"]["result"]["costs"]["user_priced"] == 0

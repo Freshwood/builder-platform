@@ -167,3 +167,35 @@ test("a failing PDF request shows an error instead of saving document.txt", asyn
   expect((await downloadPromise).suggestedFilename()).toMatch(/^homeworking-.*\.pdf$/);
   await expect(page.locator("#pdf-error")).toHaveCount(0);
 });
+
+test("material list explains prices and accepts the user's real prices", async ({ page }) => {
+  await page.goto("/");
+  await send(page, "Regal 80 x 30 x 180 cm mit 5 Böden");
+  await expect(page.getByTestId("project-summary")).toContainText("Standregal");
+  await page.getByRole("tab", { name: "Material" }).click();
+  await expect(page.getByText("Woher kommen die Preise?")).toBeVisible();
+  await expect(page.getByTestId("price-status")).toHaveText(
+    "Noch keine eigenen Preise eingetragen.",
+  );
+  const hornbach = page.getByRole("link", { name: /^Hornbach/ }).first();
+  await expect(hornbach).toHaveAttribute("href", /^https:\/\/www\.hornbach\.de\/s\/Leimholzplatte/);
+  const totalBefore = await page.getByTestId("bom-total").textContent();
+
+  const input = page.getByLabel("Dein Preis je Platte für Leimholzplatte Fichte");
+  await input.fill("39,90");
+  await input.press("Enter");
+  await expect(page.getByTestId("price-status")).toHaveText(
+    /^1 von \d+ Positionen mit deinem Preis\.$/,
+  );
+  await expect(page.getByTestId("bom")).toContainText("dein Preis");
+  await expect(page.getByTestId("bom-total")).not.toHaveText(totalBefore ?? "");
+  await expect(page.getByTestId("material-cost")).toBeVisible();
+  await expectNoSeriousA11yViolations(page);
+  await page.getByTestId("bom").screenshot({ path: "test-results/bom.png" });
+  await page.getByRole("list", { name: "Eckdaten" }).screenshot({ path: "test-results/kpi.png" });
+
+  await page.getByRole("button", { name: "Rückgängig" }).click();
+  await expect(page.getByTestId("price-status")).toHaveText(
+    "Noch keine eigenen Preise eingetragen.",
+  );
+});

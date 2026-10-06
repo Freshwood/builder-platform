@@ -194,6 +194,28 @@ def sum_money(values: list[Money]) -> Money:
     return money(sum((v.min for v in values), Decimal(0)), sum((v.max for v in values), Decimal(0)))
 
 
+_QUERY_NOISE = re.compile(
+    r"\s*\b(?:Packung|je|ca\.|inkl\.|mit Kloben|einseitig|unbehandelt|gehobelt|glatt)(?=\s|$).*$",
+    re.IGNORECASE,
+)
+_QUERY_LABELS = re.compile(r"\b(Länge|Breite|Rad|Lochabstand)\s+", re.IGNORECASE)
+
+
+def search_query(name: str, spec: str) -> str:
+    """Short product search text for retailer websites, e.g. 'Leimholzplatte Fichte 18 mm'."""
+    # ", " separates spec parts; a bare comma is a decimal comma ("0,75 l").
+    base = re.split(r", | \(", name)[0].strip()
+    first = _QUERY_LABELS.sub("", _QUERY_NOISE.sub("", spec.split(", ")[0])).strip()
+    return f"{base} {first}".strip()
+
+
+def _share(used: Decimal | float | None, quantity: Decimal) -> Decimal | None:
+    if used is None or quantity <= 0:
+        return None
+    share = Decimal(str(used)) / quantity
+    return min(Decimal(1), share).quantize(Decimal("0.001"), ROUND_HALF_UP)
+
+
 class BomBuilder:
     """Collects BOM lines in insertion order and prices them from the catalog."""
 
@@ -201,7 +223,14 @@ class BomBuilder:
         self._catalog = catalog
         self._lines: list[BomLine] = []
 
-    def add(self, item_id: str, quantity: int | Decimal, note: str | None = None) -> None:
+    def add(
+        self,
+        item_id: str,
+        quantity: int | Decimal,
+        note: str | None = None,
+        used: Decimal | float | None = None,
+    ) -> None:
+        """Add a catalog item; ``used`` is the consumed quantity if less than bought (packs)."""
         if quantity <= 0:
             return
         item = self._catalog.item(item_id)
@@ -217,6 +246,8 @@ class BomBuilder:
                 unit_price=money(item.price_min, item.price_max),
                 total=money(item.price_min * qty, item.price_max * qty),
                 note=note,
+                used_share=_share(used, qty),
+                search_query=search_query(item.name, item.spec),
             )
         )
 
@@ -246,6 +277,7 @@ class BomBuilder:
                 unit_price=money(unit_min, unit_max),
                 total=money(unit_min * qty, unit_max * qty),
                 note=note,
+                search_query=search_query(name, spec),
             )
         )
 

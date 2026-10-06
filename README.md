@@ -27,6 +27,17 @@ Stückliste stehen, sonst lehnt die Engine den Entwurf ab. Beschläge mit festen
 Schubriegel) werden als Bauteile platziert und erscheinen in Zeichnung und 3D-Modell; bei
 Wandmontage gibt es zusätzlich eine Isometrie und eine Rückansicht der Wandseite.
 
+### Preise
+
+Ohne Angabe des Nutzers ist jeder Preis ein **Richtpreis**: eine Spanne typischer Ladenpreise aus
+`data/catalog.json` (Stand im Katalog), angezeigt als typischer Wert (Mitte) mit Spanne. Packungen
+(Schrauben, Öl, Leim, Rollen) werden voll eingekauft; „davon verbraucht“ zählt nur den Anteil,
+den das Projekt braucht (`BomLine.used_share`, `CostSummary.material_used`). Jede Position hat
+Such-Links zu Händlern (Hornbach, OBI, Google Shopping) und ein Feld für den echten Preis; der
+landet als Command `set_price` im Projekt-Log (rückgängig machbar, `ProjectInputs.prices`) und
+ersetzt den Richtpreis in Stückliste, Summen, Varianten und PDF (`calc_engine.pricing`). Auch der
+Assistent übernimmt genannte Preise („die Platte kostet bei mir 39,90 €“).
+
 ## Architektur in einem Bild
 
 ```text

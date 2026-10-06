@@ -60,7 +60,10 @@
     {% for key, value in result.key_figures.items() %}
       <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
     {% endfor %}
-      <tr><td>Materialkosten (Richtwert)</td><td>{{ eur(result.costs.material.min) }} – {{ eur(result.costs.material.max) }}</td></tr>
+      <tr><td>Materialkosten Einkauf</td><td>{{ cost(result.costs.material) }}</td></tr>
+      {% if result.costs.material_used %}
+      <tr><td>davon für dieses Projekt verbraucht</td><td>{{ cost(result.costs.material_used) }}</td></tr>
+      {% endif %}
       <tr><td>Werkzeug, falls nicht vorhanden</td><td>{{ eur(result.costs.tools_optional.min) }} – {{ eur(result.costs.tools_optional.max) }}</td></tr>
     </tbody>
   </table>
@@ -126,20 +129,22 @@
 <section class="page-break" aria-labelledby="h-bom">
   <h2 id="h-bom">Materialliste</h2>
   <table>
-    <thead><tr><th scope="col">Pos.</th><th scope="col">Material</th><th scope="col">Spezifikation</th><th scope="col" class="num">Menge</th><th scope="col" class="num">Richtpreis</th></tr></thead>
+    <thead><tr><th scope="col">Pos.</th><th scope="col">Material</th><th scope="col">Spezifikation</th><th scope="col" class="num">Menge</th><th scope="col" class="num">Einzelpreis</th><th scope="col" class="num">Summe</th><th scope="col">Preisquelle</th></tr></thead>
     <tbody>
     {% for line in result.bom %}
       <tr>
         <td>{{ line.position }}</td>
         <td>{{ line.name }}{% if line.note %}<br><span class="muted">{{ line.note }}</span>{% endif %}</td>
         <td>{{ line.spec }}</td>
-        <td class="num">{{ qty(line.quantity) }} {{ line.unit }}</td>
-        <td class="num">{{ eur(line.total.min) }} – {{ eur(line.total.max) }}</td>
+        <td class="num">{{ qty(line.quantity) }} {{ line.unit }}{% if line.used_share is not none and line.used_share < 1 %}<br><span class="muted">davon verbraucht {{ (line.used_share * 100) | round | int }} %</span>{% endif %}</td>
+        <td class="num">{{ cost(line.unit_price) }}</td>
+        <td class="num">{{ cost(line.total) }}</td>
+        <td>{% if line.price_source == "user" %}dein Preis{% else %}Richtpreis{% endif %}</td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
-  <p class="muted">{{ result.costs.note }} Katalog {{ result.provenance.catalog_version }} (Stand {{ result.provenance.catalog_as_of }}).</p>
+  <p class="muted">{{ price_explanation }} Katalog {{ result.provenance.catalog_version }} (Stand {{ result.provenance.catalog_as_of }}).</p>
 
   <h2>Zuschnittliste</h2>
   <table>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from decimal import Decimal
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from pydantic import BaseModel
@@ -543,7 +544,12 @@ class RaisedBedPack:
         bom.add(board_item, len(board_bars), note=f"{len(board_pieces)} Zuschnitte")
         bom.add(post_item, len(post_bars), note=f"{g.post_count} Pfosten à {g.post_length} mm")
         screws = g.wall_screws + g.cap_screws
-        bom.add("screw_a2_5x60_200", math.ceil(screws * 1.05 / 200), note=f"{screws} Stk benötigt")
+        bom.add(
+            "screw_a2_5x60_200",
+            math.ceil(screws * 1.05 / 200),
+            note=f"{screws} Stk benötigt",
+            used=Decimal(screws) / 200,
+        )
         if g.tie_rod_count:
             rod_stock = 1000 if g.tie_rod_length <= 1000 else 2000
             rod_bars = plan_cuts([g.tie_rod_length] * g.tie_rod_count, rod_stock)
@@ -560,7 +566,11 @@ class RaisedBedPack:
                     waste_mm=sum(b.waste_mm for b in rod_bars),
                 )
             )
-            bom.add("nutwasher_m10_a2_10", math.ceil(g.tie_rod_count * 2 / 10))
+            bom.add(
+                "nutwasher_m10_a2_10",
+                math.ceil(g.tie_rod_count * 2 / 10),
+                used=Decimal(g.tie_rod_count * 2) / 10,
+            )
         bom.add("slab_concrete_300x300x40", g.post_count)
         if p.liner:
             per_roll = LINER_ROLL_LENGTH * g.liner_strips_per_roll
@@ -568,6 +578,7 @@ class RaisedBedPack:
                 f"liner_hdpe_{g.liner_roll_width}x5000",
                 math.ceil(g.liner_running_length / per_roll),
                 note=f"{g.liner_running_length} mm Bahn à {g.liner_height} mm Höhe",
+                used=Decimal(g.liner_running_length) / per_roll,
             )
         if p.liner or p.vole_mesh:
             bom.add("staples_a2_10mm_1000", 1)
@@ -576,6 +587,7 @@ class RaisedBedPack:
                 "mesh_galv_13mm_1000x5000",
                 math.ceil(g.mesh_strips * g.mesh_strip_length / MESH_ROLL_LENGTH),
                 note=f"{g.mesh_strips} Bahn(en) à {g.mesh_strip_length} mm",
+                used=Decimal(g.mesh_strips * g.mesh_strip_length) / MESH_ROLL_LENGTH,
             )
 
         fill_layers = [

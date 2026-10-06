@@ -745,6 +745,35 @@
               }
             ],
             "title": "Note"
+          },
+          "price_source": {
+            "type": "string",
+            "enum": [
+              "estimate",
+              "user"
+            ],
+            "title": "Price Source",
+            "description": "estimate = catalog guide price (range), user = price entered by the user",
+            "default": "estimate"
+          },
+          "used_share": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Share",
+            "description": "Share of the purchased quantity this project uses (e.g. 0.12 of a screw pack); None = all of it"
+          },
+          "search_query": {
+            "type": "string",
+            "title": "Search Query",
+            "description": "Search text to look the product up at retailers",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -893,6 +922,9 @@
               },
               {
                 "$ref": "#/components/schemas/ReplaceDesign"
+              },
+              {
+                "$ref": "#/components/schemas/SetPrice"
               }
             ],
             "title": "Command",
@@ -905,6 +937,7 @@
                 "replace_design": "#/components/schemas/ReplaceDesign",
                 "select_variant": "#/components/schemas/SelectVariant",
                 "set_parameters": "#/components/schemas/SetParameters",
+                "set_price": "#/components/schemas/SetPrice",
                 "set_region": "#/components/schemas/SetRegion"
               }
             }
@@ -1172,6 +1205,23 @@
           "note": {
             "type": "string",
             "title": "Note"
+          },
+          "material_used": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cost of what the project actually consumes (opened packs counted pro rata)"
+          },
+          "user_priced": {
+            "type": "integer",
+            "title": "User Priced",
+            "description": "Number of BOM lines priced by the user",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -2523,6 +2573,15 @@
             "type": "array",
             "title": "Notes"
           },
+          "prices": {
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+            },
+            "type": "object",
+            "title": "Prices",
+            "description": "Unit prices in EUR entered by the user, keyed by BOM item id"
+          },
           "design": {
             "anyOf": [
               {
@@ -2991,6 +3050,46 @@
         ],
         "title": "SetParameters",
         "description": "Set one or more parameters to absolute values (lengths in mm)."
+      },
+      "SetPrice": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "set_price",
+            "title": "Type",
+            "default": "set_price"
+          },
+          "item_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Item Id"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item_id"
+        ],
+        "title": "SetPrice",
+        "description": "Set the user's own unit price for a BOM item (EUR); ``None`` returns to the guide price."
       },
       "SetRegion": {
         "properties": {

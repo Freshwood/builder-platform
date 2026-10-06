@@ -738,7 +738,12 @@ def build_design(
             item = catalog.item(item_id)
             assert item.pack_size is not None
             packs = math.ceil(Decimal(count) * SCREW_RESERVE / item.pack_size)
-            bom.add(item_id, packs, note=f"ca. {count} Stk benötigt")
+            bom.add(
+                item_id,
+                packs,
+                note=f"ca. {count} Stk benötigt",
+                used=Decimal(count) / item.pack_size,
+            )
             screw_total += count
         if too_thick:
             warnings.append(
@@ -746,7 +751,12 @@ def build_design(
                 "Gewindestangen oder Winkelverbinder prüfen."
             )
     if not outdoor and joints:
-        bom.add("glue_d3_750", math.ceil(joints / JOINTS_PER_GLUE), note="für Leimverbindungen")
+        bom.add(
+            "glue_d3_750",
+            math.ceil(joints / JOINTS_PER_GLUE),
+            note="für Leimverbindungen",
+            used=Decimal(joints) / JOINTS_PER_GLUE,
+        )
 
     surface = _surface_m2(infos)
     if design.finish:
@@ -755,7 +765,10 @@ def build_design(
             raise DesignError([f"Oberflächenmittel '{design.finish}' gibt es nicht im Katalog"])
         cans = math.ceil(Decimal(str(surface)) * FINISH_COATS / item.coverage_m2)
         bom.add(
-            item.id, cans, note=f"{surface:.1f} m² × {FINISH_COATS} Anstriche".replace(".", ",")
+            item.id,
+            cans,
+            note=f"{surface:.1f} m² × {FINISH_COATS} Anstriche".replace(".", ","),
+            used=Decimal(str(surface)) * FINISH_COATS / item.coverage_m2,
         )
         if outdoor and not item.outdoor:
             warnings.append(f"{item.name} ist nicht für außen geeignet.")

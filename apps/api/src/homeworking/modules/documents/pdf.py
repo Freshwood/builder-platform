@@ -10,7 +10,7 @@ from decimal import Decimal
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from construction_model.base import ParamValue
-from construction_model.model import ConstructionResult, Origin, ParamSpec, ProjectModel
+from construction_model.model import ConstructionResult, Money, Origin, ParamSpec, ProjectModel
 from homeworking.modules.compliance.disclosure import (
     AI_CONTENT_LABEL,
     AI_DOCUMENT_STATEMENT,
@@ -28,6 +28,22 @@ _env = Environment(
 def _eur(value: Decimal) -> str:
     text = f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     return f"{text} €"
+
+
+def _cost(value: Money) -> str:
+    """A single value when exact (user price), otherwise the typical value and the range."""
+    if value.min == value.max:
+        return _eur(value.min)
+    typical = (value.min + value.max) / 2
+    return f"ca. {_eur(typical)} ({_eur(value.min)} – {_eur(value.max)})"
+
+
+PRICE_EXPLANATION = (
+    "Preisquelle: „Richtpreis“ ist eine Spanne typischer Ladenpreise deutscher Baumärkte und "
+    "Holzhändler aus dem Homeworking-Katalog – kein Angebot. Angebrochene Packungen (Schrauben, "
+    "Öl, Leim) werden voll eingekauft; „verbraucht“ zählt nur den Anteil für dieses Projekt. "
+    "Mit deinen echten Preisen (in der Web-App je Position eintragbar) wird die Summe exakt."
+)
 
 
 def _m(mm: int) -> str:
@@ -111,6 +127,8 @@ def render_html(project: ProjectModel, *, now: datetime | None = None) -> str:
         eur=_eur,
         qty=_qty,
         m=_m,
+        cost=_cost,
+        price_explanation=PRICE_EXPLANATION,
     )
 
 

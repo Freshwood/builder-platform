@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
@@ -82,6 +83,14 @@ class ReplaceDesign(_Command):
     design: AssemblyDesign
 
 
+class SetPrice(_Command):
+    """Set the user's own unit price for a BOM item (EUR); ``None`` returns to the guide price."""
+
+    type: Literal["set_price"] = "set_price"
+    item_id: str = Field(min_length=1, max_length=120)
+    unit_price: Decimal | None = Field(None, ge=0, le=100_000, decimal_places=2)
+
+
 class Undo(_Command):
     type: Literal["undo"] = "undo"
 
@@ -95,6 +104,7 @@ Command = Annotated[
     | SetRegion
     | AddNote
     | ReplaceDesign
+    | SetPrice
     | Undo,
     Field(discriminator="type"),
 ]
@@ -107,7 +117,8 @@ EditCommand = Annotated[
     | Rename
     | SetRegion
     | AddNote
-    | ReplaceDesign,
+    | ReplaceDesign
+    | SetPrice,
     Field(discriminator="type"),
 ]
 """Commands that clients may submit for an existing project."""
@@ -191,6 +202,11 @@ def apply_to_inputs(
             return inputs.model_copy(
                 update={"design": design, "params": kept, "variant_key": None, "notes": notes}
             )
+        case SetPrice(item_id=item_id, unit_price=unit_price):
+            prices = {k: v for k, v in inputs.prices.items() if k != item_id}
+            if unit_price is not None:
+                prices[item_id] = unit_price
+            return inputs.model_copy(update={"prices": prices})
         case Undo():
             raise CommandError("Undo must be resolved via effective_commands()")
     raise CommandError(f"Unsupported command {command!r}")  # pragma: no cover

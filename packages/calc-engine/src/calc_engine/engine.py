@@ -13,6 +13,7 @@ from calc_engine.assembly.derive import DESIGN_PACK_ID, DESIGN_PACK_VERSION, bui
 from calc_engine.assembly.resolve import DesignError, validate_params
 from calc_engine.catalog import Catalog, default_catalog
 from calc_engine.pack import Pack, PackBuild, PackDescriptor, VariantSpec
+from calc_engine.pricing import apply_prices
 from construction_model.assembly import AssemblyDesign
 from construction_model.model import (
     ChoiceSpec,
@@ -26,7 +27,7 @@ from construction_model.model import (
     VariantSummary,
 )
 
-ENGINE_VERSION = "0.2.0"
+ENGINE_VERSION = "0.3.0"
 
 
 class ParameterError(ValueError):
@@ -192,11 +193,11 @@ class Engine:
         pack = self.pack(inputs.pack_id)
         params = self.validate_params(inputs.pack_id, inputs.params)
         effective = _dump_params(params)
-        built = pack.build(params, self._catalog)
+        built = apply_prices(pack.build(params, self._catalog), inputs.prices)
 
         def build_variant(spec: VariantSpec) -> PackBuild | None:
             variant_params = self.validate_params(pack.id, {**effective, **spec.overrides})
-            return pack.build(variant_params, self._catalog)
+            return apply_prices(pack.build(variant_params, self._catalog), inputs.prices)
 
         return self._result(
             inputs,
@@ -213,14 +214,14 @@ class Engine:
     def _build_design(self, inputs: ProjectInputs, design: AssemblyDesign) -> ConstructionResult:
         try:
             effective = validate_params(design, inputs.params)
-            built = build_design(design, effective, self._catalog)
+            built = apply_prices(build_design(design, effective, self._catalog), inputs.prices)
         except DesignError as exc:
             raise DesignRejectedError(exc.errors) from None
 
         def build_variant(spec: VariantSpec) -> PackBuild | None:
             try:
                 params = validate_params(design, {**effective, **spec.overrides})
-                return build_design(design, params, self._catalog)
+                return apply_prices(build_design(design, params, self._catalog), inputs.prices)
             except DesignError:
                 return None
 

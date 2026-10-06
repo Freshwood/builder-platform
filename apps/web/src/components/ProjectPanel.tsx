@@ -5,8 +5,10 @@ import clsx from "clsx";
 import dynamic from "next/dynamic";
 import { useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
+import { BomTable } from "@/components/BomTable";
 import { PdfDownload } from "@/components/PdfDownload";
 import { formatEur, useProject, useProjectCommand, useUndo } from "@/lib/api";
+import { formatCost, formatRange, isExact } from "@/lib/prices";
 import { toneColor } from "@/lib/tones";
 
 const Viewer3D = dynamic(() => import("@/components/Viewer3D"), {
@@ -102,16 +104,29 @@ function PositionBadge({ number, tone }: { number: number; tone?: string }) {
   );
 }
 
+function costLabel(result: Result): string {
+  const priced = result.costs.user_priced ?? 0;
+  if (priced === 0) return "Material (Richtpreis)";
+  return priced === result.bom.length ? "Material (deine Preise)" : "Material (teils deine Preise)";
+}
+
 function KpiTiles({ result }: { result: Result }) {
   const figures = Object.entries(result.key_figures).slice(0, 5);
+  const used = result.costs.material_used;
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Eckdaten">
       <li className="col-span-2 rounded-2xl bg-accent px-4 py-3 text-white sm:col-span-1 dark:text-black">
         <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide">
-          <Icon path={ICONS.euro} className="h-4 w-4" /> Material (Richtwert)
+          <Icon path={ICONS.euro} className="h-4 w-4" /> {costLabel(result)}
         </span>
         <span className="mt-1 block text-xl font-bold" data-testid="material-cost">
-          {formatEur(result.costs.material.min)} – {formatEur(result.costs.material.max)}
+          {formatCost(result.costs.material)}
+        </span>
+        <span className="block text-xs">
+          {!isExact(result.costs.material) && <>Spanne {formatRange(result.costs.material)}</>}
+          {used && Number(result.costs.material.min) - Number(used.min) > 0.5 && (
+            <span className="block">davon verbraucht {formatCost(used)}</span>
+          )}
         </span>
       </li>
       {figures.map(([key, value]) => (
@@ -352,9 +367,10 @@ function Variants({ project }: { project: ProjectModel }) {
               )}
             </span>
             <span className="flex-1 text-sm text-muted">{variant.description}</span>
-            <span className="mt-2 text-lg font-bold">
-              {formatEur(variant.material_cost.min)} – {formatEur(variant.material_cost.max)}
-            </span>
+            <span className="mt-2 text-lg font-bold">{formatCost(variant.material_cost)}</span>
+            {!isExact(variant.material_cost) && (
+              <span className="text-xs text-muted">{formatRange(variant.material_cost)}</span>
+            )}
             <button
               type="button"
               disabled={variant.is_selected || command.isPending}
@@ -559,56 +575,7 @@ export function ProjectPanel({ projectId }: { projectId: string }) {
         </Panel>
 
         <Panel tab="bom" active={tab}>
-          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Materialliste">
-            <table className="w-full text-left text-sm" data-testid="bom">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                  <th scope="col" className="py-2 pr-2">
-                    Material
-                  </th>
-                  <th scope="col" className="py-2 pr-2">
-                    Spezifikation
-                  </th>
-                  <th scope="col" className="py-2 pr-2 text-right">
-                    Menge
-                  </th>
-                  <th scope="col" className="py-2 text-right">
-                    Richtpreis
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.bom.map((line) => (
-                  <tr
-                    key={line.item_id}
-                    className="border-b border-border align-top odd:bg-surface-muted/50"
-                  >
-                    <td className="py-1.5 pr-2">
-                      {line.name}
-                      {line.note && <span className="block text-xs text-muted">{line.note}</span>}
-                    </td>
-                    <td className="py-1.5 pr-2">{line.spec}</td>
-                    <td className="py-1.5 pr-2 text-right whitespace-nowrap">
-                      {Number(line.quantity)} {line.unit}
-                    </td>
-                    <td className="py-1.5 text-right whitespace-nowrap">
-                      {formatEur(line.total.min)} – {formatEur(line.total.max)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="font-semibold">
-                  <td className="py-2" colSpan={3}>
-                    Summe Material
-                  </td>
-                  <td className="py-2 text-right whitespace-nowrap">
-                    {formatEur(result.costs.material.min)} – {formatEur(result.costs.material.max)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <BomTable result={result} projectId={project.id} />
           <p className="mt-2 text-xs text-muted">
             {result.costs.note} Werkzeug, falls nicht vorhanden:{" "}
             {formatEur(result.costs.tools_optional.min)} –{" "}

@@ -24,6 +24,7 @@ from construction_model.commands import (
     ReplaceDesign,
     SelectVariant,
     SetParameters,
+    SetPrice,
     SetRegion,
 )
 from construction_model.diff import ModelDiff
@@ -32,7 +33,7 @@ from homeworking.modules.agent.prompts import INSTRUCTIONS
 from homeworking.modules.projects.service import ProjectNotFoundError, ProjectService
 
 AgentCommand = Annotated[
-    SetParameters | ChangeParameterBy | SelectVariant | Rename | SetRegion,
+    SetParameters | ChangeParameterBy | SelectVariant | Rename | SetRegion | SetPrice,
     Field(discriminator="type"),
 ]
 
@@ -78,6 +79,24 @@ def project_summary(model: ProjectModel) -> dict[str, Any]:
         ],
         "key_figures": r.key_figures,
         "material_cost_eur": f"{_eur(r.costs.material.min)} – {_eur(r.costs.material.max)}",
+        "material_used_eur": (
+            f"{_eur(r.costs.material_used.min)} – {_eur(r.costs.material_used.max)}"
+            if r.costs.material_used
+            else None
+        ),
+        "prices": (
+            f"{r.costs.user_priced} von {len(r.bom)} Positionen mit Nutzerpreis, Rest Richtpreise"
+        ),
+        "bom": [
+            {
+                "item_id": line.item_id,
+                "name": f"{line.name} ({line.spec})",
+                "quantity": f"{line.quantity:f} {line.unit}",
+                "unit_price_eur": f"{line.unit_price.min}–{line.unit_price.max}",
+                "source": line.price_source,
+            }
+            for line in r.bom
+        ],
         "variants": [
             {
                 "key": v.key,

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 from construction_model.commands import (
@@ -8,6 +10,7 @@ from construction_model.commands import (
     Rename,
     SelectVariant,
     SetParameters,
+    SetPrice,
     Undo,
     apply_to_inputs,
     can_undo,
@@ -88,3 +91,17 @@ def test_command_json_roundtrip() -> None:
     cmd = command_adapter.validate_python({"type": "change_parameter_by", "name": "w", "delta": 5})
     assert isinstance(cmd, ChangeParameterBy)
     assert command_adapter.validate_json(command_adapter.dump_json(cmd)) == cmd
+
+
+def test_set_price_sets_and_clears_user_price() -> None:
+    inputs = apply_to_inputs(
+        _created(), SetPrice(item_id="glue_d3_750", unit_price=Decimal("7.49"))
+    )
+    assert inputs.prices == {"glue_d3_750": Decimal("7.49")}
+    cleared = apply_to_inputs(inputs, SetPrice(item_id="glue_d3_750", unit_price=None))
+    assert cleared.prices == {}
+
+
+def test_set_price_rejects_negative_prices() -> None:
+    with pytest.raises(ValueError, match="greater than or equal to 0"):
+        SetPrice(item_id="glue_d3_750", unit_price=Decimal("-1"))
