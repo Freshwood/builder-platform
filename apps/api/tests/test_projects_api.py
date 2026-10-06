@@ -192,3 +192,32 @@ async def test_rejected_design_returns_engine_errors(client: httpx.AsyncClient) 
 
     missing = await client.post("/api/projects", json={"pack_id": "design", "title": "x"})
     assert missing.status_code == 422
+
+
+async def test_pdf_render_failure_is_reported_as_json(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failing render must not answer with plain text (the browser saves it as document.txt)."""
+    from homeworking.api import projects as projects_api
+
+    def broken(*_args: object, **_kwargs: object) -> bytes:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(projects_api, "render_pdf", broken)
+    created = await client.post("/api/projects", json={"pack_id": "raised_bed", "title": "A"})
+    pdf = await client.get(f"/api/projects/{created.json()['project']['id']}/document.pdf")
+    assert pdf.status_code == 500
+    assert pdf.headers["content-type"] == "application/json"
+    assert "PDF" in pdf.json()["detail"]
+
+
+async def test_pdf_download_headers(client: httpx.AsyncClient) -> None:
+    created = await client.post(
+        "/api/projects", json={"pack_id": "template", "template_key": "shelf", "title": "Regal"}
+    )
+    project_id = created.json()["project"]["id"]
+    pdf = await client.get(f"/api/projects/{project_id}/document.pdf")
+    assert pdf.status_code == 200
+    assert pdf.headers["content-type"] == "application/pdf"
+    assert pdf.headers["content-disposition"].endswith('.pdf"')
+    assert pdf.content.startswith(b"%PDF-")

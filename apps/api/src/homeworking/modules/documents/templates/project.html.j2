@@ -69,6 +69,19 @@
   {% endfor %}
 </section>
 
+{% if params %}
+<section aria-labelledby="h-params">
+  <h2 id="h-params">Maße und Einstellungen</h2>
+  <table class="figures">
+    <tbody>
+    {% for label, value in params %}
+      <tr><td>{{ label }}</td><td>{{ value }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
 <section class="safety" aria-labelledby="h-safety">
   <h2 id="h-safety">Wichtige Hinweise</h2>
   {% for text in document_notices %}<p>{{ text }}</p>{% endfor %}
@@ -138,6 +151,23 @@
     </tbody>
   </table>
 
+  {% if result.stock_plan %}
+  <h3>Einkauf und Schnittplan</h3>
+  <table>
+    <thead><tr><th scope="col">Material</th><th scope="col" class="num">Einkauf</th><th scope="col">Aufteilung</th><th scope="col" class="num">Ausnutzung</th></tr></thead>
+    <tbody>
+    {% for s in result.stock_plan %}
+      <tr>
+        <td>{{ s.name or s.item_id }}</td>
+        <td class="num">{{ s.stock_count }} × {{ m(s.stock_length_mm) }}</td>
+        <td>{% for bar in s.bars %}{{ loop.index }}: {{ bar | join(" · ") }} mm{% if not loop.last %}<br>{% endif %}{% else %}Plattenzuschnitt siehe Zuschnittliste{% endfor %}</td>
+        <td class="num">{% if s.utilization_pct is not none %}{{ s.utilization_pct }} %{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
   {% if result.fill_layers %}
   <h3>Füllung</h3>
   <table>
@@ -159,6 +189,7 @@
   {% for step in result.instructions %}
     <div class="step">
       <h3>{{ step.number }}. {{ step.title }}</h3>
+      {% if step.origin == "ai" %}<span class="ai-label">{{ ai_label }}</span>{% endif %}
       <p>{{ step.text }}</p>
       {% if step.details %}
         <ul>{% for d in step.details %}<li>{{ d }}</li>{% endfor %}</ul>

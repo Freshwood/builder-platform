@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from construction_model.model import Origin, ProjectModel
+from construction_model.base import ParamValue
+from construction_model.model import ConstructionResult, Origin, ParamSpec, ProjectModel
 from homeworking.modules.compliance.disclosure import (
     AI_CONTENT_LABEL,
     AI_DOCUMENT_STATEMENT,
@@ -28,6 +30,10 @@ def _eur(value: Decimal) -> str:
     return f"{text} €"
 
 
+def _m(mm: int) -> str:
+    return f"{mm / 1000:.2f}".replace(".", ",") + " m"
+
+
 def _qty(value: Decimal) -> str:
     return f"{value.normalize():f}".replace(".", ",")
 
@@ -37,6 +43,28 @@ class _DrawingView:
     title: str
     description: str
     svg: str
+
+
+def _param_value(spec: ParamSpec, value: ParamValue | None) -> str:
+    if value is None:
+        return "–"
+    if spec.kind == "bool":
+        return "ja" if value else "nein"
+    if spec.kind == "choice":
+        return next((o.label for o in spec.options if o.value == value), str(value))
+    if spec.kind == "length":
+        return f"{value} mm"
+    if spec.kind == "angle":
+        return f"{value}°"
+    return str(value)
+
+
+def _params(result: ConstructionResult) -> list[tuple[str, str]]:
+    """Adjustable parameters with their effective values, as shown in the web app."""
+    return [
+        (spec.label, _param_value(spec, result.effective_params.get(spec.name)))
+        for spec in result.param_specs
+    ]
 
 
 TRUST_LABELS = {
@@ -79,9 +107,25 @@ def render_html(project: ProjectModel, *, now: datetime | None = None) -> str:
         created=created,
         computed=result.provenance.computed_at.strftime("%d.%m.%Y %H:%M UTC"),
         footer=footer,
+        params=_params(result),
         eur=_eur,
         qty=_qty,
+        m=_m,
     )
+
+
+def warm_up() -> None:
+    """Import WeasyPrint and load fonts once, so the first real download is not slow.
+
+    The first render in a process costs several seconds (module import, fontconfig), on WSL
+    with the repository under /mnt/c much more - long enough to hit proxy timeouts.
+    """
+    try:
+        from weasyprint import HTML
+
+        HTML(string="<p>warm-up</p>").write_pdf()
+    except Exception:  # pragma: no cover - only logged; the real request reports errors
+        logging.getLogger("homeworking.documents").warning("pdf_warm_up_failed", exc_info=True)
 
 
 def render_pdf(project: ProjectModel, *, now: datetime | None = None) -> bytes:

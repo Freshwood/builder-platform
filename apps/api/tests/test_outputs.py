@@ -84,3 +84,20 @@ def test_redaction() -> None:
     assert "1234567" not in redacted
     assert "Lindenstraße 12a" not in redacted
     assert redact("Hochbeet 2000 x 1000 mm, 0,8 m hoch") == "Hochbeet 2000 x 1000 mm, 0,8 m hoch"
+
+
+def test_document_contains_all_sections() -> None:
+    html = render_html(_project(), now=NOW)
+    for heading in (
+        "Eckdaten",
+        "Maße und Einstellungen",
+        "Varianten",
+        "Zeichnungen",
+        "Materialliste",
+        "Zuschnittliste",
+        "Einkauf und Schnittplan",
+        "Werkzeug",
+        "Bauanleitung",
+        "Nachvollziehbarkeit",
+    ):
+        assert heading in html, heading

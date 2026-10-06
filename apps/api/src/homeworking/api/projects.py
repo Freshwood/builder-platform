@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from calc_engine.assembly.templates import templates
@@ -27,6 +29,7 @@ from homeworking.modules.drawings.svg import render_svg
 from homeworking.modules.projects.service import CommandOutcome
 
 router = APIRouter(prefix="/api", tags=["projects"])
+log = logging.getLogger("homeworking.documents")
 
 
 class CreateProjectRequest(BaseModel):
@@ -210,7 +213,15 @@ async def drawing(project_id: UUID, view: str, container: ContainerDep, user: Us
 )
 async def document(project_id: UUID, container: ContainerDep, user: UserDep) -> Response:
     model = await container.projects.get(user.id, project_id)
-    pdf = await run_in_threadpool(render_pdf, model)
+    try:
+        pdf = await run_in_threadpool(render_pdf, model)
+    except Exception:
+        # A plain-text 500 would make the browser save an unreadable "document.txt".
+        log.exception("pdf_render_failed", extra={"project_id": str(project_id)})
+        return JSONResponse(
+            {"detail": "Das PDF konnte nicht erstellt werden. Bitte versuche es erneut."},
+            status_code=500,
+        )
     filename = f"homeworking-{model.inputs.pack_id}-{str(model.id)[:8]}.pdf"
     return Response(
         pdf,

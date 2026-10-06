@@ -5,6 +5,7 @@ import clsx from "clsx";
 import dynamic from "next/dynamic";
 import { useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
+import { PdfDownload } from "@/components/PdfDownload";
 import { formatEur, useProject, useProjectCommand, useUndo } from "@/lib/api";
 import { toneColor } from "@/lib/tones";
 
@@ -514,7 +515,7 @@ export function ProjectPanel({ projectId }: { projectId: string }) {
             {result.summary}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-start gap-2">
           <button
             type="button"
             onClick={() => undo.mutate()}
@@ -523,13 +524,7 @@ export function ProjectPanel({ projectId }: { projectId: string }) {
           >
             Rückgängig
           </button>
-          <a
-            href={`/api/projects/${project.id}/document.pdf`}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white dark:text-black"
-            download
-          >
-            PDF herunterladen
-          </a>
+          <PdfDownload projectId={project.id} version={version} />
         </div>
       </div>
 

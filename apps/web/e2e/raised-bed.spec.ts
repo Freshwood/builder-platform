@@ -126,3 +126,44 @@ test("project brief collects details and sends them with the request", async ({ 
   await expect(page.getByLabel("Was möchtest du bauen oder reparieren?")).toBeVisible();
   await page.screenshot({ path: "test-results/after.png", fullPage: true });
 });
+
+test("clicking 'PDF herunterladen' downloads the complete PDF", async ({ page }) => {
+  await page.goto("/");
+  await send(page, "Regal 80 x 30 x 180 cm mit 5 Böden");
+  await expect(page.getByTestId("project-summary")).toHaveText(
+    "Standregal mit 5 Böden – 800 × 300 × 1800 mm",
+  );
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("link", { name: "PDF herunterladen" }).click();
+  const download = await downloadPromise;
+  expect(await download.failure()).toBeNull();
+  expect(download.suggestedFilename()).toMatch(/\.pdf$/);
+  const path = await download.path();
+  const { readFile } = await import("node:fs/promises");
+  const bytes = await readFile(path);
+  expect(bytes.subarray(0, 5).toString()).toBe("%PDF-");
+  expect(bytes.length).toBeGreaterThan(20_000);
+});
+
+test("a failing PDF request shows an error instead of saving document.txt", async ({ page }) => {
+  await page.goto("/");
+  await send(page, "Regal 80 x 30 x 180 cm mit 5 Böden");
+  await expect(page.getByTestId("project-summary")).toContainText("Standregal");
+  // What the Next.js proxy answers when the API times out or is restarting.
+  await page.route("**/document.pdf*", (route) =>
+    route.fulfill({ status: 500, body: "Internal Server Error" }),
+  );
+  let downloaded = false;
+  page.on("download", () => {
+    downloaded = true;
+  });
+  await page.getByRole("link", { name: "PDF herunterladen" }).click();
+  await expect(page.locator("#pdf-error")).toContainText("PDF konnte nicht erstellt werden");
+  expect(downloaded).toBe(false);
+
+  await page.unroute("**/document.pdf*");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("link", { name: "PDF herunterladen" }).click();
+  expect((await downloadPromise).suggestedFilename()).toMatch(/^homeworking-.*\.pdf$/);
+  await expect(page.locator("#pdf-error")).toHaveCount(0);
+});
