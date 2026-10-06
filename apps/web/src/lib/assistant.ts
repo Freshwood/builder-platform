@@ -67,7 +67,7 @@ export function useAssistant(projectId: string | null, onProjectChanged: (id: st
   const [transport] = useState(
     () => new DefaultChatTransport({ api: "/api/chat", credentials: "include" }),
   );
-  const { messages, sendMessage, status, error } = useChat({ transport });
+  const { messages, sendMessage, regenerate, status, error } = useChat({ transport });
   const handled = useRef(new Set<string>());
   const busy = status === "submitted" || status === "streaming";
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -97,10 +97,26 @@ export function useAssistant(projectId: string | null, onProjectChanged: (id: st
     [busy, projectId, sendMessage],
   );
 
+  /** Run the last turn again after a failed request. */
+  const retry = useCallback(() => {
+    if (busy) return;
+    setStartedAt(Date.now());
+    void regenerate({ body: { projectId } });
+  }, [busy, projectId, regenerate]);
+
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const current = busy && messages.at(-1)?.role === "assistant" ? (lastAssistant ?? null) : null;
 
-  return { messages, status, error, busy, submit, startedAt: busy ? startedAt : null, current };
+  return {
+    messages,
+    status,
+    error,
+    busy,
+    submit,
+    retry,
+    startedAt: busy ? startedAt : null,
+    current,
+  };
 }
 
 export type Assistant = ReturnType<typeof useAssistant>;

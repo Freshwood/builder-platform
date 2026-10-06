@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Datenschutz – Homeworking" };
 // Draft based on docs/compliance/dsgvo-dpia-template.md; requires legal review before launch.
 export default function DatenschutzPage() {
   return (
-    <article className="max-w-2xl space-y-4">
+    <article className="mx-auto max-w-2xl space-y-4 px-4 py-10">
       <h1 className="text-2xl font-bold">Datenschutzerklärung (Entwurf)</h1>
       <p className="rounded-md bg-warning-soft p-3 text-sm text-warning">
         Entwurf – vor Veröffentlichung rechtlich prüfen und Verantwortlichen ergänzen.
@@ -25,8 +25,8 @@ export default function DatenschutzPage() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Keine Tracking-Cookies</h2>
         <p className="text-sm">
-          Wir setzen ausschließlich ein technisch notwendiges Session-Cookie (§ 25 Abs. 2 TDDDG)
-          und verwenden keine Analyse- oder Marketing-Dienste.
+          Wir setzen ausschließlich ein technisch notwendiges Session-Cookie (§ 25 Abs. 2 TDDDG) und
+          verwenden keine Analyse- oder Marketing-Dienste.
         </p>
       </section>
       <section className="space-y-2">

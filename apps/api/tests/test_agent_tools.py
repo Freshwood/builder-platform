@@ -1,6 +1,7 @@
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
+from calc_engine.assembly.templates import template
 from calc_engine.catalog import default_catalog
 from homeworking.bootstrap import build_container
 from homeworking.modules.agent.tools import AgentDeps, build_agent, design_materials
@@ -88,5 +89,41 @@ async def test_create_stores_explanation_without_extra_round_trip(settings: Sett
         assert deps.project_id is not None
         model = await container.projects.get(owner, deps.project_id)
         assert [n.text for n in model.inputs.notes] == ["Leimholz, stumpf verschraubt."]
+    finally:
+        await container.close()
+
+
+async def test_design_sent_as_json_string_is_accepted(settings: Settings) -> None:
+    """Models often serialise the large design argument into a string; it must still validate."""
+    design = template("window_shutter").design.model_dump_json()
+    results: list[str] = []
+
+    def respond(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+        last = messages[-1]
+        kinds = {"tool-return", "retry-prompt"}
+        returns = [p for p in last.parts if getattr(p, "part_kind", "") in kinds]
+        if isinstance(last, ModelRequest) and returns:
+            results.extend(p.part_kind for p in returns)
+            return ModelResponse(parts=[TextPart("Fertig.")])
+        return ModelResponse(
+            parts=[
+                ToolCallPart(
+                    "design_project",
+                    {"title": "Fensterladen", "design": design, "params": '{"width_mm": 600}'},
+                )
+            ]
+        )
+
+    container = build_container(settings)
+    await container.create_schema()
+    try:
+        owner = (await container.identity.create_guest()).id
+        agent = build_agent(FunctionModel(respond), container.engine)
+        deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
+        await agent.run("Ein Fensterladen", deps=deps)
+        assert results == ["tool-return"]
+        assert deps.project_id is not None
+        model = await container.projects.get(owner, deps.project_id)
+        assert model.inputs.params["width_mm"] == 600
     finally:
         await container.close()

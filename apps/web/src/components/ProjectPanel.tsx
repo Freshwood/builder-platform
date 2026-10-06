@@ -1,140 +1,132 @@
 "use client";
 
-import type { ParamSpec, ProjectModel, Solid, StockPlan } from "@homeworking/api-client";
+import type { ProjectModel, Solid } from "@homeworking/api-client";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
-import { useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { BomTable } from "@/components/BomTable";
 import { PdfDownload } from "@/components/PdfDownload";
+import {
+  BuildSteps,
+  CutList,
+  Notes,
+  ParamEditor,
+  PositionBadge,
+} from "@/components/ProjectDetails";
+import { Icon, Pill, Segmented, TRUST, buttonClass, type IconName } from "@/components/ui";
 import { formatEur, useProject, useProjectCommand, useUndo } from "@/lib/api";
-import { formatCost, formatRange, isExact } from "@/lib/prices";
-import { toneColor } from "@/lib/tones";
+import { formatCost, formatRange, isExact, typical } from "@/lib/prices";
 
 const Viewer3D = dynamic(() => import("@/components/Viewer3D"), {
   ssr: false,
-  loading: () => <div className="h-full w-full animate-pulse bg-surface-muted" />,
+  loading: () => <div className="h-full w-full animate-pulse" />,
 });
 
 type Result = ProjectModel["result"];
-type ParamValue = string | number | boolean;
-
-const TRUST: Record<string, { label: string; hint: string; className: string }> = {
-  pack: {
-    label: "Geprüftes Pack",
-    hint: "Fachlich validierte Konstruktionsregeln",
-    className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
-  },
-  template: {
-    label: "Vorlage",
-    hint: "Konstruktion aus der Homeworking-Vorlagensammlung",
-    className: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
-  },
-  ai_draft: {
-    label: "KI-Entwurf",
-    hint: "Konstruktion von der KI vorgeschlagen, nicht fachlich geprüft",
-    className: "bg-ai-soft text-ai",
-  },
-};
-
-function Icon({ path, className }: { path: string; className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      className={clsx("h-5 w-5 shrink-0", className)}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d={path} />
-    </svg>
-  );
-}
-
-const ICONS = {
-  info: "M12 8h.01M11 12h1v5h1M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z",
-  warning:
-    "M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z",
-  euro: "M17 6.5A7 7 0 1 0 17 17.5M4 10h9M4 14h9",
-  cube: "m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 0v18m8-13.5-8 4.5-8-4.5",
-};
-
-function Card({
-  id,
-  title,
-  actions,
-  children,
-  className,
-}: {
-  id?: string;
-  title?: string;
-  actions?: ReactNode;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      aria-labelledby={id}
-      className={clsx("rounded-2xl border border-border bg-surface p-4 shadow-sm", className)}
-    >
-      {title && (
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 id={id} className="text-base font-semibold">
-            {title}
-          </h3>
-          {actions}
-        </div>
-      )}
-      {children}
-    </section>
-  );
-}
-
-function PositionBadge({ number, tone }: { number: number; tone?: string }) {
-  return (
-    <span
-      className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-stone-600 px-1 text-xs font-bold text-stone-900"
-      style={{ backgroundColor: tone ? toneColor(tone) : "#ffffff" }}
-    >
-      {number}
-    </span>
-  );
-}
 
 function costLabel(result: Result): string {
   const priced = result.costs.user_priced ?? 0;
-  if (priced === 0) return "Material (Richtpreis)";
-  return priced === result.bom.length ? "Material (deine Preise)" : "Material (teils deine Preise)";
+  if (priced === 0) return "Material · Richtpreis";
+  return priced === result.bom.length ? "Material · deine Preise" : "Material · teils deine Preise";
 }
 
-function KpiTiles({ result }: { result: Result }) {
-  const figures = Object.entries(result.key_figures).slice(0, 5);
+function CostCard({ result }: { result: Result }) {
   const used = result.costs.material_used;
+  const leftover = used ? Number(result.costs.material.min) - Number(used.min) : 0;
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Eckdaten">
-      <li className="col-span-2 rounded-2xl bg-accent px-4 py-3 text-white sm:col-span-1 dark:text-black">
-        <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide">
-          <Icon path={ICONS.euro} className="h-4 w-4" /> {costLabel(result)}
-        </span>
-        <span className="mt-1 block text-xl font-bold" data-testid="material-cost">
-          {formatCost(result.costs.material)}
-        </span>
-        <span className="block text-xs">
-          {!isExact(result.costs.material) && <>Spanne {formatRange(result.costs.material)}</>}
-          {used && Number(result.costs.material.min) - Number(used.min) > 0.5 && (
-            <span className="block">davon verbraucht {formatCost(used)}</span>
-          )}
-        </span>
-      </li>
+    <div className="rounded-2xl bg-accent px-4 py-2 text-on-accent shadow-sm">
+      <span className="block text-[11px] font-medium tracking-wide uppercase">
+        {costLabel(result)}
+      </span>
+      <span
+        className="block text-2xl leading-tight font-bold tabular-nums"
+        data-testid="material-cost"
+      >
+        {formatCost(result.costs.material)}
+      </span>
+      <span className="block text-[11px]">
+        {!isExact(result.costs.material) && formatRange(result.costs.material)}
+        {used && leftover > 0.5 && <> · verbraucht {formatCost(used)}</>}
+      </span>
+    </div>
+  );
+}
+
+function Header({
+  project,
+  canUndo,
+  version,
+}: {
+  project: ProjectModel;
+  canUndo: boolean;
+  version: string;
+}) {
+  const undo = useUndo(project.id);
+  const result = project.result;
+  const trust = TRUST[result.trust ?? "pack"] ?? TRUST.pack!;
+
+  // Ctrl/Cmd+Z undoes the last change unless the user is typing.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const typing = target?.closest("input, textarea, select, [contenteditable]");
+      if (typing || !(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z") return;
+      if (event.shiftKey || !canUndo || undo.isPending) return;
+      event.preventDefault();
+      undo.mutate();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [canUndo, undo]);
+
+  return (
+    <header className="flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{project.inputs.title}</h2>
+          <Pill className={trust.className} title={trust.hint} testId="trust-badge">
+            {trust.label}
+          </Pill>
+        </div>
+        <p className="mt-1 text-muted" data-testid="project-summary">
+          {result.summary}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <CostCard result={result} />
+        <div className="flex flex-col gap-1.5">
+          <PdfDownload projectId={project.id} version={version} />
+          <button
+            type="button"
+            onClick={() => undo.mutate()}
+            disabled={!canUndo || undo.isPending}
+            title="Rückgängig (Strg + Z)"
+            className={buttonClass.secondary}
+          >
+            <Icon name="undo" className="h-4 w-4" />
+            Rückgängig
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Figures({ result }: { result: Result }) {
+  const figures = Object.entries(result.key_figures).slice(0, 6);
+  if (!figures.length) return null;
+  return (
+    <ul className="flex flex-wrap gap-2" aria-label="Eckdaten">
       {figures.map(([key, value]) => (
-        <li key={key} className="rounded-2xl border border-border bg-surface px-4 py-3">
-          <span className="block text-xs font-medium uppercase tracking-wide text-muted">
+        <li
+          key={key}
+          className="shrink-0 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm"
+        >
+          <span className="block text-[11px] font-medium tracking-wide text-muted uppercase">
             {key}
           </span>
-          <span className="mt-1 block font-semibold">{value}</span>
+          <span className="font-semibold whitespace-nowrap">{value}</span>
         </li>
       ))}
     </ul>
@@ -142,26 +134,37 @@ function KpiTiles({ result }: { result: Result }) {
 }
 
 function Notices({ result }: { result: Result }) {
+  const warnings = result.notices.filter((n) => n.severity !== "info");
+  const infos = result.notices.filter((n) => n.severity === "info");
+  if (!result.notices.length) return null;
   return (
-    <ul className="space-y-2">
-      {result.notices.map((notice) => {
-        const warning = notice.severity !== "info";
-        return (
-          <li
-            key={notice.code}
-            className={clsx(
-              "flex gap-2 rounded-xl border px-3 py-2 text-sm",
-              warning
-                ? "border-warning/40 bg-warning-soft text-warning"
-                : "border-border bg-surface-muted text-text",
-            )}
-          >
-            <Icon path={warning ? ICONS.warning : ICONS.info} />
-            <span>{notice.message}</span>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="space-y-2">
+      {warnings.map((notice) => (
+        <p
+          key={notice.code}
+          className="flex gap-2 rounded-xl border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning"
+        >
+          <Icon name="warning" className="h-4 w-4 translate-y-0.5" />
+          <span>{notice.message}</span>
+        </p>
+      ))}
+      {infos.length > 0 && (
+        <details className="group rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+          <summary className="flex cursor-pointer list-none items-center gap-2 text-muted select-none">
+            <Icon name="info" className="h-4 w-4" />
+            <span className="flex-1">
+              {infos.length} {infos.length === 1 ? "Hinweis" : "Hinweise"} zur Planung
+            </span>
+            <Icon name="chevronDown" className="h-4 w-4 transition group-open:rotate-180" />
+          </summary>
+          <ul className="mt-2 space-y-1.5 pl-6">
+            {infos.map((notice) => (
+              <li key={notice.code}>{notice.message}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
   );
 }
 
@@ -184,161 +187,202 @@ function positions(solids: Solid[]): PositionRow[] {
   return [...rows.values()].sort((a, b) => a.number - b.number);
 }
 
-function ModelView({ result, title }: { result: Result; title: string }) {
+type StageMode = "model" | "drawings";
+
+/** The hero: 3D model or drawings, with floating controls and a parts legend. */
+function Stage({ project, version }: { project: ProjectModel; version: string }) {
+  const result = project.result;
   const solids = useMemo(() => result.solids ?? [], [result.solids]);
   const rows = useMemo(() => positions(solids), [solids]);
+  const hasModel = solids.length > 0;
+  const [mode, setMode] = useState<StageMode>(hasModel ? "model" : "drawings");
+  const [drawing, setDrawing] = useState(0);
+  const [showParts, setShowParts] = useState(true);
   const [highlight, setHighlight] = useState<number | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const active = rows.find((r) => r.number === highlight);
+  const drawings = result.drawings;
+  const current = drawings[Math.min(drawing, drawings.length - 1)];
+
+  function fullscreen() {
+    const el = stageRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void el.requestFullscreen?.();
+  }
+
   return (
-    <Card id="model" title="3D-Modell" className="overflow-hidden">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
-        <div className="relative h-80 overflow-hidden rounded-xl border border-border bg-gradient-to-b from-white to-stone-100 sm:h-96">
-          <Viewer3D
-            solids={solids}
-            highlight={highlight}
-            onHover={setHighlight}
-            label={`3D-Modell: ${title}, ${rows.length} Positionen. Ziehen zum Drehen, Mausrad zum Zoomen.`}
-          />
-          <p className="pointer-events-none absolute bottom-2 left-3 rounded bg-white/80 px-2 py-0.5 text-xs text-stone-700">
+    <section
+      aria-label="Ansicht"
+      ref={stageRef}
+      className="stage relative overflow-hidden rounded-3xl border border-border shadow-sm"
+    >
+      <div className="relative h-[22rem] sm:h-[30rem] lg:h-[min(62vh,40rem)]">
+        {hasModel && (
+          <div hidden={mode !== "model"} className="absolute inset-0">
+            <Viewer3D
+              key={version}
+              solids={solids}
+              highlight={highlight}
+              onHover={setHighlight}
+              label={`3D-Modell: ${project.inputs.title}, ${rows.length} Positionen. Ziehen zum Drehen, Mausrad zum Zoomen.`}
+            />
+          </div>
+        )}
+        <div
+          hidden={mode !== "drawings"}
+          className="drawing-frame absolute inset-0 flex items-center justify-center bg-white p-4 pt-16 pb-24"
+        >
+          {drawings.map((d, index) => (
+            // eslint-disable-next-line @next/next/no-img-element -- dynamic SVG from the API
+            <img
+              key={d.view}
+              src={`/api/projects/${project.id}/drawings/${d.view}.svg?v=${version}`}
+              alt={d.description}
+              hidden={index !== drawing}
+              className="max-h-full max-w-full object-contain"
+              data-testid={`drawing-${d.view}`}
+            />
+          ))}
+        </div>
+
+        {/* Floating top bar */}
+        <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
+          {hasModel ? (
+            <Segmented<StageMode>
+              label="Ansicht wählen"
+              value={mode}
+              onChange={setMode}
+              options={[
+                {
+                  value: "model",
+                  label: (
+                    <>
+                      <Icon name="cube" className="h-4 w-4" /> 3D
+                    </>
+                  ),
+                },
+                {
+                  value: "drawings",
+                  label: (
+                    <>
+                      <Icon name="image" className="h-4 w-4" /> Pläne
+                    </>
+                  ),
+                },
+              ]}
+            />
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-1.5">
+            {mode === "model" && rows.length > 0 && (
+              <button
+                type="button"
+                aria-pressed={showParts}
+                onClick={() => setShowParts(!showParts)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/85 px-3 py-1.5 text-sm font-medium shadow-sm backdrop-blur hover:bg-surface"
+              >
+                <Icon name="layers" className="h-4 w-4" />
+                Bauteile
+                <span className="rounded-full bg-surface-muted px-1.5 text-xs">{rows.length}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={fullscreen}
+              aria-label="Vollbild"
+              title="Vollbild"
+              className="flex h-[34px] w-[34px] items-center justify-center rounded-xl border border-border bg-surface/85 shadow-sm backdrop-blur hover:bg-surface"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+              >
+                <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Parts legend */}
+        {mode === "model" && showParts && rows.length > 0 && (
+          <ol
+            aria-label="Positionen"
+            className="scrollbar-thin absolute top-14 right-3 hidden max-h-[calc(100%-4.5rem)] w-60 animate-fadein space-y-0.5 overflow-y-auto rounded-2xl border border-border bg-surface/90 p-1.5 shadow-lg backdrop-blur sm:block"
+          >
+            {rows.map((row) => (
+              <li key={row.number}>
+                <button
+                  type="button"
+                  onMouseEnter={() => setHighlight(row.number)}
+                  onMouseLeave={() => setHighlight(null)}
+                  onFocus={() => setHighlight(row.number)}
+                  onBlur={() => setHighlight(null)}
+                  className={clsx(
+                    "flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm transition",
+                    highlight === row.number ? "bg-accent-soft" : "hover:bg-surface-muted",
+                  )}
+                >
+                  <PositionBadge number={row.number} tone={row.tone} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{row.name}</span>
+                    <span className="block truncate text-xs text-muted">{row.material}</span>
+                  </span>
+                  <span className="text-xs font-semibold text-muted">{row.count}×</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
+
+        {/* Bottom: hint in 3D, filmstrip for drawings */}
+        {mode === "model" ? (
+          <p className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-surface/85 px-3 py-1 text-xs text-muted shadow-sm backdrop-blur">
             {active
               ? `Pos. ${active.number} · ${active.name} · ${active.material}`
               : "Ziehen zum Drehen · Scrollen zum Zoomen"}
           </p>
-        </div>
-        <ol className="max-h-96 space-y-1 overflow-y-auto pr-1" aria-label="Positionen">
-          {rows.map((row) => (
-            <li key={row.number}>
-              <button
-                type="button"
-                onMouseEnter={() => setHighlight(row.number)}
-                onMouseLeave={() => setHighlight(null)}
-                onFocus={() => setHighlight(row.number)}
-                onBlur={() => setHighlight(null)}
-                className={clsx(
-                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm",
-                  highlight === row.number ? "bg-accent-soft" : "hover:bg-surface-muted",
-                )}
+        ) : (
+          <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
+            <ul className="scrollbar-thin flex gap-1.5 overflow-x-auto" aria-label="Zeichnungen">
+              {drawings.map((d, index) => (
+                <li key={d.view} className="shrink-0">
+                  <button
+                    type="button"
+                    aria-pressed={index === drawing}
+                    onClick={() => setDrawing(index)}
+                    className={clsx(
+                      "rounded-xl border px-3 py-1.5 text-xs font-medium shadow-sm transition",
+                      index === drawing
+                        ? "border-text bg-text text-bg"
+                        : "border-border bg-surface/90 text-muted hover:text-text",
+                    )}
+                  >
+                    {d.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {current && (
+              <a
+                href={`/api/projects/${project.id}/drawings/${current.view}.svg?v=${version}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden shrink-0 rounded-xl border border-border bg-surface/90 px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-surface sm:inline-block"
               >
-                <PositionBadge number={row.number} tone={row.tone} />
-                <span className="flex-1">
-                  <span className="block font-medium">{row.name}</span>
-                  <span className="block text-xs text-muted">{row.material}</span>
-                </span>
-                <span className="text-xs font-semibold text-muted">{row.count}×</span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </Card>
-  );
-}
-
-function initialValues(project: ProjectModel, specs: ParamSpec[]): Record<string, ParamValue> {
-  const values: Record<string, ParamValue> = {};
-  for (const spec of specs) {
-    const raw = project.inputs.params[spec.name] ?? project.result.effective_params[spec.name];
-    values[spec.name] = raw as ParamValue;
-  }
-  return values;
-}
-
-function ParamEditor({ project }: { project: ProjectModel }) {
-  const specs = project.result.param_specs ?? [];
-  const command = useProjectCommand(project.id);
-  const [values, setValues] = useState(() => initialValues(project, specs));
-  const prefix = useId();
-
-  function onSubmit(event: FormEvent) {
-    event.preventDefault();
-    command.mutate({ type: "set_parameters", values });
-  }
-
-  const set = (name: string, value: ParamValue) => setValues({ ...values, [name]: value });
-  const numeric = specs.filter((s) => s.kind !== "bool");
-  const toggles = specs.filter((s) => s.kind === "bool");
-
-  return (
-    <form onSubmit={onSubmit} className="space-y-4" aria-label="Parameter bearbeiten">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-        {numeric.map((spec) => {
-          const id = `${prefix}-${spec.name}`;
-          return (
-            <div key={spec.name} className="flex flex-col text-sm">
-              <label htmlFor={id} className="text-muted">
-                {spec.label}
-              </label>
-              {spec.kind === "choice" ? (
-                <select
-                  id={id}
-                  value={String(values[spec.name])}
-                  onChange={(e) => set(spec.name, e.target.value)}
-                  className="mt-1 rounded-lg border border-border bg-surface px-2 py-1.5"
-                >
-                  {(spec.options ?? []).map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  id={id}
-                  type="number"
-                  inputMode="numeric"
-                  name={spec.name}
-                  step={spec.kind === "length" ? 10 : 1}
-                  min={spec.min ?? undefined}
-                  max={spec.max ?? undefined}
-                  value={Number(values[spec.name])}
-                  onChange={(e) => set(spec.name, Number(e.target.value))}
-                  className="mt-1 rounded-lg border border-border bg-surface px-2 py-1.5"
-                />
-              )}
-              {spec.min != null && spec.max != null && (
-                <span className="mt-0.5 text-xs text-muted">
-                  {spec.min}–{spec.max}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {toggles.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {toggles.map((spec) => (
-            <label
-              key={spec.name}
-              className={clsx(
-                "flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-sm",
-                values[spec.name] ? "border-accent bg-accent-soft" : "border-border",
-              )}
-            >
-              <input
-                type="checkbox"
-                checked={Boolean(values[spec.name])}
-                onChange={(e) => set(spec.name, e.target.checked)}
-              />
-              {spec.label}
-            </label>
-          ))}
-        </div>
-      )}
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={command.isPending}
-          className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:text-black"
-        >
-          Übernehmen
-        </button>
-        {command.error && (
-          <p role="alert" className="text-sm text-warning">
-            {command.error.message}
-          </p>
+                Groß öffnen<span className="sr-only"> (öffnet neues Fenster)</span>
+              </a>
+            )}
+          </div>
         )}
       </div>
-    </form>
+    </section>
   );
 }
 
@@ -346,111 +390,90 @@ function Variants({ project }: { project: ProjectModel }) {
   const command = useProjectCommand(project.id);
   const variants = project.result.variants;
   if (variants.length === 0) return null;
+  const selected = variants.find((v) => v.is_selected);
+  const base = typical(selected?.material_cost ?? project.result.costs.material);
   const cheapest = Math.min(...variants.map((v) => Number(v.material_cost.min)));
   return (
-    <Card id="variants" title="Varianten">
-      <ul className="grid gap-3 sm:grid-cols-3">
-        {variants.map((variant) => (
-          <li
-            key={variant.key}
-            className={clsx(
-              "flex flex-col rounded-xl border p-3 transition-colors",
-              variant.is_selected ? "border-accent bg-accent-soft" : "border-border",
-            )}
-          >
-            <span className="flex items-center justify-between gap-2">
-              <span className="font-semibold">{variant.name}</span>
-              {Number(variant.material_cost.min) === cheapest && (
-                <span className="rounded-full bg-emerald-100 px-2 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-                  günstigste
-                </span>
-              )}
-            </span>
-            <span className="flex-1 text-sm text-muted">{variant.description}</span>
-            <span className="mt-2 text-lg font-bold">{formatCost(variant.material_cost)}</span>
-            {!isExact(variant.material_cost) && (
-              <span className="text-xs text-muted">{formatRange(variant.material_cost)}</span>
-            )}
-            <button
-              type="button"
-              disabled={variant.is_selected || command.isPending}
-              onClick={() => command.mutate({ type: "select_variant", variant_key: variant.key })}
-              className="mt-2 rounded-lg border border-border px-2 py-1 text-sm hover:bg-surface-muted disabled:opacity-50"
-              aria-label={`Variante ${variant.name} wählen`}
-            >
-              {variant.is_selected ? "Gewählt" : "Wählen"}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
-function StockBars({ plan }: { plan: StockPlan }) {
-  const bars = plan.bars ?? [];
-  if (bars.length === 0) {
-    return (
-      <div>
-        <p className="text-sm font-medium">
-          {plan.stock_count}× {plan.name ?? plan.item_id}
-        </p>
-        <div className="mt-1 h-3 overflow-hidden rounded-full bg-surface-muted" aria-hidden="true">
-          <div className="h-full bg-accent" style={{ width: `${plan.utilization_pct ?? 0}%` }} />
-        </div>
-        <p className="mt-0.5 text-xs text-muted">Ausnutzung ca. {plan.utilization_pct ?? "–"} %</p>
-      </div>
-    );
-  }
-  return (
-    <div>
-      <p className="text-sm font-medium">
-        {plan.stock_count}× {plan.name ?? plan.item_id}, {plan.stock_length_mm} mm
-        <span className="ml-2 text-xs text-muted">Verschnitt {plan.waste_mm} mm</span>
-      </p>
-      <ul className="mt-1 space-y-1">
-        {bars.map((pieces, index) => {
-          const used = pieces.reduce((a, b) => a + b, 0);
+    <section aria-labelledby="variants-heading">
+      <h3
+        id="variants-heading"
+        className="mb-2 text-sm font-semibold tracking-wide text-muted uppercase"
+      >
+        Varianten
+      </h3>
+      <ul className="scrollbar-thin -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1">
+        {variants.map((variant) => {
+          const delta = Math.round(typical(variant.material_cost) - base);
           return (
-            <li
-              key={index}
-              className="flex h-7 overflow-hidden rounded-md border border-stone-400 bg-[repeating-linear-gradient(45deg,#e7e5e4,#e7e5e4_4px,#f5f5f4_4px,#f5f5f4_8px)]"
-              aria-label={`Stange ${index + 1}: ${pieces.join(" mm, ")} mm, Rest ${plan.stock_length_mm - used} mm`}
-            >
-              {pieces.map((piece, i) => (
-                <span
-                  key={i}
-                  className="flex items-center justify-center border-r-2 border-white bg-amber-200 text-[11px] font-medium text-stone-900"
-                  style={{ width: `${(piece / plan.stock_length_mm) * 100}%` }}
-                >
-                  {piece}
+            <li key={variant.key} className="w-64 shrink-0 snap-start sm:w-auto sm:flex-1">
+              <button
+                type="button"
+                disabled={variant.is_selected || command.isPending}
+                onClick={() => command.mutate({ type: "select_variant", variant_key: variant.key })}
+                aria-label={`Variante ${variant.name} wählen`}
+                className={clsx(
+                  "flex h-full w-full flex-col rounded-2xl border p-3 text-left transition",
+                  variant.is_selected
+                    ? "border-accent bg-accent-soft/60 ring-1 ring-accent"
+                    : "border-border bg-surface hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md",
+                )}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="font-semibold">{variant.name}</span>
+                  {variant.is_selected ? (
+                    <Pill className="bg-accent text-on-accent">
+                      <Icon name="check" className="h-3 w-3" /> aktiv
+                    </Pill>
+                  ) : (
+                    Number(variant.material_cost.min) === cheapest && (
+                      <Pill className="bg-success-soft text-success">günstigste</Pill>
+                    )
+                  )}
                 </span>
-              ))}
+                <span className="mt-0.5 flex-1 text-sm text-muted">{variant.description}</span>
+                <span className="mt-2 flex items-baseline gap-2">
+                  <span className="text-lg font-bold tabular-nums">
+                    {formatCost(variant.material_cost)}
+                  </span>
+                  {!variant.is_selected && delta !== 0 && (
+                    <span
+                      className={clsx(
+                        "text-xs font-semibold tabular-nums",
+                        delta < 0 ? "text-success" : "text-muted",
+                      )}
+                    >
+                      {delta > 0 ? "+" : "−"}
+                      {formatEur(Math.abs(delta))}
+                    </span>
+                  )}
+                </span>
+              </button>
             </li>
           );
         })}
       </ul>
-    </div>
+    </section>
   );
 }
 
-const TABS = [
-  { key: "drawings", label: "Zeichnungen" },
-  { key: "bom", label: "Material" },
-  { key: "cuts", label: "Zuschnitt" },
-  { key: "steps", label: "Anleitung" },
-  { key: "params", label: "Maße anpassen" },
-] as const;
-type TabKey = (typeof TABS)[number]["key"];
+type TabKey = "adjust" | "bom" | "cuts" | "steps" | "notes";
 
-function Tabs({ active, onChange }: { active: TabKey; onChange: (key: TabKey) => void }) {
+function Tabs({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: { key: TabKey; label: string; icon: IconName; count?: number }[];
+  active: TabKey;
+  onChange: (key: TabKey) => void;
+}) {
   return (
     <div
       role="tablist"
       aria-label="Projektdetails"
-      className="flex gap-1 overflow-x-auto border-b border-border"
+      className="scrollbar-thin flex gap-1 overflow-x-auto rounded-2xl bg-surface-muted p-1"
     >
-      {TABS.map((tab) => (
+      {tabs.map((tab) => (
         <button
           key={tab.key}
           id={`tab-${tab.key}`}
@@ -461,22 +484,26 @@ function Tabs({ active, onChange }: { active: TabKey; onChange: (key: TabKey) =>
           tabIndex={active === tab.key ? 0 : -1}
           onClick={() => onChange(tab.key)}
           onKeyDown={(event) => {
-            const index = TABS.findIndex((t) => t.key === active);
+            const index = tabs.findIndex((t) => t.key === active);
             const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
             if (delta) {
-              const next = TABS[(index + delta + TABS.length) % TABS.length]!;
+              const next = tabs[(index + delta + tabs.length) % tabs.length]!;
               onChange(next.key);
               document.getElementById(`tab-${next.key}`)?.focus();
             }
           }}
           className={clsx(
-            "-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium",
-            active === tab.key
-              ? "border-accent text-text"
-              : "border-transparent text-muted hover:text-text",
+            "inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition",
+            active === tab.key ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text",
           )}
         >
+          <Icon name={tab.icon} className="h-4 w-4" />
           {tab.label}
+          {tab.count != null && (
+            <span className="rounded-full bg-surface-muted px-1.5 text-xs text-muted">
+              {tab.count}
+            </span>
+          )}
         </button>
       ))}
     </div>
@@ -490,7 +517,7 @@ function Panel({ tab, active, children }: { tab: TabKey; active: TabKey; childre
       id={`panel-${tab}`}
       aria-labelledby={`tab-${tab}`}
       hidden={tab !== active}
-      className="pt-4"
+      className="pt-5"
     >
       {children}
     </div>
@@ -499,84 +526,59 @@ function Panel({ tab, active, children }: { tab: TabKey; active: TabKey; childre
 
 export function ProjectPanel({ projectId }: { projectId: string }) {
   const { data, isLoading, error } = useProject(projectId);
-  const undo = useUndo(projectId);
-  const [tab, setTab] = useState<TabKey>("drawings");
+  const [tab, setTab] = useState<TabKey | null>(null);
 
-  if (isLoading) return <p className="text-muted">Projekt wird geladen …</p>;
+  if (isLoading) {
+    return (
+      <div className="space-y-4" aria-busy="true">
+        <div className="h-16 animate-pulse rounded-2xl bg-surface-muted" />
+        <div className="h-[30rem] animate-pulse rounded-3xl bg-surface-muted" />
+        <p className="sr-only">Projekt wird geladen …</p>
+      </div>
+    );
+  }
   if (error || !data) return <p role="alert">Das Projekt konnte nicht geladen werden.</p>;
 
   const { project, can_undo: canUndo } = data;
   const result = project.result;
   const notes = project.inputs.notes ?? [];
   const version = encodeURIComponent(JSON.stringify(result.effective_params));
-  const trust = TRUST[result.trust ?? "pack"] ?? TRUST.pack!;
-  const toneByPosition = new Map((result.solids ?? []).map((s) => [s.position, s.tone]));
-  const hasModel = (result.solids ?? []).length > 0;
+  const hasParams = (result.param_specs ?? []).length > 0;
+
+  const tabs: { key: TabKey; label: string; icon: IconName; count?: number }[] = [
+    ...(hasParams ? [{ key: "adjust" as const, label: "Anpassen", icon: "sliders" as const }] : []),
+    { key: "bom", label: "Material", icon: "list", count: result.bom.length },
+    { key: "cuts", label: "Zuschnitt", icon: "scissors" },
+    { key: "steps", label: "Bauanleitung", icon: "hammer", count: result.instructions.length },
+    ...(notes.length
+      ? [{ key: "notes" as const, label: "Warum so?", icon: "lightbulb" as const }]
+      : []),
+  ];
+  const active = tab && tabs.some((t) => t.key === tab) ? tab : tabs[0]!.key;
 
   return (
-    <div className="space-y-4" data-testid="project-panel">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-bold tracking-tight">{project.inputs.title}</h2>
-            <span
-              className={clsx("rounded-full px-2.5 py-0.5 text-xs font-semibold", trust.className)}
-              title={trust.hint}
-              data-testid="trust-badge"
-            >
-              {trust.label}
-            </span>
-          </div>
-          <p className="text-muted" data-testid="project-summary">
-            {result.summary}
-          </p>
-        </div>
-        <div className="flex items-start gap-2">
-          <button
-            type="button"
-            onClick={() => undo.mutate()}
-            disabled={!canUndo || undo.isPending}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm disabled:opacity-40"
-          >
-            Rückgängig
-          </button>
-          <PdfDownload projectId={project.id} version={version} />
-        </div>
-      </div>
-
-      <KpiTiles result={result} />
+    <div className="animate-fadein space-y-5" data-testid="project-panel">
+      <Header project={project} canUndo={canUndo} version={version} />
+      <Figures result={result} />
+      <Stage key={project.id} project={project} version={version} />
       <Notices result={result} />
-      {hasModel && <ModelView key={version} result={result} title={project.inputs.title} />}
       <Variants project={project} />
 
-      <Card>
-        <Tabs active={tab} onChange={setTab} />
+      <section
+        aria-label="Details"
+        className="rounded-3xl border border-border bg-surface p-3 shadow-sm sm:p-4"
+      >
+        <Tabs tabs={tabs} active={active} onChange={setTab} />
 
-        <Panel tab="drawings" active={tab}>
-          <div className="grid gap-4 xl:grid-cols-2">
-            {result.drawings.map((d) => (
-              <figure
-                key={d.view}
-                className="drawing-frame overflow-hidden rounded-xl border border-border"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element -- dynamic SVG from the API */}
-                <img
-                  src={`/api/projects/${project.id}/drawings/${d.view}.svg?v=${version}`}
-                  alt={d.description}
-                  className="mx-auto h-auto max-h-[560px] w-auto max-w-full"
-                  data-testid={`drawing-${d.view}`}
-                />
-                <figcaption className="border-t border-border bg-surface px-3 py-2 text-xs font-medium text-muted">
-                  {d.title}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        </Panel>
+        {hasParams && (
+          <Panel tab="adjust" active={active}>
+            <ParamEditor key={version} project={project} />
+          </Panel>
+        )}
 
-        <Panel tab="bom" active={tab}>
+        <Panel tab="bom" active={active}>
           <BomTable result={result} projectId={project.id} />
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-3 text-xs text-muted">
             {result.costs.note} Werkzeug, falls nicht vorhanden:{" "}
             {formatEur(result.costs.tools_optional.min)} –{" "}
             {formatEur(result.costs.tools_optional.max)}. Katalog{" "}
@@ -584,138 +586,29 @@ export function ProjectPanel({ projectId }: { projectId: string }) {
           </p>
         </Panel>
 
-        <Panel tab="cuts" active={tab}>
-          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Zuschnittliste">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                  <th scope="col" className="py-2">
-                    Pos.
-                  </th>
-                  <th scope="col" className="py-2">
-                    Bauteil
-                  </th>
-                  <th scope="col" className="py-2">
-                    Querschnitt
-                  </th>
-                  <th scope="col" className="py-2 text-right">
-                    Zuschnitt
-                  </th>
-                  <th scope="col" className="py-2 text-right">
-                    Anzahl
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.cut_list.map((cut, index) => (
-                  <tr key={`${cut.part}-${index}`} className="border-b border-border">
-                    <td className="py-1.5">
-                      {cut.position != null ? (
-                        <PositionBadge
-                          number={cut.position}
-                          tone={toneByPosition.get(cut.position)}
-                        />
-                      ) : (
-                        "–"
-                      )}
-                    </td>
-                    <td className="py-1.5">
-                      {cut.part}
-                      <span className="block text-xs text-muted">{cut.material}</span>
-                    </td>
-                    <td className="py-1.5">
-                      {cut.cross_section}
-                      {cut.width_mm ? "" : " mm"}
-                    </td>
-                    <td className="py-1.5 text-right whitespace-nowrap">
-                      {cut.length_mm}
-                      {cut.width_mm ? ` × ${cut.width_mm}` : ""} mm
-                    </td>
-                    <td className="py-1.5 text-right">{cut.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {result.stock_plan.length > 0 && (
-            <div className="mt-5 space-y-4">
-              <h4 className="text-sm font-semibold">Einkauf und Schnittplan</h4>
-              {result.stock_plan.map((plan) => (
-                <StockBars key={plan.item_id} plan={plan} />
-              ))}
-            </div>
-          )}
+        <Panel tab="cuts" active={active}>
+          <CutList result={result} />
         </Panel>
 
-        <Panel tab="steps" active={tab}>
-          <ol className="space-y-4">
-            {result.instructions.map((step) => (
-              <li key={step.number} className="flex gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-white dark:text-black">
-                  {step.number}
-                </span>
-                <div>
-                  <p className="font-semibold">
-                    {step.title}
-                    {step.origin === "ai" && (
-                      <span className="ml-2 rounded bg-ai-soft px-1.5 py-0.5 align-middle text-xs font-bold text-ai">
-                        KI-generiert
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-sm text-muted">{step.text}</p>
-                  {step.details && step.details.length > 0 && (
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
-                      {step.details.map((detail, index) => (
-                        <li key={index}>{detail}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-          <h4 className="mt-5 text-sm font-semibold">Werkzeug</h4>
-          <ul className="mt-2 flex flex-wrap gap-2 text-sm">
-            {result.tools.map((tool) => (
-              <li
-                key={tool.name}
-                className="rounded-full border border-border bg-surface-muted px-3 py-1"
-              >
-                {tool.name}
-              </li>
-            ))}
-          </ul>
+        <Panel tab="steps" active={active}>
+          <BuildSteps key={project.id} result={result} projectId={project.id} />
         </Panel>
 
-        <Panel tab="params" active={tab}>
-          <ParamEditor key={version} project={project} />
-        </Panel>
-      </Card>
+        {notes.length > 0 && (
+          <Panel tab="notes" active={active}>
+            <Notes notes={notes} />
+          </Panel>
+        )}
+      </section>
 
-      {notes.length > 0 && (
-        <Card id="notes" title="Erläuterungen">
-          {notes.map((note) => (
-            <div
-              key={note.id}
-              className="mb-2 rounded-xl border border-dashed border-ai/50 p-3 text-sm"
-            >
-              {note.origin === "ai" && (
-                <span className="mb-1 inline-block rounded bg-ai-soft px-1.5 text-xs font-bold text-ai">
-                  KI-generiert
-                </span>
-              )}
-              <p>{note.text}</p>
-            </div>
-          ))}
-        </Card>
-      )}
-
-      <p className="text-xs text-muted">
-        Planungshilfe – kein Standsicherheitsnachweis. Ob ein Vorhaben genehmigungspflichtig ist,
-        regelt die Landesbauordnung; verbindlich ist die Auskunft des Bauamts. Engine{" "}
-        {result.provenance.engine_version} · Pack {result.provenance.pack_id}{" "}
-        {result.provenance.pack_version}
+      <p className="flex gap-2 text-xs text-muted">
+        <Icon name="shield" className="h-4 w-4" />
+        <span>
+          Planungshilfe – kein Standsicherheitsnachweis. Ob ein Vorhaben genehmigungspflichtig ist,
+          regelt die Landesbauordnung; verbindlich ist die Auskunft des Bauamts. Engine{" "}
+          {result.provenance.engine_version} · Pack {result.provenance.pack_id}{" "}
+          {result.provenance.pack_version}
+        </span>
       </p>
     </div>
   );

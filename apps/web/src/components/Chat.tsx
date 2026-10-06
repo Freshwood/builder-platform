@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, type FormEvent, type KeyboardEvent } from "react";
+import clsx from "clsx";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
 import { ActivityList } from "@/components/Activity";
 import { AutoTextarea } from "@/components/AutoTextarea";
+import { Icon, Spinner } from "@/components/ui";
 import { messageBlocks } from "@/lib/activity";
 import {
   formatElapsed,
@@ -19,18 +21,31 @@ const ACTION_LABEL: Record<string, string> = {
   undone: "Änderung zurückgenommen",
 };
 
+/** One-tap follow-ups once a project exists; they are sent as normal chat messages. */
+const QUICK_ACTIONS = [
+  "Mach es günstiger",
+  "Mach es stabiler",
+  "Erklär mir die Konstruktion",
+  "Welche Holzart passt besser?",
+];
+
 function ProjectCard({ output }: { output: ToolOutput }) {
   const project = output.project;
   if (!project?.summary) return null;
   return (
-    <div className="mt-2 rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm">
-      <span className="block text-xs font-semibold uppercase tracking-wide text-accent-strong">
-        {ACTION_LABEL[output.action ?? ""] ?? "Projekt"}
-        {project.trust === "ai_draft" && " · KI-Entwurf"}
+    <div className="mt-2 flex items-center gap-3 rounded-2xl border border-border bg-surface px-3 py-2 text-sm shadow-sm">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
+        <Icon name="cube" className="h-4 w-4" />
       </span>
-      <span className="block font-medium">{project.summary}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-semibold text-accent-strong">
+          {ACTION_LABEL[output.action ?? ""] ?? "Projekt"}
+          {project.trust === "ai_draft" && " · KI-Entwurf"}
+        </span>
+        <span className="block truncate font-medium">{project.summary}</span>
+      </span>
       {project.material_cost_eur && (
-        <span className="mt-1 inline-block rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white dark:text-black">
+        <span className="shrink-0 text-xs font-semibold tabular-nums text-muted">
           {project.material_cost_eur}
         </span>
       )}
@@ -41,23 +56,46 @@ function ProjectCard({ output }: { output: ToolOutput }) {
 function WorkingIndicator({ startedAt, waiting }: { startedAt: number | null; waiting: boolean }) {
   const elapsed = useElapsed(startedAt);
   return (
-    <li className="flex items-center gap-2 text-sm text-muted" aria-live="polite">
-      <span
-        aria-hidden="true"
-        className="h-3 w-3 animate-spin rounded-full border-2 border-ai/30 border-t-ai"
-      />
-      {waiting ? "Der Assistent liest deine Angaben …" : "Der Assistent arbeitet …"}
-      <span className="font-mono tabular-nums">{formatElapsed(elapsed)}</span>
+    <li className="flex items-center gap-2 pl-9 text-sm text-muted" aria-live="polite">
+      <span className="flex gap-1" aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="h-1.5 w-1.5 animate-bounce rounded-full bg-ai"
+            style={{ animationDelay: `${i * 0.15}s` }}
+          />
+        ))}
+      </span>
+      {waiting ? "liest deine Angaben" : "arbeitet"}
+      <span className="font-mono text-xs tabular-nums">{formatElapsed(elapsed)}</span>
     </li>
   );
 }
 
-export function Chat({ assistant, projectId }: { assistant: Assistant; projectId: string | null }) {
-  const { messages, status, error, busy, submit, startedAt } = assistant;
-  const [input, setInput] = useState("");
+function Avatar() {
+  return (
+    <span
+      aria-hidden="true"
+      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-ai to-fuchsia-500 text-white"
+    >
+      <Icon name="sparkles" className="h-4 w-4" />
+    </span>
+  );
+}
 
-  function send() {
-    if (submit(input)) setInput("");
+export function Chat({ assistant, projectId }: { assistant: Assistant; projectId: string | null }) {
+  const { messages, status, error, busy, submit, retry, startedAt } = assistant;
+  const [input, setInput] = useState("");
+  const listRef = useRef<HTMLOListElement>(null);
+
+  // Follow the conversation while it grows.
+  useEffect(() => {
+    const list = listRef.current;
+    if (list) list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
+  }, [messages, busy]);
+
+  function send(text = input) {
+    if (submit(text) && text === input) setInput("");
   }
 
   function onSubmit(event: FormEvent) {
@@ -74,24 +112,25 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
   }
 
   return (
-    <section aria-labelledby="chat-heading" className="flex flex-col lg:h-full">
-      <h2 id="chat-heading" className="sr-only">
-        Planungsassistent
-      </h2>
-      <p
-        role="note"
-        className="mb-3 rounded-md border border-ai/30 bg-ai-soft px-3 py-2 text-sm text-ai"
-        data-testid="ai-disclosure"
-      >
-        Du sprichst mit einem KI-Assistenten. Maße, Mengen, Kosten und Zeichnungen berechnet
-        Homeworking regelbasiert; die KI formuliert Fragen und Erklärungen.
-      </p>
+    <section aria-labelledby="chat-heading" className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+        <Avatar />
+        <div className="min-w-0">
+          <h2 id="chat-heading" className="text-sm font-semibold">
+            Planungsassistent
+          </h2>
+          <p role="note" className="text-xs text-muted" data-testid="ai-disclosure">
+            KI-Assistent · Maße, Mengen, Kosten und Zeichnungen rechnet Homeworking regelbasiert.
+          </p>
+        </div>
+      </div>
 
       <ol
+        ref={listRef}
         aria-live="polite"
         aria-label="Chatverlauf"
         tabIndex={0}
-        className="max-h-[60vh] space-y-3 overflow-y-auto lg:max-h-none lg:flex-1"
+        className="scrollbar-thin min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4"
         data-testid="messages"
       >
         {messages.map((message, index) => {
@@ -110,23 +149,23 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
           const errors = outputs.filter((o) => o.error && !o.errors);
           const cards = outputs.filter((o) => o.project?.summary);
           if (!blocks.length && errors.length === 0 && cards.length === 0) return null;
+          if (isUser) {
+            return (
+              <li key={message.id} className="flex animate-fadein justify-end">
+                <p className="max-w-[88%] rounded-3xl rounded-br-md bg-surface-muted px-4 py-2.5 whitespace-pre-wrap">
+                  {blocks[0]?.kind === "text" ? blocks[0].text.trim() : ""}
+                </p>
+              </li>
+            );
+          }
           return (
-            <li key={message.id} className={isUser ? "flex justify-end" : "flex justify-start"}>
-              <div
-                className={
-                  isUser
-                    ? "max-w-[85%] rounded-2xl rounded-br-sm bg-accent px-4 py-2 text-white dark:text-black"
-                    : "w-full max-w-[92%] rounded-2xl rounded-bl-sm border border-border bg-surface px-4 py-2"
-                }
-              >
-                {!isUser && (
-                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ai">
-                    KI-Assistent
-                  </span>
-                )}
+            <li key={message.id} className="flex animate-fadein gap-2">
+              <Avatar />
+              <div className="min-w-0 flex-1">
+                <span className="sr-only">KI-Assistent: </span>
                 {blocks.map((block) =>
                   block.kind === "text" ? (
-                    <p key={block.key} className="whitespace-pre-wrap">
+                    <p key={block.key} className="leading-relaxed whitespace-pre-wrap">
                       {block.text.trim()}
                     </p>
                   ) : (
@@ -137,7 +176,7 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
                   <ProjectCard key={i} output={output} />
                 ))}
                 {errors.map((e, i) => (
-                  <p key={i} className="text-sm text-warning">
+                  <p key={i} className="mt-1 text-sm text-warning">
                     {e.error}
                   </p>
                 ))}
@@ -148,43 +187,78 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
         {busy && <WorkingIndicator startedAt={startedAt} waiting={status === "submitted"} />}
       </ol>
 
-      {error && (
-        <p role="alert" className="mt-2 text-sm text-warning">
-          Die Verbindung zum Assistenten ist fehlgeschlagen. Bitte versuche es erneut.
-        </p>
-      )}
-
-      <form onSubmit={onSubmit} className="mt-3">
-        <label htmlFor="chat-input" className="sr-only">
-          Was möchtest du bauen oder reparieren?
-        </label>
-        <div className="flex items-end gap-2 rounded-2xl border border-border bg-surface p-2 shadow-sm focus-within:border-accent">
-          <AutoTextarea
-            id="chat-input"
-            value={input}
-            onChange={setInput}
-            onKeyDown={onKeyDown}
-            minRows={2}
-            maxRows={8}
-            placeholder={
-              projectId
-                ? "Was soll anders werden? z. B. „Mach es 50 cm breiter“ oder „Mit Rückwand“"
-                : "Antworte dem Assistenten oder beschreibe weitere Wünsche …"
-            }
-            className="flex-1 resize-none bg-transparent px-2 py-1 outline-none"
-          />
-          <button
-            type="submit"
-            disabled={busy || !input.trim()}
-            className="rounded-xl bg-accent px-4 py-2 font-medium text-white disabled:opacity-50 dark:text-black"
+      <div className="border-t border-border bg-bg/60 px-3 pt-2 pb-3 backdrop-blur">
+        {error && (
+          <div
+            role="alert"
+            className="mb-2 flex items-center gap-2 rounded-xl border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning"
           >
-            Senden
-          </button>
-        </div>
-        <p className="mt-1 px-1 text-xs text-muted">
-          Enter sendet, Umschalt + Enter für eine neue Zeile.
-        </p>
-      </form>
+            <Icon name="warning" className="h-4 w-4" />
+            <span className="flex-1">Die Verbindung zum Assistenten ist fehlgeschlagen.</span>
+            <button
+              type="button"
+              onClick={retry}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 font-medium hover:bg-warning/10"
+            >
+              <Icon name="rotate" className="h-4 w-4" /> Erneut versuchen
+            </button>
+          </div>
+        )}
+
+        {projectId && !busy && (
+          <ul
+            className="scrollbar-thin -mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-0.5"
+            aria-label="Vorschläge"
+          >
+            {QUICK_ACTIONS.map((action) => (
+              <li key={action} className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => send(action)}
+                  className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium whitespace-nowrap text-muted transition hover:border-accent/50 hover:text-text"
+                >
+                  {action}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <form onSubmit={onSubmit}>
+          <label htmlFor="chat-input" className="sr-only">
+            Was möchtest du bauen oder reparieren?
+          </label>
+          <div
+            className={clsx(
+              "flex items-end gap-2 rounded-3xl border border-border bg-surface py-1.5 pr-1.5 pl-4 shadow-sm transition focus-within:border-accent/60",
+            )}
+          >
+            <AutoTextarea
+              id="chat-input"
+              value={input}
+              onChange={setInput}
+              onKeyDown={onKeyDown}
+              minRows={1}
+              maxRows={8}
+              placeholder={
+                projectId
+                  ? "Was soll anders werden? z. B. „50 cm breiter“"
+                  : "Antworte dem Assistenten …"
+              }
+              className="flex-1 resize-none bg-transparent py-1.5 outline-none"
+            />
+            <button
+              type="submit"
+              disabled={busy || !input.trim()}
+              aria-label="Senden"
+              title="Senden (Enter)"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent transition hover:brightness-110 active:scale-95 disabled:opacity-30"
+            >
+              {busy ? <Spinner /> : <Icon name="send" className="h-4 w-4 -rotate-90" />}
+            </button>
+          </div>
+        </form>
+      </div>
     </section>
   );
 }

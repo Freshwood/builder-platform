@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import dataclass, field
 from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import BeforeValidator, Field
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models import Model
 
@@ -32,10 +33,31 @@ from construction_model.model import Origin, ParamValue, ProjectModel
 from homeworking.modules.agent.prompts import INSTRUCTIONS
 from homeworking.modules.projects.service import ProjectNotFoundError, ProjectService
 
+
+def _parse_json_string(value: Any) -> Any:
+    """Accept an object argument that the model sent as a JSON-encoded string.
+
+    Models regularly serialise large nested arguments (a whole design) into a string. Strict
+    validation then rejects every attempt with "Input should be an object" and the model cannot
+    see what is wrong, so the string is decoded before validation.
+    """
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return value
+    return value
+
+
+_JsonTolerant = BeforeValidator(_parse_json_string)
+
 AgentCommand = Annotated[
     SetParameters | ChangeParameterBy | SelectVariant | Rename | SetRegion | SetPrice,
     Field(discriminator="type"),
+    _JsonTolerant,
 ]
+DesignArg = Annotated[AssemblyDesign, _JsonTolerant]
+ParamsArg = Annotated[dict[str, ParamValue], _JsonTolerant]
 
 
 @dataclass
@@ -276,7 +298,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         ctx: RunContext[AgentDeps],
         template_key: str,
         title: str,
-        params: dict[str, ParamValue],
+        params: ParamsArg,
         explanation: str | None = None,
     ) -> dict[str, Any]:
         """Create a project from a design template; omitted parameters use template defaults.
@@ -310,8 +332,8 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
     async def design_project(
         ctx: RunContext[AgentDeps],
         title: str,
-        design: AssemblyDesign,
-        params: dict[str, ParamValue] | None = None,
+        design: DesignArg,
+        params: ParamsArg | None = None,
         explanation: str | None = None,
     ) -> dict[str, Any]:
         """Create a project from a free-form parametric design (when no pack or template fits).
@@ -364,7 +386,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
 
     @agent.tool(retries=3)
     async def redesign_project(
-        ctx: RunContext[AgentDeps], design: AssemblyDesign, explanation: str | None = None
+        ctx: RunContext[AgentDeps], design: DesignArg, explanation: str | None = None
     ) -> dict[str, Any]:
         """Replace the design of the current free-form project (structural changes such as an
         extra drawer or a different construction). Pure dimension changes use change_project.
@@ -401,7 +423,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         ctx: RunContext[AgentDeps],
         pack_id: str,
         title: str,
-        params: dict[str, ParamValue],
+        params: ParamsArg,
         explanation: str | None = None,
     ) -> dict[str, Any]:
         """Create a new project from a construction pack. Lengths in millimetres.

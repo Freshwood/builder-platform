@@ -89,9 +89,10 @@ test("plan a shelf from a template with 3D model and cutting plan", async ({ pag
 
   await page.getByRole("tab", { name: "Zuschnitt" }).click();
   await expect(page.getByRole("tabpanel")).toContainText("Einkauf und Schnittplan");
-  await page.getByRole("tab", { name: "Maße anpassen" }).click();
+  // Parameters apply directly on Enter, no extra confirm button.
+  await page.getByRole("tab", { name: "Anpassen" }).click();
   await page.getByLabel("Anzahl Böden").fill("6");
-  await page.getByRole("button", { name: "Übernehmen" }).click();
+  await page.getByLabel("Anzahl Böden").press("Enter");
   await expect(summary).toHaveText("Standregal mit 6 Böden – 1000 × 300 × 1800 mm");
 
   await expectNoSeriousA11yViolations(page);
@@ -100,16 +101,21 @@ test("plan a shelf from a template with 3D model and cutting plan", async ({ pag
 test("project brief collects details and sends them with the request", async ({ page }) => {
   await page.goto("/");
   const brief = page.getByTestId("project-brief");
-  await brief.getByRole("button", { name: "Bücherregal" }).click();
+  await page.getByRole("button", { name: /^Bücherregal/ }).click();
   await expect(page.getByLabel("Was möchtest du bauen oder reparieren?")).toHaveValue(
     /Bücherregal mit 5 Böden/,
   );
-  await brief.getByRole("button", { name: "Geölt" }).click();
-  await expect(brief.getByRole("button", { name: "Geölt" })).toHaveAttribute(
+  // Details are pills that open a small panel (progressive disclosure).
+  await brief.getByRole("button", { name: /^Oberfläche/ }).click();
+  const finish = brief.getByRole("region", { name: "Oberfläche" });
+  await finish.getByRole("button", { name: "Geölt" }).click();
+  await expect(finish.getByRole("button", { name: "Geölt" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  await expect(brief).toContainText("5 von 9 Angaben");
+  const details = brief.getByRole("list", { name: "Details (optional)" });
+  await expect(details).toContainText("Geölt");
+  await expect(details).toContainText("80 × 30 cm");
   await expectNoSeriousA11yViolations(page);
   await page.screenshot({ path: "test-results/brief.png", fullPage: true });
 

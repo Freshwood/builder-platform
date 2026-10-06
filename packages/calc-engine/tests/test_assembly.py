@@ -274,9 +274,13 @@ def test_expressions() -> None:
     assert evaluate("max(w, 900) // 100", env) == 9
     assert evaluate("flag and n >= 3", env) == 1
     assert evaluate(12, env) == 12
-    for bad in ("__import__('os')", "w.real", "[1, 2]", "unknown + 1", "w / 0"):
+    # Placeholder braces as used in material ids are tolerated in expressions.
+    assert evaluate("{w} - 130", env) == 670
+    for bad in ("__import__('os')", "w.real", "[1, 2]", "unknown + 1", "w / 0", "{1, 2}"):
         with pytest.raises(ExprError):
             evaluate(bad, env)
+    with pytest.raises(ExprError, match="if"):
+        evaluate("n == 1 ? 2 : 0", env)
 
 
 def test_sheet_planning() -> None:

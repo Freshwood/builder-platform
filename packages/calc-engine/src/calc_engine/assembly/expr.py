@@ -35,6 +35,7 @@ _COMPARE: dict[type[ast.cmpop], Callable[[float, float], bool]] = {
     ast.NotEq: operator.ne,
 }
 _IF_CALL = re.compile(r"\bif\s*\(")
+_PLACEHOLDER = re.compile(r"\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}")
 _FUNCTIONS: dict[str, Callable[..., float]] = {
     "min": min,
     "max": max,
@@ -57,11 +58,15 @@ class ExprError(ValueError):
 def _parse(source: str) -> ast.expr:
     if len(source) > MAX_LENGTH:
         raise ExprError(f"Ausdruck zu lang (max. {MAX_LENGTH} Zeichen)")
+    # Material placeholders look like "{wood}"; models often carry that style over into
+    # expressions ("{height_mm} - 130"), so a braced name is read as the plain name.
+    text = _PLACEHOLDER.sub(r"\1", source)
     try:
         # ``if`` is a Python keyword; accept the spreadsheet-style if(cond, a, b) anyway.
-        return ast.parse(_IF_CALL.sub("_if(", source), mode="eval").body
+        return ast.parse(_IF_CALL.sub("_if(", text), mode="eval").body
     except SyntaxError:
-        raise ExprError(f"Ungültiger Ausdruck '{source}'") from None
+        hint = " – statt 'a ? b : c' bitte if(a, b, c) schreiben" if "?" in source else ""
+        raise ExprError(f"Ungültiger Ausdruck '{source}'{hint}") from None
 
 
 def evaluate(value: float | int | str, env: Mapping[str, float]) -> float:
