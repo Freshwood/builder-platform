@@ -237,3 +237,78 @@ export function PlanningProgress({
     </section>
   );
 }
+
+/** Main area when a planning turn ended without a project: a follow-up question or an error. */
+export function PlanningStopped({
+  request,
+  reply,
+  failed,
+  onAnswer,
+  onRetry,
+}: {
+  request: string;
+  reply: string;
+  failed: boolean;
+  onAnswer: () => void;
+  onRetry: () => void;
+}) {
+  const asked = !failed && reply.length > 0;
+  return (
+    <section
+      aria-labelledby="stopped-heading"
+      className="blueprint relative flex h-full min-h-[28rem] flex-col overflow-hidden rounded-3xl p-6 text-white sm:p-8"
+      data-testid="planning-stopped"
+    >
+      <h2 id="stopped-heading" className="text-2xl font-semibold tracking-tight">
+        {asked ? "Der Assistent hat eine Rückfrage" : "Noch kein Projekt erstellt"}
+      </h2>
+      <p role={failed ? "alert" : undefined} className="mt-2 max-w-2xl text-sm text-white/80">
+        {failed
+          ? "Die Verbindung zum Assistenten ist fehlgeschlagen."
+          : asked
+            ? "Beantworte sie im Chat, dann geht es weiter."
+            : "Der Assistent hat diesmal kein Projekt berechnet. Versuche es noch einmal."}
+      </p>
+
+      {asked && (
+        <p className="relative mt-6 max-h-[24rem] max-w-2xl overflow-y-auto rounded-2xl bg-white/10 px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap">
+          <span className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-sky-200 uppercase">
+            <Icon name="sparkles" className="h-3.5 w-3.5" /> KI-Assistent
+          </span>
+          {reply}
+        </p>
+      )}
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        {asked && (
+          <button
+            type="button"
+            onClick={onAnswer}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-sky-100"
+          >
+            <Icon name="message" className="h-4 w-4" /> Im Chat antworten
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onRetry}
+          className={clsx(
+            "inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition",
+            asked
+              ? "border border-white/30 hover:bg-white/10"
+              : "bg-white text-slate-900 hover:bg-sky-100",
+          )}
+        >
+          <Icon name="rotate" className="h-4 w-4" /> {asked ? "Nochmal planen" : "Erneut versuchen"}
+        </button>
+      </div>
+
+      <div className="relative mt-auto pt-8">
+        <h3 className="text-xs font-semibold tracking-wide text-sky-200 uppercase">
+          Deine Anfrage
+        </h3>
+        <p className="mt-1 line-clamp-4 text-sm whitespace-pre-wrap text-white/80">{request}</p>
+      </div>
+    </section>
+  );
+}

@@ -127,3 +127,40 @@ async def test_design_sent_as_json_string_is_accepted(settings: Settings) -> Non
         assert model.inputs.params["width_mm"] == 600
     finally:
         await container.close()
+
+
+async def test_template_can_be_built_untreated_in_pine(settings: Settings) -> None:
+    """'Kiefer, unbehandelt' fits the shutter template: no free design, no finish in the list."""
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        if len(messages) == 1:
+            assert "wood=douglas|larch|oak|pine|spruce" in (info.instructions or "")
+            return ModelResponse(
+                parts=[
+                    ToolCallPart(
+                        "create_from_template",
+                        {
+                            "template_key": "window_shutter",
+                            "title": "Fensterladen",
+                            "params": {"width_mm": 310, "height_mm": 380, "wood": "pine"},
+                            "untreated": True,
+                        },
+                    )
+                ]
+            )
+        return ModelResponse(parts=[TextPart("Fertig.")])
+
+    container = build_container(settings)
+    await container.create_schema()
+    try:
+        owner = (await container.identity.create_guest()).id
+        agent = build_agent(FunctionModel(respond), container.engine)
+        deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
+        await agent.run("Fensterläden aus Kiefer, unbehandelt", deps=deps)
+        assert deps.project_id is not None
+        model = await container.projects.get(owner, deps.project_id)
+        names = [line.name for line in model.result.bom]
+        assert any("Kiefer" in name for name in names)
+        assert not any("öl" in name.lower() or "lasur" in name.lower() for name in names)
+    finally:
+        await container.close()

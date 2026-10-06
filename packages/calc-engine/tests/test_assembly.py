@@ -484,7 +484,7 @@ def test_window_shutter_template_matches_the_reported_case() -> None:
     height=st.integers(300, 1600),
     wings=st.integers(1, 2),
     board_mm=st.integers(18, 28),
-    wood=st.sampled_from(["douglas", "larch", "oak"]),
+    wood=st.sampled_from(["douglas", "larch", "oak", "pine", "spruce"]),
 )
 def test_window_shutter_is_valid_for_all_parameters(
     width: int, height: int, wings: int, board_mm: int, wood: str
@@ -495,3 +495,11 @@ def test_window_shutter_is_valid_for_all_parameters(
     assert r.key_figures["Außenmaße (B × T × H)"].startswith(f"{width} ×")
     assert sum(1 for s in r.solids if s.name == "Ladenband") == 2 * wings
     assert sum(1 for s in r.solids if s.name == "Schubriegel") == 1
+
+
+def test_window_shutter_in_pine_warns_about_outdoor_use() -> None:
+    """Pine is a valid wish for the template; the engine only adds a durability hint."""
+    design = templates()["window_shutter"].design
+    r = build(design, width_mm=310, height_mm=380, wings=2, wood="pine")
+    assert {line.name for line in r.bom if "Kiefer" in line.name}
+    assert r.notices

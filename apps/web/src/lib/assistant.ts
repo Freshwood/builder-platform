@@ -4,6 +4,8 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { sessionReady } from "@/lib/session";
+
 export type ToolProject = {
   project_id?: string;
   title?: string;
@@ -65,7 +67,15 @@ export function messageText(message: UIMessage): string {
 /** Chat state shared by the brief form, the chat column and the progress panel. */
 export function useAssistant(projectId: string | null, onProjectChanged: (id: string) => void) {
   const [transport] = useState(
-    () => new DefaultChatTransport({ api: "/api/chat", credentials: "include" }),
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        credentials: "include",
+        fetch: async (input, init) => {
+          await sessionReady();
+          return fetch(input, init);
+        },
+      }),
   );
   const { messages, sendMessage, regenerate, status, error } = useChat({ transport });
   const handled = useRef(new Set<string>());

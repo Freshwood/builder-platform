@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 
-import { PlanningProgress } from "@/components/Activity";
+import { PlanningProgress, PlanningStopped } from "@/components/Activity";
 import { Chat } from "@/components/Chat";
 import { Landing } from "@/components/Landing";
 import { ProjectPanel } from "@/components/ProjectPanel";
@@ -38,6 +38,8 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
 
   const assistant = useAssistant(projectId, onProjectChanged);
   const lastRequest = [...assistant.messages].reverse().find((m) => m.role === "user");
+  const lastMessage = assistant.messages.at(-1);
+  const lastReply = lastMessage?.role === "assistant" ? messageText(lastMessage) : "";
   const runningStep = assistant.current
     ? messageBlocks(assistant.current, true)
         .flatMap((block) => (block.kind === "activity" ? block.steps : []))
@@ -108,11 +110,25 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
               )}
               <ProjectPanel projectId={projectId} />
             </>
-          ) : (
+          ) : assistant.busy ? (
             <PlanningProgress
               request={lastRequest ? messageText(lastRequest) : ""}
               current={assistant.current}
               startedAt={assistant.startedAt}
+            />
+          ) : (
+            // The turn ended without a project (follow-up question or failure): never leave a
+            // frozen progress panel behind.
+            <PlanningStopped
+              request={lastRequest ? messageText(lastRequest) : ""}
+              reply={lastReply}
+              failed={Boolean(assistant.error)}
+              onAnswer={() => {
+                setMobileView("chat");
+                // Focus after the chat column became visible on small screens.
+                requestAnimationFrame(() => document.getElementById("chat-input")?.focus());
+              }}
+              onRetry={assistant.retry}
             />
           )}
         </div>

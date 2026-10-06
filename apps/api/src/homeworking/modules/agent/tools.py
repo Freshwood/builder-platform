@@ -300,6 +300,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         title: str,
         params: ParamsArg,
         explanation: str | None = None,
+        untreated: bool = False,
     ) -> dict[str, Any]:
         """Create a project from a design template; omitted parameters use template defaults.
 
@@ -308,6 +309,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             title: Short German project title.
             params: Template parameters (lengths in mm).
             explanation: Optional short German explanation of the construction (labelled as AI).
+            untreated: True when the user wants no surface treatment (no oil or glaze).
         """
         async with ctx.deps.write_lock:
             try:
@@ -316,6 +318,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                     template_key=template_key,
                     title=title,
                     params=params,
+                    untreated=untreated,
                     actor="agent",
                     trace_id=ctx.deps.trace_id,
                 )

@@ -74,6 +74,14 @@
           {
             "value": "oak",
             "label": "Eiche"
+          },
+          {
+            "value": "pine",
+            "label": "Kiefer"
+          },
+          {
+            "value": "spruce",
+            "label": "Fichte"
           }
         ]
       }

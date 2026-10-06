@@ -113,6 +113,7 @@ class ProjectService:
         title: str | None = None,
         params: dict[str, ParamValue] | None = None,
         region: Region | None = None,
+        untreated: bool = False,
         actor: Actor = "user",
         trace_id: str | None = None,
     ) -> CommandOutcome:
@@ -121,13 +122,14 @@ class ProjectService:
             tpl = template(template_key)
         except KeyError:
             raise UnknownPackError(template_key) from None
+        design = tpl.design.model_copy(update={"finish": None}) if untreated else tpl.design
         return await self.create(
             owner_id,
             pack_id=DESIGN_PACK_ID,
             title=title or tpl.title,
             params=params or {},
             region=region,
-            design=tpl.design,
+            design=design,
             actor=actor,
             trace_id=trace_id,
         )

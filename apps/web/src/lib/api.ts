@@ -10,8 +10,14 @@ import {
 } from "@homeworking/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { sessionReady } from "@/lib/session";
+
 // The Next.js server proxies /api to the backend, so requests stay same-origin.
 client.setConfig({ baseUrl: "", credentials: "include" });
+client.interceptors.request.use(async (request) => {
+  await sessionReady();
+  return request;
+});
 
 export const projectKey = (id: string) => ["project", id] as const;
 
