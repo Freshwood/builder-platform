@@ -2,11 +2,15 @@ import {
   client,
   executeCommand,
   getProject,
+  getVersion,
   listProjects,
+  restoreVersion,
   undo,
+  versions,
   type CommandRequest,
   type CommandResponse,
   type ProjectView,
+  type VersionEntry,
 } from "@homeworking/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -20,6 +24,8 @@ client.interceptors.request.use(async (request) => {
 });
 
 export const projectKey = (id: string) => ["project", id] as const;
+// Below projectKey, so invalidating a project also refreshes its version list.
+const versionsKey = (id: string) => ["project", id, "versions"] as const;
 
 export function useProject(id: string | null) {
   return useQuery({
@@ -28,6 +34,42 @@ export function useProject(id: string | null) {
     queryFn: async (): Promise<ProjectView> => {
       const { data } = await getProject({ path: { project_id: id! }, throwOnError: true });
       return data;
+    },
+  });
+}
+
+export function useVersions(id: string, enabled = true) {
+  return useQuery({
+    queryKey: versionsKey(id),
+    enabled,
+    queryFn: async (): Promise<VersionEntry[]> =>
+      (await versions({ path: { project_id: id }, throwOnError: true })).data,
+  });
+}
+
+/** Read-only state of a project after version ``seq``; old versions never change. */
+export function useProjectVersion(id: string, seq: number | null) {
+  return useQuery({
+    queryKey: ["project", id, "version", seq],
+    enabled: seq !== null,
+    staleTime: Infinity,
+    queryFn: async (): Promise<ProjectView> =>
+      (await getVersion({ path: { project_id: id, seq: seq! }, throwOnError: true })).data,
+  });
+}
+
+export function useRestoreVersion(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (seq: number): Promise<CommandResponse> => {
+      const { data, error } = await restoreVersion({ path: { project_id: id, seq } });
+      if (error || !data) throw new Error(errorMessage(error));
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(projectKey(id), { project: data.project, can_undo: data.can_undo });
+      void queryClient.invalidateQueries({ queryKey: versionsKey(id) });
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
   });
 }
@@ -60,6 +102,7 @@ export function useProjectCommand(id: string) {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(projectKey(id), { project: data.project, can_undo: data.can_undo });
+      void queryClient.invalidateQueries({ queryKey: versionsKey(id) });
     },
   });
 }
@@ -74,6 +117,7 @@ export function useUndo(id: string) {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(projectKey(id), { project: data.project, can_undo: data.can_undo });
+      void queryClient.invalidateQueries({ queryKey: versionsKey(id) });
     },
   });
 }

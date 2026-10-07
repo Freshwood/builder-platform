@@ -91,6 +91,17 @@ class SetPrice(_Command):
     unit_price: Decimal | None = Field(None, ge=0, le=100_000, decimal_places=2)
 
 
+class ReplaceInputs(_Command):
+    """Replace all inputs at once: restore an earlier version or re-plan the project.
+
+    The full inputs travel with the command, so replaying the log never depends on other entries.
+    """
+
+    type: Literal["replace_inputs"] = "replace_inputs"
+    inputs: ProjectInputs
+    restored_seq: int | None = Field(None, ge=1, description="Version restored by this command")
+
+
 class Undo(_Command):
     type: Literal["undo"] = "undo"
 
@@ -105,6 +116,7 @@ Command = Annotated[
     | AddNote
     | ReplaceDesign
     | SetPrice
+    | ReplaceInputs
     | Undo,
     Field(discriminator="type"),
 ]
@@ -207,6 +219,8 @@ def apply_to_inputs(
             if unit_price is not None:
                 prices[item_id] = unit_price
             return inputs.model_copy(update={"prices": prices})
+        case ReplaceInputs(inputs=replacement):
+            return replacement
         case Undo():
             raise CommandError("Undo must be resolved via effective_commands()")
     raise CommandError(f"Unsupported command {command!r}")  # pragma: no cover

@@ -447,6 +447,36 @@ Die Plattform kann die notwendigen Leistungen **orchestrieren**.
 
 Dadurch wird die Plattform für Partner wertvoll.
 
+## Community-Bibliothek, Forks und Marktplatz (Ausblick)
+
+Jedes Projekt hat einen vollständigen Versionsverlauf, und jedes KI-Ergebnis ist gespeichert
+([ADR-0005](docs/architecture/adr/0005-versionen-und-gespeicherte-ki-laeufe.md)). Darauf lässt sich
+eine Community aufbauen:
+
+```text
+Privates Projekt ──veröffentlichen──▶ Community-Bibliothek (kostenlos, mit Lizenz, z. B. CC BY-SA)
+                                         │
+                                         ├── forken: eigene Kopie mit Herkunftsverweis, weiter verbessern
+                                         ├── bewerten, kommentieren, „gebaut“-Fotos
+                                         └── gute Forks fließen als Vorlage zurück (kuratiert)
+
+Besonderes Projekt ──verkaufen──▶ Marktplatz (Ersteller legt Preis fest, Plattform erhält Provision)
+```
+
+- **Veröffentlichen:** Ein Projekt (bzw. eine bestimmte Version) wird öffentlich; private Daten wie
+  Region, eigene Preise und Chatverlauf bleiben privat.
+- **Forken:** Kopie inklusive Entwurf und Parametern, mit Verweis auf das Original und dessen
+  Version (Provenance). Zeichnungen, Stückliste und Kosten rechnet die Engine für den Fork neu.
+- **Kosten sparen:** Ein veröffentlichter Entwurf ersetzt teure KI-Läufe – wer etwas Ähnliches
+  bauen will, startet vom Fork statt vom leeren Chat. Der Agent kann passende Community-Projekte
+  vorschlagen, bevor er frei entwirft.
+- **Verkaufen:** Ersteller bieten besondere Pläne kostenpflichtig an; die Plattform verdient über
+  eine Provision.
+- **Compliance (Gate 6):** Nutzungsbedingungen mit Lizenz für geteilte Inhalte, Moderation und
+  Meldeweg (DSA), Ranking-Transparenz (P2B-VO), Meldepflichten für Verkäufer (DAC7),
+  Verbraucherrechte bei digitalen Inhalten, klare Haftungshinweise (Planungshilfe, kein
+  Standsicherheitsnachweis) auch für verkaufte Pläne.
+
 ---
 
 # 7. Interoperabilitäts-Layer

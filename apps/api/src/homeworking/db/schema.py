@@ -60,3 +60,26 @@ class ProjectCommandRow(Base):
     pack_version: Mapped[str] = mapped_column(String(32))
     diff: Mapped[dict[str, Any] | None]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AgentRunRow(Base):
+    """One assistant turn with everything it produced (ADR-0005): chat, designs, usage."""
+
+    __tablename__ = "agent_runs"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    trace_id: Mapped[str] = mapped_column(String(64), unique=True)
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    chat_id: Mapped[str | None] = mapped_column(String(128), index=True)
+    project_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(16))
+    model: Mapped[str] = mapped_column(String(128))
+    prompt_version: Mapped[str] = mapped_column(String(32))
+    ui_messages: Mapped[list[Any]] = mapped_column(JsonDocument)
+    model_messages: Mapped[list[Any] | None] = mapped_column(JsonDocument)
+    design_attempts: Mapped[list[Any]] = mapped_column(JsonDocument)
+    usage: Mapped[dict[str, Any] | None]
+    error: Mapped[str | None] = mapped_column(String(2000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

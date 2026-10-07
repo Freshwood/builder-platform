@@ -407,6 +407,159 @@
         }
       }
     },
+    "/api/projects/{project_id}/versions": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Versions",
+        "description": "Every log entry is a version that can be viewed and restored (newest first).",
+        "operationId": "versions",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VersionEntry"
+                  },
+                  "title": "Response Versions"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/versions/{seq}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Get Version",
+        "description": "Read-only view of the project as it was after version ``seq``.",
+        "operationId": "get_version",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "seq",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/versions/{seq}/restore": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Restore Version",
+        "operationId": "restore_version",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "seq",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{project_id}/drawings/{view}.svg": {
       "get": {
         "tags": [
@@ -432,6 +585,22 @@
             "schema": {
               "type": "string",
               "title": "View"
+            }
+          },
+          {
+            "name": "seq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Seq"
             }
           }
         ],
@@ -471,6 +640,22 @@
               "type": "string",
               "format": "uuid",
               "title": "Project Id"
+            }
+          },
+          {
+            "name": "seq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Seq"
             }
           }
         ],
@@ -549,6 +734,55 @@
         "responses": {
           "200": {
             "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/chat": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Project Chat",
+        "description": "Chat messages of a project (Vercel AI UI message format), oldest first.",
+        "operationId": "project_chat",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Project Chat"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
@@ -3509,6 +3743,78 @@
           "is_selected"
         ],
         "title": "VariantSummary"
+      },
+      "VersionEntry": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "German description of the change"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "material_cost": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "string",
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material Cost",
+            "description": "Material cost range (EUR) of the project after this change"
+          },
+          "construction": {
+            "type": "boolean",
+            "title": "Construction",
+            "description": "Whether the change replaced the construction"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "label",
+          "actor",
+          "created_at",
+          "construction",
+          "current"
+        ],
+        "title": "VersionEntry"
       }
     }
   }

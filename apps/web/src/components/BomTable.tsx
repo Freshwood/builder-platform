@@ -82,7 +82,15 @@ function SourceBadge({ line }: { line: BomLine }) {
   );
 }
 
-export function BomTable({ result, projectId }: { result: Result; projectId: string }) {
+export function BomTable({
+  result,
+  projectId,
+  readOnly = false,
+}: {
+  result: Result;
+  projectId: string;
+  readOnly?: boolean;
+}) {
   const costs = result.costs;
   const used = costs.material_used;
   const userPriced = costs.user_priced ?? 0;
@@ -160,11 +168,17 @@ export function BomTable({ result, projectId }: { result: Result; projectId: str
                     )}
                   </td>
                   <td className="py-2 pr-2">
-                    <PriceEditor
-                      key={`${line.item_id}:${line.price_source}:${line.unit_price.min}`}
-                      line={line}
-                      projectId={projectId}
-                    />
+                    {readOnly ? (
+                      <span className="block text-right tabular-nums">
+                        {formatCost(line.unit_price, { cents: true })}
+                      </span>
+                    ) : (
+                      <PriceEditor
+                        key={`${line.item_id}:${line.price_source}:${line.unit_price.min}`}
+                        line={line}
+                        projectId={projectId}
+                      />
+                    )}
                     <span className="mt-1 flex justify-end">
                       <SourceBadge line={line} />
                     </span>

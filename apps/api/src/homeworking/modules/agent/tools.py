@@ -67,6 +67,8 @@ class AgentDeps:
     project_id: UUID | None
     trace_id: str
     changed_projects: set[UUID] = field(default_factory=set)
+    # Every design the model submitted, accepted or not; stored with the agent run (it cost money).
+    design_attempts: list[dict[str, Any]] = field(default_factory=list)
     # The model may call several tools in parallel; project writes must run one after another,
     # otherwise they race for the next command sequence number.
     write_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -252,6 +254,28 @@ async def _store_explanation(
     )
 
 
+def _target(ctx: RunContext[AgentDeps], new_project: bool) -> UUID | None:
+    """Project that a create call re-plans as its next version (None = create a new project)."""
+    return None if new_project else ctx.deps.project_id
+
+
+def _action(target: UUID | None) -> str:
+    return "created" if target is None else "replanned"
+
+
+def _attempt(
+    ctx: RunContext[AgentDeps], tool: str, design: AssemblyDesign, errors: list[str]
+) -> None:
+    ctx.deps.design_attempts.append(
+        {
+            "tool": tool,
+            "accepted": not errors,
+            "errors": errors,
+            "design": design.model_dump(mode="json"),
+        }
+    )
+
+
 def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
     agent: Agent[AgentDeps, str] = Agent(
         model,
@@ -301,6 +325,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         params: ParamsArg,
         explanation: str | None = None,
         untreated: bool = False,
+        new_project: bool = False,
     ) -> dict[str, Any]:
         """Create a project from a design template; omitted parameters use template defaults.
 
@@ -310,7 +335,10 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             params: Template parameters (lengths in mm).
             explanation: Optional short German explanation of the construction (labelled as AI).
             untreated: True when the user wants no surface treatment (no oil or glaze).
+            new_project: Only true if the user explicitly wants another, separate project. Otherwise
+                an active project gets this as its next version (history and chat stay).
         """
+        target = _target(ctx, new_project)
         # Models tend to put the flag and design-level fields among the template parameters.
         params = dict(params)
         untreated = bool(params.pop("untreated", untreated))
@@ -324,6 +352,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                     title=title,
                     params=params,
                     untreated=untreated,
+                    replace_project_id=target,
                     actor="agent",
                     trace_id=ctx.deps.trace_id,
                 )
@@ -334,7 +363,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
-        return {"action": "created", "project": project_summary(outcome.project)}
+        return {"action": _action(target), "project": project_summary(outcome.project)}
 
     @agent.tool(retries=3)
     async def design_project(
@@ -343,6 +372,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         design: DesignArg,
         params: ParamsArg | None = None,
         explanation: str | None = None,
+        new_project: bool = False,
     ) -> dict[str, Any]:
         """Create a project from a free-form parametric design (when no pack or template fits).
 
@@ -357,27 +387,44 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             params: Optional initial parameter values (otherwise the design defaults).
             explanation: Short German explanation of why the construction looks like this
                 (material, cross-sections, joints); stored only if the engine accepts the design.
+            new_project: Only true if the user explicitly wants another, separate project. Otherwise
+                an active project gets this as its next version (history and chat stay).
         """
         design = design.model_copy(update={"origin": Origin.AI})
+        target = _target(ctx, new_project)
         async with ctx.deps.write_lock:
             try:
-                outcome = await ctx.deps.projects.create(
-                    ctx.deps.owner_id,
-                    pack_id=DESIGN_PACK_ID,
-                    title=title,
-                    params=params or {},
-                    design=design,
-                    actor="agent",
-                    trace_id=ctx.deps.trace_id,
-                )
+                if target is not None:
+                    outcome = await ctx.deps.projects.replan(
+                        ctx.deps.owner_id,
+                        target,
+                        pack_id=DESIGN_PACK_ID,
+                        title=title,
+                        params=params or {},
+                        design=design,
+                        actor="agent",
+                        trace_id=ctx.deps.trace_id,
+                    )
+                else:
+                    outcome = await ctx.deps.projects.create(
+                        ctx.deps.owner_id,
+                        pack_id=DESIGN_PACK_ID,
+                        title=title,
+                        params=params or {},
+                        design=design,
+                        actor="agent",
+                        trace_id=ctx.deps.trace_id,
+                    )
             except DesignRejectedError as exc:
+                _attempt(ctx, "design_project", design, exc.errors)
                 return _design_rejected(exc)
             except ParameterError as exc:
                 return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+            _attempt(ctx, "design_project", design, [])
             await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
-        return {"action": "created", "project": project_summary(outcome.project)}
+        return {"action": _action(target), "project": project_summary(outcome.project)}
 
     @agent.tool
     async def get_current_design(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
@@ -413,11 +460,13 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                     trace_id=ctx.deps.trace_id,
                 )
             except DesignRejectedError as exc:
+                _attempt(ctx, "redesign_project", design, exc.errors)
                 return _design_rejected(exc)
             except ParameterError as exc:
                 return _error("Ungültige Parameter: " + "; ".join(exc.errors))
             except (CommandError, ProjectNotFoundError) as exc:
                 return _error(f"Änderung nicht möglich: {exc}")
+            _attempt(ctx, "redesign_project", design, [])
             await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.changed_projects.add(outcome.project.id)
         return {
@@ -433,6 +482,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         title: str,
         params: ParamsArg,
         explanation: str | None = None,
+        new_project: bool = False,
     ) -> dict[str, Any]:
         """Create a new project from a construction pack. Lengths in millimetres.
 
@@ -441,17 +491,31 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             title: Short project title in German, e.g. "Hochbeet am Gartenhaus".
             params: Pack parameters; omitted parameters use the pack defaults.
             explanation: Optional short German explanation of the construction (labelled as AI).
+            new_project: Only true if the user explicitly wants another, separate project. Otherwise
+                an active project gets this as its next version (history and chat stay).
         """
+        target = _target(ctx, new_project)
         async with ctx.deps.write_lock:
             try:
-                outcome = await ctx.deps.projects.create(
-                    ctx.deps.owner_id,
-                    pack_id=pack_id,
-                    title=title,
-                    params=params,
-                    actor="agent",
-                    trace_id=ctx.deps.trace_id,
-                )
+                if target is not None:
+                    outcome = await ctx.deps.projects.replan(
+                        ctx.deps.owner_id,
+                        target,
+                        pack_id=pack_id,
+                        title=title,
+                        params=params,
+                        actor="agent",
+                        trace_id=ctx.deps.trace_id,
+                    )
+                else:
+                    outcome = await ctx.deps.projects.create(
+                        ctx.deps.owner_id,
+                        pack_id=pack_id,
+                        title=title,
+                        params=params,
+                        actor="agent",
+                        trace_id=ctx.deps.trace_id,
+                    )
             except ParameterError as exc:
                 return _error("Ungültige Parameter: " + "; ".join(exc.errors))
             except UnknownPackError:
@@ -459,7 +523,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
-        return {"action": "created", "project": project_summary(outcome.project)}
+        return {"action": _action(target), "project": project_summary(outcome.project)}
 
     @agent.tool
     async def change_project(ctx: RunContext[AgentDeps], command: AgentCommand) -> dict[str, Any]:

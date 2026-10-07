@@ -91,7 +91,7 @@ export function useAssistant(projectId: string | null, onProjectChanged: (id: st
         },
       }),
   );
-  const { messages, sendMessage, regenerate, status, error } = useChat({ transport });
+  const { messages, sendMessage, regenerate, setMessages, status, error } = useChat({ transport });
   const handled = useRef(new Set<string>());
   const busy = status === "submitted" || status === "streaming";
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -128,6 +128,17 @@ export function useAssistant(projectId: string | null, onProjectChanged: (id: st
     void regenerate({ body: { projectId } });
   }, [busy, projectId, regenerate]);
 
+  /** Show a stored conversation; its project links must not switch the project again. */
+  const restore = useCallback(
+    (stored: UIMessage[]) => {
+      for (const message of stored) {
+        toolOutputs(message).forEach((_, index) => handled.current.add(`${message.id}:${index}`));
+      }
+      setMessages((current) => (current.length ? current : stored));
+    },
+    [setMessages],
+  );
+
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const current = busy && messages.at(-1)?.role === "assistant" ? (lastAssistant ?? null) : null;
 
@@ -138,6 +149,7 @@ export function useAssistant(projectId: string | null, onProjectChanged: (id: st
     busy,
     submit,
     retry,
+    restore,
     startedAt: busy ? startedAt : null,
     current,
   };

@@ -12,6 +12,7 @@ from homeworking.db.schema import Base
 from homeworking.db.session import make_engine, make_session_factory
 from homeworking.modules.agent.model import build_model
 from homeworking.modules.agent.tools import AgentDeps, build_agent
+from homeworking.modules.conversations.service import ConversationService
 from homeworking.modules.identity.service import IdentityProvider, SqlGuestIdentityProvider
 from homeworking.modules.projects.repository import SqlProjectRepository
 from homeworking.modules.projects.service import ProjectService
@@ -26,6 +27,7 @@ class Container:
     engine: Engine
     projects: ProjectService
     identity: IdentityProvider
+    conversations: ConversationService
     agent: Agent[AgentDeps, str]
     model_name: str
 
@@ -50,6 +52,7 @@ def build_container(settings: Settings, engine: Engine | None = None) -> Contain
         engine=calc,
         projects=ProjectService(SqlProjectRepository(sessions), calc),
         identity=SqlGuestIdentityProvider(sessions),
+        conversations=ConversationService(sessions),
         agent=build_agent(model, calc),
         model_name=model.model_name,
     )

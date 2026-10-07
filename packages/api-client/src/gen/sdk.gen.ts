@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ChatData, ChatResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DocumentData, DocumentErrors, DocumentResponses, DrawingData, DrawingErrors, DrawingResponses, ExecuteCommandData, ExecuteCommandErrors, ExecuteCommandResponses, ExportData, ExportErrors, ExportResponses, GetProjectData, GetProjectErrors, GetProjectResponses, HealthData, HealthResponses, HistoryData, HistoryErrors, HistoryResponses, ListPacksData, ListPacksResponses, ListProjectsData, ListProjectsResponses, ListTemplatesData, ListTemplatesResponses, MeData, MeResponses, NoticesData, NoticesResponses, UndoData, UndoErrors, UndoResponses } from './types.gen';
+import type { ChatData, ChatResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DocumentData, DocumentErrors, DocumentResponses, DrawingData, DrawingErrors, DrawingResponses, ExecuteCommandData, ExecuteCommandErrors, ExecuteCommandResponses, ExportData, ExportErrors, ExportResponses, GetProjectData, GetProjectErrors, GetProjectResponses, GetVersionData, GetVersionErrors, GetVersionResponses, HealthData, HealthResponses, HistoryData, HistoryErrors, HistoryResponses, ListPacksData, ListPacksResponses, ListProjectsData, ListProjectsResponses, ListTemplatesData, ListTemplatesResponses, MeData, MeResponses, NoticesData, NoticesResponses, ProjectChatData, ProjectChatErrors, ProjectChatResponses, RestoreVersionData, RestoreVersionErrors, RestoreVersionResponses, UndoData, UndoErrors, UndoResponses, VersionsData, VersionsErrors, VersionsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -93,6 +93,25 @@ export const undo = <ThrowOnError extends boolean = false>(options: Options<Undo
 export const history_ = <ThrowOnError extends boolean = false>(options: Options<HistoryData, ThrowOnError>): RequestResult<HistoryResponses, HistoryErrors, ThrowOnError> => (options.client ?? client).get<HistoryResponses, HistoryErrors, ThrowOnError>({ url: '/api/projects/{project_id}/history', ...options });
 
 /**
+ * Versions
+ *
+ * Every log entry is a version that can be viewed and restored (newest first).
+ */
+export const versions = <ThrowOnError extends boolean = false>(options: Options<VersionsData, ThrowOnError>): RequestResult<VersionsResponses, VersionsErrors, ThrowOnError> => (options.client ?? client).get<VersionsResponses, VersionsErrors, ThrowOnError>({ url: '/api/projects/{project_id}/versions', ...options });
+
+/**
+ * Get Version
+ *
+ * Read-only view of the project as it was after version ``seq``.
+ */
+export const getVersion = <ThrowOnError extends boolean = false>(options: Options<GetVersionData, ThrowOnError>): RequestResult<GetVersionResponses, GetVersionErrors, ThrowOnError> => (options.client ?? client).get<GetVersionResponses, GetVersionErrors, ThrowOnError>({ url: '/api/projects/{project_id}/versions/{seq}', ...options });
+
+/**
+ * Restore Version
+ */
+export const restoreVersion = <ThrowOnError extends boolean = false>(options: Options<RestoreVersionData, ThrowOnError>): RequestResult<RestoreVersionResponses, RestoreVersionErrors, ThrowOnError> => (options.client ?? client).post<RestoreVersionResponses, RestoreVersionErrors, ThrowOnError>({ url: '/api/projects/{project_id}/versions/{seq}/restore', ...options });
+
+/**
  * Drawing
  */
 export const drawing = <ThrowOnError extends boolean = false>(options: Options<DrawingData, ThrowOnError>): RequestResult<DrawingResponses, DrawingErrors, ThrowOnError> => (options.client ?? client).get<DrawingResponses, DrawingErrors, ThrowOnError>({ url: '/api/projects/{project_id}/drawings/{view}.svg', ...options });
@@ -111,3 +130,10 @@ export const export_ = <ThrowOnError extends boolean = false>(options: Options<E
  * Chat
  */
 export const chat = <ThrowOnError extends boolean = false>(options?: Options<ChatData, ThrowOnError>): RequestResult<ChatResponses, unknown, ThrowOnError> => (options?.client ?? client).post<ChatResponses, unknown, ThrowOnError>({ url: '/api/chat', ...options });
+
+/**
+ * Project Chat
+ *
+ * Chat messages of a project (Vercel AI UI message format), oldest first.
+ */
+export const projectChat = <ThrowOnError extends boolean = false>(options: Options<ProjectChatData, ThrowOnError>): RequestResult<ProjectChatResponses, ProjectChatErrors, ThrowOnError> => (options.client ?? client).get<ProjectChatResponses, ProjectChatErrors, ThrowOnError>({ url: '/api/projects/{project_id}/chat', ...options });

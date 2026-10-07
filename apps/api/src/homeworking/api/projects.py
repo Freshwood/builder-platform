@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -15,9 +16,24 @@ from pydantic import BaseModel, Field
 from calc_engine.assembly.templates import templates
 from calc_engine.pack import PackDescriptor
 from construction_model.assembly import AssemblyDesign
-from construction_model.commands import EditCommand, command_adapter
+from construction_model.commands import (
+    AddNote,
+    ChangeParameterBy,
+    Command,
+    CreateProject,
+    EditCommand,
+    Rename,
+    ReplaceDesign,
+    ReplaceInputs,
+    SelectVariant,
+    SetParameters,
+    SetPrice,
+    SetRegion,
+    Undo,
+    command_adapter,
+)
 from construction_model.diff import ModelDiff
-from construction_model.model import ParamValue, ProjectModel, Region
+from construction_model.model import Origin, ParamValue, ProjectModel, Region
 from homeworking.api.deps import ContainerDep, UserDep
 from homeworking.modules.compliance.disclosure import (
     AI_CHAT_DISCLOSURE,
@@ -26,6 +42,7 @@ from homeworking.modules.compliance.disclosure import (
 )
 from homeworking.modules.documents.pdf import render_pdf
 from homeworking.modules.drawings.svg import render_svg
+from homeworking.modules.projects.ports import CommandRecord
 from homeworking.modules.projects.service import CommandOutcome
 
 router = APIRouter(prefix="/api", tags=["projects"])
@@ -77,6 +94,18 @@ class HistoryEntry(BaseModel):
     command: dict[str, Any]
     engine_version: str
     created_at: datetime | None
+
+
+class VersionEntry(BaseModel):
+    seq: int
+    label: str = Field(description="German description of the change")
+    actor: str
+    created_at: datetime | None
+    material_cost: tuple[Decimal, Decimal] | None = Field(
+        None, description="Material cost range (EUR) of the project after this change"
+    )
+    construction: bool = Field(description="Whether the change replaced the construction")
+    current: bool
 
 
 class MeResponse(BaseModel):
@@ -193,13 +222,99 @@ async def history(project_id: UUID, container: ContainerDep, user: UserDep) -> l
     ]
 
 
+def _changes(record: CommandRecord, labels: dict[str, str]) -> str:
+    changes = record.diff.params if record.diff else []
+    return ", ".join(f"{labels.get(c.name, c.name)} {c.before} → {c.after}" for c in changes)
+
+
+def _version_label(record: CommandRecord, labels: dict[str, str]) -> str:
+    command: Command = record.command
+    match command:
+        case CreateProject(title=title):
+            return f"Projekt „{title}“ erstellt"
+        case SetParameters() | ChangeParameterBy():
+            changes = _changes(record, labels)
+            return f"Geändert: {changes}" if changes else "Parameter geändert"
+        case SelectVariant(variant_key=key):
+            return f"Variante „{key}“ gewählt"
+        case Rename(title=title):
+            return f"Umbenannt in „{title}“"
+        case SetRegion():
+            return "Region geändert"
+        case AddNote():
+            return "Notiz hinzugefügt"
+        case ReplaceDesign():
+            return "Neuer Entwurf"
+        case SetPrice():
+            return "Eigener Preis eingetragen"
+        case ReplaceInputs(restored_seq=seq, inputs=inputs):
+            return f"Version {seq} wiederhergestellt" if seq else f"Neu geplant: {inputs.title}"
+        case Undo():
+            return "Rückgängig gemacht"
+    return command.type  # pragma: no cover
+
+
+@router.get("/projects/{project_id}/versions", response_model=list[VersionEntry])
+async def versions(project_id: UUID, container: ContainerDep, user: UserDep) -> list[VersionEntry]:
+    """Every log entry is a version that can be viewed and restored (newest first)."""
+    model = await container.projects.get(user.id, project_id)
+    labels = {p.name: p.label for p in model.result.param_specs}
+    # An AI explanation is stored right after the construction it explains: same version.
+    records = [
+        r
+        for r in await container.projects.history(user.id, project_id)
+        if not (isinstance(r.command, AddNote) and r.command.origin is Origin.AI)
+    ]
+    last = records[-1].seq if records else 0
+    return [
+        VersionEntry(
+            seq=r.seq,
+            label=_version_label(r, labels),
+            actor=r.actor,
+            created_at=r.created_at,
+            material_cost=r.diff.material_cost_after if r.diff else None,
+            construction=isinstance(
+                r.command, CreateProject | ReplaceDesign | ReplaceInputs | Undo
+            ),
+            current=r.seq == last,
+        )
+        for r in reversed(records)
+    ]
+
+
+@router.get("/projects/{project_id}/versions/{seq}", response_model=ProjectView)
+async def get_version(
+    project_id: UUID, seq: int, container: ContainerDep, user: UserDep
+) -> ProjectView:
+    """Read-only view of the project as it was after version ``seq``."""
+    model = await container.projects.version(user.id, project_id, seq)
+    return ProjectView(project=model, can_undo=False)
+
+
+@router.post("/projects/{project_id}/versions/{seq}/restore", response_model=CommandResponse)
+async def restore_version(
+    project_id: UUID, seq: int, container: ContainerDep, user: UserDep
+) -> CommandResponse:
+    return _command_response(await container.projects.restore(user.id, project_id, seq))
+
+
+async def _model(
+    container: ContainerDep, owner_id: UUID, project_id: UUID, seq: int | None
+) -> ProjectModel:
+    if seq is None:
+        return await container.projects.get(owner_id, project_id)
+    return await container.projects.version(owner_id, project_id, seq)
+
+
 @router.get(
     "/projects/{project_id}/drawings/{view}.svg",
     response_class=Response,
     responses={200: {"content": {"image/svg+xml": {}}}},
 )
-async def drawing(project_id: UUID, view: str, container: ContainerDep, user: UserDep) -> Response:
-    model = await container.projects.get(user.id, project_id)
+async def drawing(
+    project_id: UUID, view: str, container: ContainerDep, user: UserDep, seq: int | None = None
+) -> Response:
+    model = await _model(container, user.id, project_id, seq)
     for d in model.result.drawings:
         if d.view == view:
             return Response(render_svg(d, element_id=f"drawing-{view}"), media_type="image/svg+xml")
@@ -211,8 +326,10 @@ async def drawing(project_id: UUID, view: str, container: ContainerDep, user: Us
     response_class=Response,
     responses={200: {"content": {"application/pdf": {}}}},
 )
-async def document(project_id: UUID, container: ContainerDep, user: UserDep) -> Response:
-    model = await container.projects.get(user.id, project_id)
+async def document(
+    project_id: UUID, container: ContainerDep, user: UserDep, seq: int | None = None
+) -> Response:
+    model = await _model(container, user.id, project_id, seq)
     try:
         pdf = await run_in_threadpool(render_pdf, model)
     except Exception:

@@ -1692,6 +1692,49 @@ export type VariantSummary = {
     is_selected: boolean;
 };
 
+/**
+ * VersionEntry
+ */
+export type VersionEntry = {
+    /**
+     * Seq
+     */
+    seq: number;
+    /**
+     * Label
+     *
+     * German description of the change
+     */
+    label: string;
+    /**
+     * Actor
+     */
+    actor: string;
+    /**
+     * Created At
+     */
+    created_at: string | null;
+    /**
+     * Material Cost
+     *
+     * Material cost range (EUR) of the project after this change
+     */
+    material_cost?: [
+        string,
+        string
+    ] | null;
+    /**
+     * Construction
+     *
+     * Whether the change replaced the construction
+     */
+    construction: boolean;
+    /**
+     * Current
+     */
+    current: boolean;
+};
+
 export type HealthData = {
     body?: never;
     path?: never;
@@ -1975,6 +2018,106 @@ export type HistoryResponses = {
 
 export type HistoryResponse = HistoryResponses[keyof HistoryResponses];
 
+export type VersionsData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/versions';
+};
+
+export type VersionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type VersionsError = VersionsErrors[keyof VersionsErrors];
+
+export type VersionsResponses = {
+    /**
+     * Response Versions
+     *
+     * Successful Response
+     */
+    200: Array<VersionEntry>;
+};
+
+export type VersionsResponse = VersionsResponses[keyof VersionsResponses];
+
+export type GetVersionData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Seq
+         */
+        seq: number;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/versions/{seq}';
+};
+
+export type GetVersionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetVersionError = GetVersionErrors[keyof GetVersionErrors];
+
+export type GetVersionResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectView;
+};
+
+export type GetVersionResponse = GetVersionResponses[keyof GetVersionResponses];
+
+export type RestoreVersionData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Seq
+         */
+        seq: number;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/versions/{seq}/restore';
+};
+
+export type RestoreVersionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RestoreVersionError = RestoreVersionErrors[keyof RestoreVersionErrors];
+
+export type RestoreVersionResponses = {
+    /**
+     * Successful Response
+     */
+    200: CommandResponse;
+};
+
+export type RestoreVersionResponse = RestoreVersionResponses[keyof RestoreVersionResponses];
+
 export type DrawingData = {
     body?: never;
     path: {
@@ -1987,7 +2130,12 @@ export type DrawingData = {
          */
         view: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Seq
+         */
+        seq?: number | null;
+    };
     url: '/api/projects/{project_id}/drawings/{view}.svg';
 };
 
@@ -2017,7 +2165,12 @@ export type DocumentData = {
          */
         project_id: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Seq
+         */
+        seq?: number | null;
+    };
     url: '/api/projects/{project_id}/document.pdf';
 };
 
@@ -2086,3 +2239,37 @@ export type ChatResponses = {
      */
     200: unknown;
 };
+
+export type ProjectChatData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/chat';
+};
+
+export type ProjectChatErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ProjectChatError = ProjectChatErrors[keyof ProjectChatErrors];
+
+export type ProjectChatResponses = {
+    /**
+     * Response Project Chat
+     *
+     * Successful Response
+     */
+    200: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+export type ProjectChatResponse = ProjectChatResponses[keyof ProjectChatResponses];

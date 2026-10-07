@@ -19,6 +19,7 @@ import {
 const ACTION_LABEL: Record<string, string> = {
   created: "Projekt erstellt",
   changed: "Projekt geändert",
+  replanned: "Neue Version",
   undone: "Änderung zurückgenommen",
 };
 

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { BomTable } from "@/components/BomTable";
 import { PdfDownload } from "@/components/PdfDownload";
+import { VersionHistory } from "@/components/VersionHistory";
 import {
   BuildSteps,
   CutList,
@@ -15,7 +16,14 @@ import {
   PositionBadge,
 } from "@/components/ProjectDetails";
 import { Icon, Pill, Segmented, TRUST, buttonClass, type IconName } from "@/components/ui";
-import { formatEur, useProject, useProjectCommand, useUndo } from "@/lib/api";
+import {
+  formatEur,
+  useProject,
+  useProjectCommand,
+  useProjectVersion,
+  useRestoreVersion,
+  useUndo,
+} from "@/lib/api";
 import { formatCost, formatRange, isExact, typical } from "@/lib/prices";
 
 const Viewer3D = dynamic(() => import("@/components/Viewer3D"), {
@@ -57,10 +65,14 @@ function Header({
   project,
   canUndo,
   version,
+  historyOpen,
+  onToggleHistory,
 }: {
   project: ProjectModel;
   canUndo: boolean;
   version: string;
+  historyOpen: boolean;
+  onToggleHistory: () => void;
 }) {
   const undo = useUndo(project.id);
   const result = project.result;
@@ -106,6 +118,16 @@ function Header({
           >
             <Icon name="undo" className="h-4 w-4" />
             Rückgängig
+          </button>
+          <button
+            type="button"
+            onClick={onToggleHistory}
+            aria-expanded={historyOpen}
+            aria-controls="version-history"
+            className={buttonClass.secondary}
+          >
+            <Icon name="layers" className="h-4 w-4" />
+            Verlauf
           </button>
         </div>
       </div>
@@ -524,9 +546,53 @@ function Panel({ tab, active, children }: { tab: TabKey; active: TabKey; childre
   );
 }
 
+/** Shown while an earlier version is displayed: restore it or go back to the current one. */
+function VersionBanner({
+  projectId,
+  seq,
+  onClose,
+}: {
+  projectId: string;
+  seq: number;
+  onClose: () => void;
+}) {
+  const restore = useRestoreVersion(projectId);
+  return (
+    <div
+      role="status"
+      className="sticky top-3 z-20 flex flex-wrap items-center gap-3 rounded-2xl border border-accent/40 bg-accent-soft/95 px-4 py-3 text-sm shadow-lg backdrop-blur"
+      data-testid="version-banner"
+    >
+      <Icon name="layers" className="h-4 w-4 text-accent" />
+      <span className="flex-1">
+        Du siehst <strong>Version {seq}</strong> – nur zum Ansehen. Wiederherstellen legt sie als
+        neue Version an; nichts geht verloren.
+      </span>
+      {restore.error && <span className="text-warning">{restore.error.message}</span>}
+      <button
+        type="button"
+        className={buttonClass.primary}
+        disabled={restore.isPending}
+        onClick={() => restore.mutate(seq, { onSuccess: onClose })}
+      >
+        <Icon name="rotate" className="h-4 w-4" />
+        Diese Version wiederherstellen
+      </button>
+      <button type="button" className={buttonClass.secondary} onClick={onClose}>
+        Zur aktuellen Version
+      </button>
+    </div>
+  );
+}
+
 export function ProjectPanel({ projectId }: { projectId: string }) {
-  const { data, isLoading, error } = useProject(projectId);
+  const current = useProject(projectId);
+  const [viewSeq, setViewSeq] = useState<number | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const old = useProjectVersion(projectId, viewSeq);
+  const { data, isLoading, error } = viewSeq === null ? current : old;
   const [tab, setTab] = useState<TabKey | null>(null);
+  const readOnly = viewSeq !== null;
 
   if (isLoading) {
     return (
@@ -542,11 +608,17 @@ export function ProjectPanel({ projectId }: { projectId: string }) {
   const { project, can_undo: canUndo } = data;
   const result = project.result;
   const notes = project.inputs.notes ?? [];
-  const version = encodeURIComponent(JSON.stringify(result.effective_params));
+  // Query string of drawing and PDF URLs: changes with every parameter change (cache busting)
+  // and selects the displayed version.
+  const version =
+    encodeURIComponent(JSON.stringify(result.effective_params)) +
+    (viewSeq === null ? "" : `&seq=${viewSeq}`);
   const hasParams = (result.param_specs ?? []).length > 0;
 
   const tabs: { key: TabKey; label: string; icon: IconName; count?: number }[] = [
-    ...(hasParams ? [{ key: "adjust" as const, label: "Anpassen", icon: "sliders" as const }] : []),
+    ...(hasParams && !readOnly
+      ? [{ key: "adjust" as const, label: "Anpassen", icon: "sliders" as const }]
+      : []),
     { key: "bom", label: "Material", icon: "list", count: result.bom.length },
     { key: "cuts", label: "Zuschnitt", icon: "scissors" },
     { key: "steps", label: "Bauanleitung", icon: "hammer", count: result.instructions.length },
@@ -558,11 +630,25 @@ export function ProjectPanel({ projectId }: { projectId: string }) {
 
   return (
     <div className="animate-fadein space-y-5" data-testid="project-panel">
-      <Header project={project} canUndo={canUndo} version={version} />
+      {viewSeq !== null && (
+        <VersionBanner projectId={projectId} seq={viewSeq} onClose={() => setViewSeq(null)} />
+      )}
+      <Header
+        project={project}
+        canUndo={canUndo && !readOnly}
+        version={version}
+        historyOpen={historyOpen}
+        onToggleHistory={() => setHistoryOpen((open) => !open)}
+      />
+      {historyOpen && (
+        <div id="version-history">
+          <VersionHistory projectId={projectId} selected={viewSeq} onSelect={setViewSeq} />
+        </div>
+      )}
       <Figures result={result} />
-      <Stage key={project.id} project={project} version={version} />
+      <Stage key={`${project.id}:${viewSeq}`} project={project} version={version} />
       <Notices result={result} />
-      <Variants project={project} />
+      {!readOnly && <Variants project={project} />}
 
       <section
         aria-label="Details"
@@ -570,14 +656,14 @@ export function ProjectPanel({ projectId }: { projectId: string }) {
       >
         <Tabs tabs={tabs} active={active} onChange={setTab} />
 
-        {hasParams && (
+        {hasParams && !readOnly && (
           <Panel tab="adjust" active={active}>
             <ParamEditor key={version} project={project} />
           </Panel>
         )}
 
         <Panel tab="bom" active={active}>
-          <BomTable result={result} projectId={project.id} />
+          <BomTable result={result} projectId={project.id} readOnly={readOnly} />
           <p className="mt-3 text-xs text-muted">
             {result.costs.note} Werkzeug, falls nicht vorhanden:{" "}
             {formatEur(result.costs.tools_optional.min)} –{" "}

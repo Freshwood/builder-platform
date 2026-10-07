@@ -1,6 +1,8 @@
 "use client";
 
+import { projectChat } from "@homeworking/api-client";
 import { useQueryClient } from "@tanstack/react-query";
+import type { UIMessage } from "ai";
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 
@@ -37,6 +39,19 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
   );
 
   const assistant = useAssistant(projectId, onProjectChanged);
+  const { restore } = assistant;
+
+  // An opened project brings its stored conversation along (it survives reloads).
+  useEffect(() => {
+    if (!initialProjectId) return;
+    let cancelled = false;
+    void projectChat({ path: { project_id: initialProjectId } }).then(({ data }) => {
+      if (!cancelled && data?.length) restore(data as unknown as UIMessage[]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialProjectId, restore]);
   const lastRequest = [...assistant.messages].reverse().find((m) => m.role === "user");
   const lastMessage = assistant.messages.at(-1);
   const lastReply = lastMessage?.role === "assistant" ? messageText(lastMessage) : "";

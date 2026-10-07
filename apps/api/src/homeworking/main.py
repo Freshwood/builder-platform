@@ -16,7 +16,7 @@ from construction_model.commands import CommandError
 from homeworking.api import chat, projects
 from homeworking.bootstrap import Container, build_container
 from homeworking.modules.documents.pdf import warm_up as warm_up_pdf
-from homeworking.modules.projects.service import ProjectNotFoundError
+from homeworking.modules.projects.service import ProjectNotFoundError, VersionNotFoundError
 from homeworking.settings import Settings, get_settings
 
 
@@ -66,6 +66,10 @@ def create_app(
     @app.exception_handler(ProjectNotFoundError)
     async def _not_found(_: Request, __: ProjectNotFoundError) -> JSONResponse:
         return JSONResponse({"detail": "Projekt nicht gefunden"}, status_code=404)
+
+    @app.exception_handler(VersionNotFoundError)
+    async def _version_not_found(_: Request, __: VersionNotFoundError) -> JSONResponse:
+        return JSONResponse({"detail": "Version nicht gefunden"}, status_code=404)
 
     @app.exception_handler(UnknownPackError)
     async def _unknown_pack(_: Request, exc: UnknownPackError) -> JSONResponse:

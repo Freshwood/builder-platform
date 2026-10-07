@@ -14,6 +14,7 @@ from construction_model.commands import (
     Command,
     CommandError,
     CreateProject,
+    ReplaceInputs,
     SelectVariant,
     Undo,
     apply_to_inputs,
@@ -22,7 +23,7 @@ from construction_model.commands import (
     effective_commands,
 )
 from construction_model.diff import ModelDiff, diff_results
-from construction_model.model import ParamValue, ProjectInputs, ProjectModel, Region
+from construction_model.model import Origin, ParamValue, ProjectInputs, ProjectModel, Region
 from homeworking.modules.projects.ports import (
     Actor,
     CommandRecord,
@@ -33,6 +34,10 @@ from homeworking.modules.projects.ports import (
 
 
 class ProjectNotFoundError(LookupError):
+    pass
+
+
+class VersionNotFoundError(LookupError):
     pass
 
 
@@ -114,15 +119,30 @@ class ProjectService:
         params: dict[str, ParamValue] | None = None,
         region: Region | None = None,
         untreated: bool = False,
+        replace_project_id: UUID | None = None,
         actor: Actor = "user",
         trace_id: str | None = None,
     ) -> CommandOutcome:
-        """Create a free-form project from a curated design template (ADR-0004)."""
+        """Create a free-form project from a curated design template (ADR-0004).
+
+        With ``replace_project_id`` the template becomes a new version of that project instead.
+        """
         try:
             tpl = template(template_key)
         except KeyError:
             raise UnknownPackError(template_key) from None
         design = tpl.design.model_copy(update={"finish": None}) if untreated else tpl.design
+        if replace_project_id is not None:
+            return await self.replan(
+                owner_id,
+                replace_project_id,
+                pack_id=DESIGN_PACK_ID,
+                title=title or tpl.title,
+                params=params or {},
+                design=design,
+                actor=actor,
+                trace_id=trace_id,
+            )
         return await self.create(
             owner_id,
             pack_id=DESIGN_PACK_ID,
@@ -130,6 +150,70 @@ class ProjectService:
             params=params or {},
             region=region,
             design=design,
+            actor=actor,
+            trace_id=trace_id,
+        )
+
+    async def replan(
+        self,
+        owner_id: UUID,
+        project_id: UUID,
+        *,
+        pack_id: str,
+        title: str,
+        params: dict[str, ParamValue],
+        design: AssemblyDesign | None = None,
+        actor: Actor = "user",
+        trace_id: str | None = None,
+    ) -> CommandOutcome:
+        """Plan an existing project anew (other pack, template or design) as its next version.
+
+        Region, user prices and user notes stay; AI explanations belong to the old construction.
+        """
+        self._engine.ensure_known(pack_id, design)
+        current = (await self._owned(owner_id, project_id)).model.inputs
+        inputs = ProjectInputs(
+            title=title,
+            pack_id=pack_id,
+            params=dict(params),
+            region=current.region,
+            design=design,
+            prices=current.prices,
+            notes=[n for n in current.notes if n.origin is not Origin.AI],
+        )
+        return await self.execute(
+            owner_id, project_id, ReplaceInputs(inputs=inputs), actor=actor, trace_id=trace_id
+        )
+
+    async def version(self, owner_id: UUID, project_id: UUID, seq: int) -> ProjectModel:
+        """The project as it was right after log entry ``seq`` (deterministic replay)."""
+        stored = await self._owned(owner_id, project_id)
+        records = [r for r in await self._repo.commands(project_id) if r.seq <= seq]
+        if not records or records[-1].seq != seq:
+            raise VersionNotFoundError(seq)
+        inputs: ProjectInputs | None = None
+        for _, command in effective_commands((r.seq, r.command) for r in records):
+            inputs = self._apply(inputs, command)
+        assert inputs is not None
+        return stored.model.model_copy(
+            update={"inputs": inputs, "result": self._engine.build(inputs)}
+        )
+
+    async def restore(
+        self,
+        owner_id: UUID,
+        project_id: UUID,
+        seq: int,
+        *,
+        actor: Actor = "user",
+        trace_id: str | None = None,
+    ) -> CommandOutcome:
+        """Make an earlier version current again; it is appended, so no history is lost."""
+        old = await self.version(owner_id, project_id, seq)
+        return await self.execute(
+            owner_id,
+            project_id,
+            ReplaceInputs(inputs=old.inputs, restored_seq=seq),
             actor=actor,
             trace_id=trace_id,
         )

@@ -121,6 +121,7 @@ class SqlProjectRepository:
                 if row is None:
                     raise LookupError(model.id)
                 row.title = model.inputs.title
+                row.pack_id = model.inputs.pack_id
                 row.schema_version = model.schema_version
                 row.model = model.model_dump(mode="json")
                 session.add(_command_row(model.id, record))

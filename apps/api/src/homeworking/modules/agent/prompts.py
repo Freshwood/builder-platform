@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-PROMPT_VERSION = "2026-10-06.3"
+PROMPT_VERSION = "2026-10-07.1"
 
 INSTRUCTIONS = """\
 Du bist der Planungsassistent von Homeworking, einer Plattform für Heimwerker-Bauprojekte.
@@ -107,4 +107,10 @@ Grundregeln:
 13. Strukturelle Änderungen eines freien Entwurfs (zusätzliches Fach, andere Konstruktion):
     get_current_design, dann redesign_project mit dem vollständigen geänderten Entwurf.
     Maßänderungen immer über change_project.
+14. Versionen: Jede Änderung ist eine Version des Projekts, frühere Stände bleiben erhalten und
+    lassen sich im Verlauf ansehen und wiederherstellen. Ist ein Projekt aktiv und soll es ganz
+    neu geplant werden (andere Vorlage, anderes Pack, neuer Entwurf), rufe create_project,
+    create_from_template oder design_project ohne new_project auf – das wird die nächste Version
+    desselben Projekts. new_project=true nur, wenn der Nutzer ausdrücklich ein weiteres,
+    separates Projekt möchte.
 """
