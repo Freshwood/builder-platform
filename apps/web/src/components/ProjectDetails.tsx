@@ -470,6 +470,13 @@ export function BuildSteps({ result, projectId }: { result: Result; projectId: s
   );
 }
 
+function paragraphs(text: string): string[] {
+  return text
+    .split(/\n\s*\n/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 export function Notes({ notes }: { notes: NonNullable<ProjectModel["inputs"]["notes"]> }) {
   return (
     <div className="space-y-3">
@@ -480,7 +487,14 @@ export function Notes({ notes }: { notes: NonNullable<ProjectModel["inputs"]["no
               <Icon name="sparkles" className="h-3.5 w-3.5" /> KI-generiert
             </figcaption>
           )}
-          <p className="leading-relaxed">{note.text}</p>
+          <div className="space-y-2 leading-relaxed">
+            {/* Explanations come in paragraphs separated by blank lines. */}
+            {paragraphs(note.text).map((text, i) => (
+              <p key={i} className="whitespace-pre-line">
+                {text}
+              </p>
+            ))}
+          </div>
         </figure>
       ))}
     </div>

@@ -75,7 +75,13 @@ tasks:
 
   dev:servers:
     internal: true
-    deps: [dev:api, dev:web]
+    deps: [dev:api, dev:web, dev:warmup]
+
+  dev:warmup:
+    internal: true
+    # next dev compiles each route on first request (minutes on /mnt/c); do it before the user.
+    cmds:
+      - node apps/web/scripts/warmup.mjs
 
   dev:api:
     desc: Run only the API with auto-reload
@@ -91,6 +97,27 @@ tasks:
     desc: Run only the web app
     cmds:
       - "{{.PNPM}} --filter web dev"
+
+  start:
+    desc: Run API and web app like in production (prebuilt pages, no compiling on first visit)
+    deps: [install:web, migrate]
+    cmds:
+      - "{{.PNPM}} --filter web build"
+      - task: start:servers
+
+  start:servers:
+    internal: true
+    deps: [start:api, start:web]
+
+  start:api:
+    internal: true
+    cmds:
+      - uv run uvicorn homeworking.main:app --port {{.API_PORT}}
+
+  start:web:
+    internal: true
+    cmds:
+      - "{{.PNPM}} --filter web start"
 
   # --- Quality -------------------------------------------------------------------------------
 

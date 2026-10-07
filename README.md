@@ -68,8 +68,14 @@ Voraussetzungen: Docker, [uv](https://docs.astral.sh/uv/), Node 24 mit Corepack,
 ```bash
 task setup                    # .env aus .env.example (LLM_MODE=test läuft ohne API-Key), uv sync, pnpm install
 task dev                      # Postgres, Migrationen, API :8000, Web :3000
+task start                    # wie Produktion: Seiten vorab gebaut, kein Kompilieren beim ersten Aufruf
 task                          # alle Tasks auflisten
 ```
+
+`task dev` kompiliert jede Seite beim ersten Aufruf; damit das nicht beim Öffnen eines Projekts
+passiert, ruft es nach dem Start alle Seiten einmal im Hintergrund auf (`apps/web/scripts/warmup.mjs`).
+Unter WSL mit dem Repository unter `/mnt/c` dauert das trotzdem lange – schneller ist ein Klon im
+Linux-Dateisystem oder `task start`.
 
 Abhängigkeiten werden nur neu installiert, wenn sich Lockfiles ändern; `task dev`, `task test`
 usw. installieren bei Bedarf selbst. Zusätzliche Argumente gehen nach `--`, z. B.

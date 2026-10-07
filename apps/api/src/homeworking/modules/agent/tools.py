@@ -33,6 +33,9 @@ from construction_model.model import Origin, ParamValue, ProjectModel
 from homeworking.modules.agent.prompts import INSTRUCTIONS
 from homeworking.modules.projects.service import ProjectNotFoundError, ProjectService
 
+# Upper bound of AddNote.text; explanations span several paragraphs.
+NOTE_MAX_CHARS = 4000
+
 
 def _parse_json_string(value: Any) -> Any:
     """Accept an object argument that the model sent as a JSON-encoded string.
@@ -248,7 +251,7 @@ async def _store_explanation(
     await ctx.deps.projects.execute(
         ctx.deps.owner_id,
         project_id,
-        AddNote(text=text.strip()[:2000], origin=Origin.AI),
+        AddNote(text=text.strip()[:NOTE_MAX_CHARS], origin=Origin.AI),
         actor="agent",
         trace_id=ctx.deps.trace_id,
     )
@@ -333,7 +336,8 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             template_key: Template key, e.g. "shelf".
             title: Short German project title.
             params: Template parameters (lengths in mm).
-            explanation: Optional short German explanation of the construction (labelled as AI).
+            explanation: Detailed German explanation of the construction in several paragraphs
+                (labelled as AI, see the instructions).
             untreated: True when the user wants no surface treatment (no oil or glaze).
             new_project: Only true if the user explicitly wants another, separate project. Otherwise
                 an active project gets this as its next version (history and chat stay).
@@ -385,8 +389,9 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             design: The complete design. Coordinates in mm: x = width (right), y = depth (back),
                 z = height (up), floor z = 0; ``at`` is the part's minimum corner.
             params: Optional initial parameter values (otherwise the design defaults).
-            explanation: Short German explanation of why the construction looks like this
-                (material, cross-sections, joints); stored only if the engine accepts the design.
+            explanation: Detailed German explanation of why the construction looks like this
+                (construction, material, joints, hardware, finish) in several paragraphs; stored
+                only if the engine accepts the design.
             new_project: Only true if the user explicitly wants another, separate project. Otherwise
                 an active project gets this as its next version (history and chat stay).
         """
@@ -490,7 +495,8 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             pack_id: Id of the construction pack, e.g. "raised_bed".
             title: Short project title in German, e.g. "Hochbeet am Gartenhaus".
             params: Pack parameters; omitted parameters use the pack defaults.
-            explanation: Optional short German explanation of the construction (labelled as AI).
+            explanation: Detailed German explanation of the construction in several paragraphs
+                (labelled as AI, see the instructions).
             new_project: Only true if the user explicitly wants another, separate project. Otherwise
                 an active project gets this as its next version (history and chat stay).
         """
@@ -585,7 +591,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
 
     @agent.tool
     async def add_explanation(ctx: RunContext[AgentDeps], text: str) -> dict[str, Any]:
-        """Store a short explanation of the design for the project document (labelled as AI)."""
+        """Store an additional explanation of the design for the project document (labelled as AI)."""
         async with ctx.deps.write_lock:
             if ctx.deps.project_id is None:
                 return _error("Es ist kein Projekt aktiv.")
@@ -593,7 +599,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                 await ctx.deps.projects.execute(
                     ctx.deps.owner_id,
                     ctx.deps.project_id,
-                    AddNote(text=text[:2000], origin=Origin.AI),
+                    AddNote(text=text[:NOTE_MAX_CHARS], origin=Origin.AI),
                     actor="agent",
                     trace_id=ctx.deps.trace_id,
                 )

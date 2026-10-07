@@ -111,7 +111,9 @@
 <section aria-labelledby="h-ai">
   <h2 id="h-ai">Erläuterungen des Assistenten</h2>
   {% for note in ai_notes %}
-    <div class="ai"><span class="ai-label">{{ ai_label }}</span><p>{{ note.text }}</p></div>
+    <div class="ai"><span class="ai-label">{{ ai_label }}</span>
+    {%- for paragraph in note.text.split("\n\n") if paragraph.strip() %}<p>{{ paragraph.strip() }}</p>{% endfor -%}
+    </div>
   {% endfor %}
 </section>
 {% endif %}
