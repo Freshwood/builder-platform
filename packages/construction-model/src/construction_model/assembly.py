@@ -18,17 +18,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from construction_model.base import Origin, ParamValue
 
 Identifier = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,39}$")]
-Expr = Annotated[
-    float | str,
-    Field(
-        description=(
-            "Number or arithmetic expression over parameters (and the repeat variable), "
-            "e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. "
-            "Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), "
-            "comparisons and and/or/not."
-        )
-    ),
-]
+# Explained once in the AssemblyDesign docstring: repeating the description on every field
+# cost ~2.7K characters in every LLM request that carries the design schema.
+Expr = float | str
 Vec3 = tuple[Expr, Expr, Expr]
 
 
@@ -126,7 +118,14 @@ class DesignVariant(_Frozen):
 
 
 class AssemblyDesign(_Frozen):
-    """A complete parametric design of a buildable object."""
+    """A complete parametric design of a buildable object.
+
+    Coordinates in mm: x = width (right), y = depth (back), z = height (up), floor z = 0.
+    Numeric fields (size, at, count, quantity, when, deg) take a number or an arithmetic
+    expression over parameters and the repeat variable, e.g. 'width_mm - 2 * 18' or
+    'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round,
+    floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
+    """
 
     object_type: str = Field(min_length=1, max_length=60, description="German, e.g. 'Wandregal'")
     summary: str = Field(

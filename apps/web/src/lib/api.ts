@@ -67,7 +67,11 @@ export function useRestoreVersion(id: string) {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(projectKey(id), { project: data.project, can_undo: data.can_undo });
+      queryClient.setQueryData(projectKey(id), {
+        project: data.project,
+        can_undo: data.can_undo,
+        seq: data.seq,
+      });
       void queryClient.invalidateQueries({ queryKey: versionsKey(id) });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
@@ -101,7 +105,11 @@ export function useProjectCommand(id: string) {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(projectKey(id), { project: data.project, can_undo: data.can_undo });
+      queryClient.setQueryData(projectKey(id), {
+        project: data.project,
+        can_undo: data.can_undo,
+        seq: data.seq,
+      });
       void queryClient.invalidateQueries({ queryKey: versionsKey(id) });
     },
   });
@@ -116,16 +124,23 @@ export function useUndo(id: string) {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(projectKey(id), { project: data.project, can_undo: data.can_undo });
+      queryClient.setQueryData(projectKey(id), {
+        project: data.project,
+        can_undo: data.can_undo,
+        seq: data.seq,
+      });
       void queryClient.invalidateQueries({ queryKey: versionsKey(id) });
     },
   });
 }
 
+// Created once: constructing Intl formatters is expensive and formatEur runs per table cell.
+const EUR = new Intl.NumberFormat("de-DE", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+
 export function formatEur(value: string | number): string {
-  return new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(Number(value));
+  return EUR.format(Number(value));
 }

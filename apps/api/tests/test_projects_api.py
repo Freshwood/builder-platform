@@ -119,7 +119,7 @@ async def test_concurrent_append_is_rejected(settings) -> None:  # type: ignore[
             await container.projects._repo.append(
                 first.project.model_copy(update={"inputs": inputs}), stale
             )
-        model, undoable = await container.projects.view(owner, created.project.id)
+        model, undoable, _ = await container.projects.view(owner, created.project.id)
         assert model.inputs.title == "B"
         assert undoable is True
     finally:

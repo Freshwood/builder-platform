@@ -29,7 +29,8 @@ const TOOL_LABELS: Record<string, Labels> = {
   add_explanation: { running: "Speichere die Erläuterung …", done: "Erläuterung gespeichert" },
 };
 
-const DESIGN_TOOLS = new Set(["design_project", "redesign_project"]);
+// design_project / redesign_project: tool names before prompt 2026-10-07.3 (stored chats).
+export const DESIGN_TOOLS = new Set(["save_design", "design_project", "redesign_project"]);
 
 type PartialDesign = {
   design?: { parts?: ({ name?: string } | undefined)[]; steps?: unknown[] };

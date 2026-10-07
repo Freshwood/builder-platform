@@ -3,7 +3,7 @@
 - Status: akzeptiert
 - Datum: 2026-10-07
 - Ergänzt: [ADR-0002](0002-projektmodell-und-command-log.md)
-- Problem: [docs/problems/versioning.md](../../problems/versioning.md)
+- Problem: [docs/problems/archiv/versioning.md](../../problems/archiv/versioning.md)
 
 ## Kontext
 

@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -15,6 +16,7 @@ from calc_engine.engine import ParameterError, UnknownPackError
 from construction_model.commands import CommandError
 from homeworking.api import chat, projects
 from homeworking.bootstrap import Container, build_container
+from homeworking.logging_config import configure_logging
 from homeworking.modules.documents.pdf import warm_up as warm_up_pdf
 from homeworking.modules.projects.service import ProjectNotFoundError, VersionNotFoundError
 from homeworking.settings import Settings, get_settings
@@ -27,6 +29,7 @@ def create_app(
     create_schema: bool = False,
 ) -> FastAPI:
     settings = settings or get_settings()
+    configure_logging()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -55,6 +58,8 @@ def create_app(
         same_site="lax",
         https_only=settings.secure_cookies,
     )
+    # Project JSON (BOM, cut plan, solids) and SVG drawings compress 5-10x.
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

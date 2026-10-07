@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(task check:*)",
+      "Bash(task test:*)",
+      "Bash(task bench:*)",
+      "Bash(task prompt:lock)",
+      "Bash(task openapi:check)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv run ruff:*)",
+      "Bash(uv run mypy:*)",
+      "Bash(uv run lint-imports)",
+      "Bash(corepack pnpm -r lint)",
+      "Bash(corepack pnpm -r typecheck)"
+    ],
+    "deny": ["Read(./.env)", "Read(./.env.*)"]
+  }
+}

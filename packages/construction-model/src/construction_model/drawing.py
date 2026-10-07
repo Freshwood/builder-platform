@@ -113,5 +113,6 @@ class Drawing(_Frozen):
     min_y: float
     width: float
     height: float
-    primitives: list[Primitive]
+    # Omitted in API project views (clients load the rendered SVG instead).
+    primitives: list[Primitive] = Field(default_factory=list)
     legend: list[LegendEntry] = Field(default_factory=list)

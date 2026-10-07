@@ -934,7 +934,7 @@
           "parts"
         ],
         "title": "AssemblyDesign",
-        "description": "A complete parametric design of a buildable object."
+        "description": "A complete parametric design of a buildable object.\n\nCoordinates in mm: x = width (right), y = depth (back), z = height (up), floor z = 0.\nNumeric fields (size, at, count, quantity, when, deg) take a number or an arithmetic\nexpression over parameters and the repeat variable, e.g. 'width_mm - 2 * 18' or\n'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round,\nfloor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
       },
       "BomLine": {
         "properties": {
@@ -1192,20 +1192,21 @@
             "type": "boolean",
             "title": "Can Undo"
           },
-          "diff": {
-            "$ref": "#/components/schemas/ModelDiff"
-          },
           "seq": {
             "type": "integer",
-            "title": "Seq"
+            "title": "Seq",
+            "description": "Command log position of this state (changes on every edit)"
+          },
+          "diff": {
+            "$ref": "#/components/schemas/ModelDiff"
           }
         },
         "type": "object",
         "required": [
           "project",
           "can_undo",
-          "diff",
-          "seq"
+          "seq",
+          "diff"
         ],
         "title": "CommandResponse"
       },
@@ -1901,8 +1902,7 @@
           "min_x",
           "min_y",
           "width",
-          "height",
-          "primitives"
+          "height"
         ],
         "title": "Drawing"
       },
@@ -1977,8 +1977,7 @@
                 "type": "string"
               }
             ],
-            "title": "Quantity",
-            "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+            "title": "Quantity"
           },
           "note": {
             "anyOf": [
@@ -1995,15 +1994,10 @@
           "when": {
             "anyOf": [
               {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string"
-                  }
-                ],
-                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+                "type": "number"
+              },
+              {
+                "type": "string"
               },
               {
                 "type": "null"
@@ -2555,8 +2549,7 @@
                   {
                     "type": "string"
                   }
-                ],
-                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+                ]
               },
               {
                 "anyOf": [
@@ -2566,8 +2559,7 @@
                   {
                     "type": "string"
                   }
-                ],
-                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+                ]
               },
               {
                 "anyOf": [
@@ -2577,8 +2569,7 @@
                   {
                     "type": "string"
                   }
-                ],
-                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+                ]
               }
             ],
             "type": "array",
@@ -2597,8 +2588,7 @@
                   {
                     "type": "string"
                   }
-                ],
-                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+                ]
               },
               {
                 "anyOf": [
@@ -2608,8 +2598,7 @@
                   {
                     "type": "string"
                   }
-                ],
-                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+                ]
               },
               {
                 "anyOf": [
@@ -2619,8 +2608,7 @@
                   {
                     "type": "string"
                   }
-                ],
-                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+                ]
               }
             ],
             "type": "array",
@@ -2652,15 +2640,10 @@
           "when": {
             "anyOf": [
               {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string"
-                  }
-                ],
-                "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+                "type": "number"
+              },
+              {
+                "type": "string"
               },
               {
                 "type": "null"
@@ -2918,12 +2901,18 @@
           "can_undo": {
             "type": "boolean",
             "title": "Can Undo"
+          },
+          "seq": {
+            "type": "integer",
+            "title": "Seq",
+            "description": "Command log position of this state (changes on every edit)"
           }
         },
         "type": "object",
         "required": [
           "project",
-          "can_undo"
+          "can_undo",
+          "seq"
         ],
         "title": "ProjectView"
       },
@@ -3120,8 +3109,7 @@
                 "type": "string"
               }
             ],
-            "title": "Count",
-            "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+            "title": "Count"
           },
           "var": {
             "type": "string",
@@ -3178,8 +3166,7 @@
                 "type": "string"
               }
             ],
-            "title": "Deg",
-            "description": "Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+            "title": "Deg"
           }
         },
         "additionalProperties": false,

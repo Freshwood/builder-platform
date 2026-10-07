@@ -10,7 +10,9 @@ from uuid import UUID
 
 from pydantic import BeforeValidator, Field
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.models import Model
+from pydantic_ai.capabilities import AbstractCapability, ProcessHistory
+from pydantic_ai.messages import ModelResponse
+from pydantic_ai.models import Model, ModelRequestContext
 
 from calc_engine.assembly.derive import DESIGN_PACK_ID
 from calc_engine.assembly.templates import template, templates
@@ -30,8 +32,13 @@ from construction_model.commands import (
 )
 from construction_model.diff import ModelDiff
 from construction_model.model import Origin, ParamValue, ProjectModel
+from homeworking.modules.agent.history import process_history
 from homeworking.modules.agent.prompts import INSTRUCTIONS
-from homeworking.modules.projects.service import ProjectNotFoundError, ProjectService
+from homeworking.modules.projects.service import (
+    CommandOutcome,
+    ProjectNotFoundError,
+    ProjectService,
+)
 
 # Upper bound of AddNote.text; explanations span several paragraphs.
 NOTE_MAX_CHARS = 4000
@@ -72,6 +79,8 @@ class AgentDeps:
     changed_projects: set[UUID] = field(default_factory=set)
     # Every design the model submitted, accepted or not; stored with the agent run (it cost money).
     design_attempts: list[dict[str, Any]] = field(default_factory=list)
+    # Usage of every model request, also of runs that fail later (they cost money, too).
+    requests: list[dict[str, Any]] = field(default_factory=list)
     # The model may call several tools in parallel; project writes must run one after another,
     # otherwise they race for the next command sequence number.
     write_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -81,10 +90,14 @@ def _eur(value: Any) -> str:
     return f"{value:.0f} €"
 
 
-def project_summary(model: ProjectModel) -> dict[str, Any]:
-    """Compact, token-friendly view of a project for the LLM."""
+def project_summary(model: ProjectModel, *, with_bom: bool = False) -> dict[str, Any]:
+    """Compact, token-friendly view of a project for the LLM.
+
+    The bill of materials (about half of the summary) is only included on request
+    (get_project); every create/change result would otherwise repeat it in the history.
+    """
     r = model.result
-    return {
+    summary: dict[str, Any] = {
         "project_id": str(model.id),
         "title": model.inputs.title,
         "trust": r.trust,
@@ -114,16 +127,6 @@ def project_summary(model: ProjectModel) -> dict[str, Any]:
         "prices": (
             f"{r.costs.user_priced} von {len(r.bom)} Positionen mit Nutzerpreis, Rest Richtpreise"
         ),
-        "bom": [
-            {
-                "item_id": line.item_id,
-                "name": f"{line.name} ({line.spec})",
-                "quantity": f"{line.quantity:f} {line.unit}",
-                "unit_price_eur": f"{line.unit_price.min}–{line.unit_price.max}",
-                "source": line.price_source,
-            }
-            for line in r.bom
-        ],
         "variants": [
             {
                 "key": v.key,
@@ -136,6 +139,18 @@ def project_summary(model: ProjectModel) -> dict[str, Any]:
         ],
         "notices": [n.message for n in r.notices],
     }
+    if with_bom:
+        summary["bom"] = [
+            {
+                "item_id": line.item_id,
+                "name": f"{line.name} ({line.spec})",
+                "quantity": f"{line.quantity:f} {line.unit}",
+                "unit_price_eur": f"{line.unit_price.min}–{line.unit_price.max}",
+                "source": line.price_source,
+            }
+            for line in r.bom
+        ]
+    return summary
 
 
 def diff_summary(diff: ModelDiff) -> dict[str, Any]:
@@ -217,6 +232,42 @@ def design_materials(catalog: Catalog) -> dict[str, Any]:
     return {"catalog_items": items, "lumber": lumber}
 
 
+def materials_table(catalog: Catalog) -> str:
+    """The design materials as a compact text table (about a third of the JSON tokens)."""
+    data = design_materials(catalog)
+    lines = ["Katalog: id | Name | Maße mm | Preis € | außen | Beschlagtyp"]
+    for e in data["catalog_items"]:
+        if "section_mm" in e:
+            size = f"{e['section_mm'][0]}x{e['section_mm'][1]} ≤{e['max_length_mm']}"
+            price = f"{e['eur_per_m']}/m"
+        elif "sheet_mm" in e:
+            size = f"{e['thickness_mm']} Platte {e['sheet_mm'][0]}x{e['sheet_mm'][1]}"
+            price = f"{e['eur_per_sheet']}/Platte"
+        elif "fixed_size_mm" in e:
+            size = "fest " + "x".join(str(v) for v in e["fixed_size_mm"])
+            price = ""
+        else:
+            size, price = e["use"], ""
+        outdoor = "ja" if e["outdoor"] else "nein"
+        lines.append(
+            f"{e['id']} | {e['name']} | {size} | {price} | {outdoor} | {e.get('hardware_type', '')}"
+        )
+    lumber = data["lumber"]
+    lines += [
+        "",
+        f"Maßholz {lumber['id_format']} (z. B. {lumber['example']}): jede Holzart in JEDEM "
+        f"Querschnitt, Stärke {lumber['thickness_mm'][0]}–{lumber['thickness_mm'][1]} mm, "
+        f"Breite ≤{lumber['max_width_mm']} mm; nehmen, wenn kein Katalogartikel passt.",
+        "species | Name | €/m³ | max Länge mm | außen",
+        *(
+            f"{sp['species']} | {sp['label']} | {sp['eur_per_m3']} | {sp['max_length_mm']} | "
+            f"{'ja' if sp['outdoor'] else 'nein'}"
+            for sp in lumber["species"]
+        ),
+    ]
+    return "\n".join(lines)
+
+
 def _design_json(design: AssemblyDesign) -> dict[str, Any]:
     return design.model_dump(mode="json", exclude_defaults=True)
 
@@ -266,17 +317,79 @@ def _action(target: UUID | None) -> str:
     return "created" if target is None else "replanned"
 
 
-def _attempt(
-    ctx: RunContext[AgentDeps], tool: str, design: AssemblyDesign, errors: list[str]
-) -> None:
+def _attempt(ctx: RunContext[AgentDeps], design: AssemblyDesign, errors: list[str]) -> None:
     ctx.deps.design_attempts.append(
         {
-            "tool": tool,
+            "tool": "save_design",
             "accepted": not errors,
             "errors": errors,
             "design": design.model_dump(mode="json"),
         }
     )
+
+
+async def _save_design(
+    ctx: RunContext[AgentDeps],
+    target: UUID | None,
+    design: AssemblyDesign,
+    title: str | None,
+    params: dict[str, ParamValue] | None,
+) -> CommandOutcome:
+    """Create a design project, redesign the current one or re-plan it as a design project."""
+    projects, owner, trace = ctx.deps.projects, ctx.deps.owner_id, ctx.deps.trace_id
+    if target is None:
+        return await projects.create(
+            owner,
+            pack_id=DESIGN_PACK_ID,
+            title=title or design.object_type,
+            params=params or {},
+            design=design,
+            actor="agent",
+            trace_id=trace,
+        )
+    current = (await projects.get(owner, target)).inputs
+    if current.design is not None and title is None and params is None:
+        # Structural change of a free-form design: keeps valid params and user notes.
+        return await projects.execute(
+            owner, target, ReplaceDesign(design=design), actor="agent", trace_id=trace
+        )
+    return await projects.replan(
+        owner,
+        target,
+        pack_id=DESIGN_PACK_ID,
+        title=title or current.title,
+        params=params or {},
+        design=design,
+        actor="agent",
+        trace_id=trace,
+    )
+
+
+@dataclass
+class RecordUsage(AbstractCapability[AgentDeps]):
+    """Store tokens and the provider's resolved model name of every model response."""
+
+    async def after_model_request(
+        self,
+        ctx: RunContext[AgentDeps],
+        *,
+        request_context: ModelRequestContext,
+        response: ModelResponse,
+    ) -> ModelResponse:
+        usage = response.usage
+        ctx.deps.requests.append(
+            {
+                "model": response.model_name,
+                "input_tokens": usage.input_tokens,
+                "output_tokens": usage.output_tokens,
+                "cache_read_tokens": usage.cache_read_tokens,
+            }
+        )
+        return response
+
+    @classmethod
+    def get_serialization_name(cls) -> str | None:
+        return None
 
 
 def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
@@ -285,13 +398,14 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         deps_type=AgentDeps,
         instructions=[INSTRUCTIONS, planning_overview(engine)],
         retries=2,
+        capabilities=[ProcessHistory(process_history), RecordUsage()],
     )
 
     @agent.tool
     def list_construction_packs(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
         """List what can be planned: verified packs (with parameter schema) and design templates.
 
-        Anything else can be designed freely with design_project.
+        Anything else can be designed freely with save_design.
         """
         return {
             "packs": [d.model_dump() for d in ctx.deps.projects.engine.describe_packs()],
@@ -307,14 +421,13 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         }
 
     @agent.tool
-    def list_materials(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
-        """Materials for free-form designs: catalog items (profiles, sheets, placeable pieces,
-        hardware, finishes) and made-to-order lumber in any species and cross-section."""
-        return design_materials(ctx.deps.projects.engine.catalog)
+    def list_materials(ctx: RunContext[AgentDeps]) -> str:
+        """Materials for free-form designs: catalog items and made-to-order lumber."""
+        return materials_table(ctx.deps.projects.engine.catalog)
 
     @agent.tool_plain
     def get_template_design(template_key: str) -> dict[str, Any]:
-        """Return the full design of a template as an example or starting point for design_project."""
+        """Return the full design of a template as an example or starting point for save_design."""
         try:
             return _design_json(template(template_key).design)
         except KeyError:
@@ -336,11 +449,9 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             template_key: Template key, e.g. "shelf".
             title: Short German project title.
             params: Template parameters (lengths in mm).
-            explanation: Detailed German explanation of the construction in several paragraphs
-                (labelled as AI, see the instructions).
+            explanation: The "Warum so?" explanation (see instructions).
             untreated: True when the user wants no surface treatment (no oil or glaze).
-            new_project: Only true if the user explicitly wants another, separate project. Otherwise
-                an active project gets this as its next version (history and chat stay).
+            new_project: Only true if the user explicitly wants another, separate project.
         """
         target = _target(ctx, new_project)
         # Models tend to put the flag and design-level fields among the template parameters.
@@ -370,70 +481,54 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         return {"action": _action(target), "project": project_summary(outcome.project)}
 
     @agent.tool(retries=3)
-    async def design_project(
+    async def save_design(
         ctx: RunContext[AgentDeps],
-        title: str,
         design: DesignArg,
+        title: str | None = None,
         params: ParamsArg | None = None,
         explanation: str | None = None,
         new_project: bool = False,
     ) -> dict[str, Any]:
-        """Create a project from a free-form parametric design (when no pack or template fits).
-
-        The engine validates the design (catalog dimensions, collisions, connectivity, floor
-        contact) and derives BOM, cut list, screws, costs and drawings. On rejection fix the
-        listed errors and call again with the complete corrected design.
+        """Save a free-form parametric design (when no pack or template fits) or replace the
+        design of the current free-form project. The engine validates it and derives BOM, cut
+        list, screws, costs and drawings; on rejection fix the listed errors and call again
+        with the complete corrected design.
 
         Args:
-            title: Short German project title.
-            design: The complete design. Coordinates in mm: x = width (right), y = depth (back),
-                z = height (up), floor z = 0; ``at`` is the part's minimum corner.
-            params: Optional initial parameter values (otherwise the design defaults).
-            explanation: Detailed German explanation of why the construction looks like this
-                (construction, material, joints, hardware, finish) in several paragraphs; stored
-                only if the engine accepts the design.
-            new_project: Only true if the user explicitly wants another, separate project. Otherwise
-                an active project gets this as its next version (history and chat stay).
+            design: The complete design.
+            title: Short German project title (required for a new project).
+            params: Optional parameter values (otherwise the design defaults).
+            explanation: The "Warum so?" explanation (see instructions); stored only if the
+                engine accepts the design.
+            new_project: Only true if the user explicitly wants another, separate project.
         """
         design = design.model_copy(update={"origin": Origin.AI})
         target = _target(ctx, new_project)
         async with ctx.deps.write_lock:
             try:
-                if target is not None:
-                    outcome = await ctx.deps.projects.replan(
-                        ctx.deps.owner_id,
-                        target,
-                        pack_id=DESIGN_PACK_ID,
-                        title=title,
-                        params=params or {},
-                        design=design,
-                        actor="agent",
-                        trace_id=ctx.deps.trace_id,
-                    )
-                else:
-                    outcome = await ctx.deps.projects.create(
-                        ctx.deps.owner_id,
-                        pack_id=DESIGN_PACK_ID,
-                        title=title,
-                        params=params or {},
-                        design=design,
-                        actor="agent",
-                        trace_id=ctx.deps.trace_id,
-                    )
+                outcome = await _save_design(ctx, target, design, title, params)
             except DesignRejectedError as exc:
-                _attempt(ctx, "design_project", design, exc.errors)
+                _attempt(ctx, design, exc.errors)
                 return _design_rejected(exc)
             except ParameterError as exc:
                 return _error("Ungültige Parameter: " + "; ".join(exc.errors))
-            _attempt(ctx, "design_project", design, [])
+            except (CommandError, ProjectNotFoundError) as exc:
+                return _error(f"Änderung nicht möglich: {exc}")
+            _attempt(ctx, design, [])
             await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
-        return {"action": _action(target), "project": project_summary(outcome.project)}
+        reply: dict[str, Any] = {
+            "action": _action(target),
+            "project": project_summary(outcome.project),
+        }
+        if target is not None:
+            reply["diff"] = diff_summary(outcome.diff)
+        return reply
 
     @agent.tool
     async def get_current_design(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
-        """Return the design of the current free-form project (to modify it with redesign_project)."""
+        """Return the design of the current free-form project (to change it with save_design)."""
         if ctx.deps.project_id is None:
             return _error("Es ist kein Projekt aktiv.")
         try:
@@ -443,42 +538,6 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         if model.inputs.design is None:
             return _error("Das Projekt nutzt ein Construction Pack; ändere es mit change_project.")
         return {"params": model.inputs.params, "design": _design_json(model.inputs.design)}
-
-    @agent.tool(retries=3)
-    async def redesign_project(
-        ctx: RunContext[AgentDeps], design: DesignArg, explanation: str | None = None
-    ) -> dict[str, Any]:
-        """Replace the design of the current free-form project (structural changes such as an
-        extra drawer or a different construction). Pure dimension changes use change_project.
-
-        The previous AI explanation is removed and replaced by ``explanation`` if given."""
-        design = design.model_copy(update={"origin": Origin.AI})
-        async with ctx.deps.write_lock:
-            if ctx.deps.project_id is None:
-                return _error("Es ist kein Projekt aktiv.")
-            try:
-                outcome = await ctx.deps.projects.execute(
-                    ctx.deps.owner_id,
-                    ctx.deps.project_id,
-                    ReplaceDesign(design=design),
-                    actor="agent",
-                    trace_id=ctx.deps.trace_id,
-                )
-            except DesignRejectedError as exc:
-                _attempt(ctx, "redesign_project", design, exc.errors)
-                return _design_rejected(exc)
-            except ParameterError as exc:
-                return _error("Ungültige Parameter: " + "; ".join(exc.errors))
-            except (CommandError, ProjectNotFoundError) as exc:
-                return _error(f"Änderung nicht möglich: {exc}")
-            _attempt(ctx, "redesign_project", design, [])
-            await _store_explanation(ctx, outcome.project.id, explanation)
-        ctx.deps.changed_projects.add(outcome.project.id)
-        return {
-            "action": "changed",
-            "project": project_summary(outcome.project),
-            "diff": diff_summary(outcome.diff),
-        }
 
     @agent.tool
     async def create_project(
@@ -495,10 +554,8 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             pack_id: Id of the construction pack, e.g. "raised_bed".
             title: Short project title in German, e.g. "Hochbeet am Gartenhaus".
             params: Pack parameters; omitted parameters use the pack defaults.
-            explanation: Detailed German explanation of the construction in several paragraphs
-                (labelled as AI, see the instructions).
-            new_project: Only true if the user explicitly wants another, separate project. Otherwise
-                an active project gets this as its next version (history and chat stay).
+            explanation: The "Warum so?" explanation (see instructions).
+            new_project: Only true if the user explicitly wants another, separate project.
         """
         target = _target(ctx, new_project)
         async with ctx.deps.write_lock:
@@ -580,14 +637,14 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
 
     @agent.tool
     async def get_project(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
-        """Return the current project's key figures, costs, variants and notices."""
+        """Return the current project incl. bill of materials (item_id for set_price)."""
         if ctx.deps.project_id is None:
             return _error("Es ist kein Projekt aktiv.")
         try:
             model = await ctx.deps.projects.get(ctx.deps.owner_id, ctx.deps.project_id)
         except ProjectNotFoundError:
             return _error("Projekt nicht gefunden.")
-        return {"project": project_summary(model)}
+        return {"project": project_summary(model, with_bom=True)}
 
     @agent.tool
     async def add_explanation(ctx: RunContext[AgentDeps], text: str) -> dict[str, Any]:

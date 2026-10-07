@@ -26,3 +26,15 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+      - id: lint-imports
+        name: import-linter (architecture contracts)
+        entry: uv run lint-imports
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: prompt-lock
+        name: prompt lock (versioned prompt changes, docs/ai/README.md)
+        entry: uv run pytest -q apps/api/tests/test_prompt_lock.py
+        language: system
+        files: ^(apps/api/src/homeworking/modules/agent/|packages/construction-model/src/construction_model/assembly\.py|docs/ai/PROMPT_CHANGELOG\.md)
+        pass_filenames: false

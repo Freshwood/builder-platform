@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID, uuid4
+
+import anyio
 
 from calc_engine.assembly.derive import DESIGN_PACK_ID
 from calc_engine.assembly.templates import template
@@ -23,7 +26,14 @@ from construction_model.commands import (
     effective_commands,
 )
 from construction_model.diff import ModelDiff, diff_results
-from construction_model.model import Origin, ParamValue, ProjectInputs, ProjectModel, Region
+from construction_model.model import (
+    ConstructionResult,
+    Origin,
+    ParamValue,
+    ProjectInputs,
+    ProjectModel,
+    Region,
+)
 from homeworking.modules.projects.ports import (
     Actor,
     CommandRecord,
@@ -49,10 +59,22 @@ class CommandOutcome:
     can_undo: bool
 
 
+# Rebuilt earlier versions; the command log is append-only, so (project, seq) never changes.
+VERSION_CACHE_SIZE = 64
+
+
 class ProjectService:
     def __init__(self, repository: ProjectRepository, engine: Engine) -> None:
         self._repo = repository
         self._engine = engine
+        self._versions: OrderedDict[tuple[UUID, int], tuple[ProjectInputs, ConstructionResult]] = (
+            OrderedDict()
+        )
+
+    async def _build(self, inputs: ProjectInputs) -> ConstructionResult:
+        """Run the engine in a worker thread: it is CPU-bound and would block the event loop
+        (and with it every other request and agent stream) for its whole duration."""
+        return await anyio.to_thread.run_sync(self._engine.build, inputs)
 
     @property
     def engine(self) -> Engine:
@@ -102,7 +124,7 @@ class ProjectService:
         )
         self._engine.ensure_known(pack_id, design)
         inputs = self._apply(None, command)
-        result = self._engine.build(inputs)
+        result = await self._build(inputs)
         model = ProjectModel(id=uuid4(), inputs=inputs, result=result)
         diff = diff_results(None, result)
         await self._repo.add(
@@ -188,16 +210,22 @@ class ProjectService:
     async def version(self, owner_id: UUID, project_id: UUID, seq: int) -> ProjectModel:
         """The project as it was right after log entry ``seq`` (deterministic replay)."""
         stored = await self._owned(owner_id, project_id)
-        records = [r for r in await self._repo.commands(project_id) if r.seq <= seq]
-        if not records or records[-1].seq != seq:
-            raise VersionNotFoundError(seq)
-        inputs: ProjectInputs | None = None
-        for _, command in effective_commands((r.seq, r.command) for r in records):
-            inputs = self._apply(inputs, command)
-        assert inputs is not None
-        return stored.model.model_copy(
-            update={"inputs": inputs, "result": self._engine.build(inputs)}
-        )
+        key = (project_id, seq)
+        if (cached := self._versions.get(key)) is None:
+            records = [r for r in await self._repo.commands(project_id) if r.seq <= seq]
+            if not records or records[-1].seq != seq:
+                raise VersionNotFoundError(seq)
+            inputs: ProjectInputs | None = None
+            for _, command in effective_commands((r.seq, r.command) for r in records):
+                inputs = self._apply(inputs, command)
+            assert inputs is not None
+            cached = (inputs, await self._build(inputs))
+            self._versions[key] = cached
+            if len(self._versions) > VERSION_CACHE_SIZE:
+                self._versions.popitem(last=False)
+        else:
+            self._versions.move_to_end(key)
+        return stored.model.model_copy(update={"inputs": cached[0], "result": cached[1]})
 
     async def restore(
         self,
@@ -221,11 +249,12 @@ class ProjectService:
     async def get(self, owner_id: UUID, project_id: UUID) -> ProjectModel:
         return (await self._owned(owner_id, project_id)).model
 
-    async def view(self, owner_id: UUID, project_id: UUID) -> tuple[ProjectModel, bool]:
-        """Return the project and whether it has something to undo."""
+    async def view(self, owner_id: UUID, project_id: UUID) -> tuple[ProjectModel, bool, int]:
+        """Return the project, whether it has something to undo and its log position."""
         stored = await self._owned(owner_id, project_id)
         records = await self._repo.commands(project_id)
-        return stored.model, can_undo([r.command for r in records])
+        seq = records[-1].seq if records else 0
+        return stored.model, can_undo([r.command for r in records]), seq
 
     async def list_projects(self, owner_id: UUID) -> list[ProjectListItem]:
         return await self._repo.list_for_owner(owner_id)
@@ -250,7 +279,7 @@ class ProjectService:
         stored = await self._owned(owner_id, project_id)
         old = stored.model
         inputs = self._apply(old.inputs, command)
-        result = self._engine.build(inputs)
+        result = await self._build(inputs)
         model = old.model_copy(update={"inputs": inputs, "result": result})
         diff = diff_results(old.result, result)
         records = await self._repo.commands(project_id)
@@ -277,7 +306,7 @@ class ProjectService:
         for _, command in effective:
             inputs = self._apply(inputs, command)
         assert inputs is not None
-        result = self._engine.build(inputs)
+        result = await self._build(inputs)
         model = stored.model.model_copy(update={"inputs": inputs, "result": result})
         diff = diff_results(stored.model.result, result)
         seq = (records[-1].seq if records else 0) + 1

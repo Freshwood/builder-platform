@@ -10,12 +10,16 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from sqlalchemy import select, update
+from pydantic_ai.messages import ModelMessage, ModelMessagesTypeAdapter
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from homeworking.db.schema import AgentRunRow
 
 RunStatus = Literal["completed", "failed", "cancelled"]
+
+# Older turns add little for the next answer but cost tokens on every request.
+HISTORY_MAX_RUNS = 20
 
 
 @dataclass(frozen=True)
@@ -32,6 +36,11 @@ class AgentRun:
     design_attempts: list[dict[str, Any]] = field(default_factory=list)
     usage: dict[str, Any] | None = None
     error: str | None = None
+    prompt_fingerprint: str | None = None
+    safety_rules_version: str | None = None
+    model_role: str | None = None
+    routing_reason: str | None = None
+    duration_ms: int | None = None
 
 
 class ConversationService:
@@ -56,6 +65,11 @@ class ConversationService:
                     design_attempts=run.design_attempts,
                     usage=run.usage,
                     error=run.error[:2000] if run.error else None,
+                    prompt_fingerprint=run.prompt_fingerprint,
+                    safety_rules_version=run.safety_rules_version,
+                    model_role=run.model_role,
+                    routing_reason=run.routing_reason,
+                    duration_ms=run.duration_ms,
                     # Set here: SQLite's server default has only second resolution (chat order).
                     created_at=datetime.now(UTC),
                 )
@@ -81,3 +95,38 @@ class ConversationService:
                 .order_by(AgentRunRow.created_at, AgentRunRow.id)
             )
             return [message for messages in rows for message in messages]
+
+    async def history(
+        self, owner_id: UUID, *, chat_id: str | None, project_id: UUID | None
+    ) -> list[ModelMessage]:
+        """Model messages of the latest completed turns of a chat or project, oldest first.
+
+        This is the trusted conversation history for the next turn: the browser only sends its
+        new message, so it neither re-uploads the whole chat nor can it inject tool results.
+        """
+        scopes = []
+        if chat_id is not None:
+            scopes.append(AgentRunRow.chat_id == chat_id)
+        if project_id is not None:
+            scopes.append(AgentRunRow.project_id == project_id)
+        if not scopes:
+            return []
+        async with self._sessions() as session:
+            rows = await session.scalars(
+                select(AgentRunRow.model_messages)
+                .where(
+                    AgentRunRow.owner_id == owner_id,
+                    AgentRunRow.status == "completed",
+                    AgentRunRow.model_messages.is_not(None),
+                    or_(*scopes),
+                )
+                .order_by(AgentRunRow.created_at.desc(), AgentRunRow.id.desc())
+                .limit(HISTORY_MAX_RUNS)
+            )
+            runs = list(rows)
+        return [
+            message
+            for run in reversed(runs)
+            if run  # JSON null on some backends
+            for message in ModelMessagesTypeAdapter.validate_python(run)
+        ]

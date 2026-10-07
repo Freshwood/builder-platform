@@ -1,0 +1,50 @@
+{
+  "source": "https://openrouter.ai/api/v1/models (public price list, fetched 2026-10-07)",
+  "unit": "USD per 1M tokens",
+  "note": "Prices are copied by hand on purpose, so that a price change is a reviewed commit. Latency and design quality are NOT in this file; they need a live run (see docs/ai/README.md).",
+  "models": {
+    "upstage/solar-pro4": {
+      "input": 0.09,
+      "output": 0.36,
+      "cache_read": 0.018,
+      "role_today": "everything (LLM_MODEL)"
+    },
+    "openai/gpt-5.6-luna": {
+      "input": 0.2,
+      "output": 1.2,
+      "cache_read": 0.02
+    },
+    "google/gemini-3.8-flash": {
+      "input": 0.75,
+      "output": 3.75,
+      "cache_read": 0.075
+    },
+    "google/gemini-3.5-flash-lite": {
+      "input": 0.3,
+      "output": 2.5,
+      "cache_read": 0.03
+    }
+  },
+  "configurations": {
+    "solar_only": {
+      "designer": "upstage/solar-pro4",
+      "fast": "upstage/solar-pro4"
+    },
+    "luna_only": {
+      "designer": "openai/gpt-5.6-luna",
+      "fast": "openai/gpt-5.6-luna"
+    },
+    "flash_only": {
+      "designer": "google/gemini-3.8-flash",
+      "fast": "google/gemini-3.8-flash"
+    },
+    "routed_flash_designer": {
+      "designer": "google/gemini-3.8-flash",
+      "fast": "upstage/solar-pro4"
+    },
+    "routed_luna_designer": {
+      "designer": "openai/gpt-5.6-luna",
+      "fast": "upstage/solar-pro4"
+    }
+  }
+}

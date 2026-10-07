@@ -85,19 +85,30 @@ export function useAssistant(projectId: string | null, onProjectChanged: (id: st
       new DefaultChatTransport({
         api: "/api/chat",
         credentials: "include",
+        // The server keeps the conversation (stored agent runs); send only the new message
+        // instead of re-uploading the whole chat incl. designs and tool results every turn.
+        prepareSendMessagesRequest: ({ id, messages, body, trigger, messageId }) => ({
+          body: { ...body, id, trigger, messageId, messages: messages.slice(-1) },
+        }),
         fetch: async (input, init) => {
           await sessionReady();
           return fetch(input, init);
         },
       }),
   );
-  const { messages, sendMessage, regenerate, setMessages, status, error } = useChat({ transport });
+  // Batch stream updates: re-rendering the chat per token costs more than it shows.
+  const { messages, sendMessage, regenerate, setMessages, status, error } = useChat({
+    transport,
+    throttle: 50,
+  });
   const handled = useRef(new Set<string>());
   const busy = status === "submitted" || status === "streaming";
   const [startedAt, setStartedAt] = useState<number | null>(null);
 
+  // Only the streaming (last) message gains tool results; earlier ones were handled already.
+  const latest = messages.at(-1);
   useEffect(() => {
-    for (const message of messages) {
+    for (const message of latest ? [latest] : []) {
       toolOutputs(message).forEach((output, index) => {
         const key = `${message.id}:${index}`;
         const id = output.project?.project_id;
@@ -107,7 +118,7 @@ export function useAssistant(projectId: string | null, onProjectChanged: (id: st
         }
       });
     }
-  }, [messages, onProjectChanged]);
+  }, [latest, onProjectChanged]);
 
   const submit = useCallback(
     (text: string) => {

@@ -103,8 +103,14 @@ Ohne LLM (`LLM_MODE=test`) versteht der Offline-Planer Hochbeet und die Vorlagen
 „Regal 80 × 30 × 180 cm mit 5 Böden“, „Gartenbank 1,6 m aus Lärche“, „Werkbank 150 × 70 cm mit
 Rollen“. Freie Entwürfe brauchen ein Modell, das zuverlässig lange, verschachtelte
 Werkzeug-Argumente erzeugt (Klasse Claude Sonnet, Mistral Medium 3.5 oder vergleichbar); für
-Vorlagen und Maßänderungen genügt ein kleines Modell. `AGENT_TOTAL_TOKENS_LIMIT` (Standard
-200 000) begrenzt einen Chat-Turn inklusive Korrekturrunden.
+Vorlagen und Maßänderungen genügt ein kleines Modell. Optional übernimmt `LLM_MODEL_FAST` diese
+Routine-Turns, und `LLM_MODEL` bleibt für freie Entwürfe ([ADR-0006](docs/architecture/adr/0006-token-budget-und-modell-routing.md)).
+`AGENT_TOTAL_TOKENS_LIMIT` (Standard 200 000) begrenzt einen Chat-Turn inklusive
+Korrekturrunden.
+
+Prompts, Tool-Definitionen und Routing sind versioniert und per Fingerprint jedem gespeicherten
+Lauf zugeordnet. Den Token-Verbrauch misst `task bench` offline; Ablauf für Prompt-Änderungen
+und Modellvergleich: [docs/ai/README.md](docs/ai/README.md).
 
 Die Startseite fragt neben der freien Beschreibung einen optionalen Steckbrief ab (Einsatzort,
 Montage, Maße, Holzart, Oberfläche, Budget, Erfahrung, Werkzeug, Nutzung); er wird als

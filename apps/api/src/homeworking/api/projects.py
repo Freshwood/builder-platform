@@ -70,14 +70,18 @@ class CommandRequest(BaseModel):
     command: EditCommand
 
 
+# Clients load drawings as SVG; the vector primitives are ~30 % of a project's JSON and unused.
+WITHOUT_PRIMITIVES: Any = {"project": {"result": {"drawings": {"__all__": {"primitives"}}}}}
+
+
 class ProjectView(BaseModel):
     project: ProjectModel
     can_undo: bool
+    seq: int = Field(description="Command log position of this state (changes on every edit)")
 
 
 class CommandResponse(ProjectView):
     diff: ModelDiff
-    seq: int
 
 
 class ProjectListEntry(BaseModel):
@@ -163,7 +167,12 @@ async def list_projects(container: ContainerDep, user: UserDep) -> list[ProjectL
     ]
 
 
-@router.post("/projects", response_model=CommandResponse, status_code=201)
+@router.post(
+    "/projects",
+    response_model=CommandResponse,
+    response_model_exclude=WITHOUT_PRIMITIVES,
+    status_code=201,
+)
 async def create_project(
     body: CreateProjectRequest, container: ContainerDep, user: UserDep
 ) -> CommandResponse:
@@ -189,20 +198,30 @@ async def create_project(
     return _command_response(outcome)
 
 
-@router.get("/projects/{project_id}", response_model=ProjectView)
+@router.get(
+    "/projects/{project_id}", response_model=ProjectView, response_model_exclude=WITHOUT_PRIMITIVES
+)
 async def get_project(project_id: UUID, container: ContainerDep, user: UserDep) -> ProjectView:
-    model, undoable = await container.projects.view(user.id, project_id)
-    return ProjectView(project=model, can_undo=undoable)
+    model, undoable, seq = await container.projects.view(user.id, project_id)
+    return ProjectView(project=model, can_undo=undoable, seq=seq)
 
 
-@router.post("/projects/{project_id}/commands", response_model=CommandResponse)
+@router.post(
+    "/projects/{project_id}/commands",
+    response_model=CommandResponse,
+    response_model_exclude=WITHOUT_PRIMITIVES,
+)
 async def execute_command(
     project_id: UUID, body: CommandRequest, container: ContainerDep, user: UserDep
 ) -> CommandResponse:
     return _command_response(await container.projects.execute(user.id, project_id, body.command))
 
 
-@router.post("/projects/{project_id}/undo", response_model=CommandResponse)
+@router.post(
+    "/projects/{project_id}/undo",
+    response_model=CommandResponse,
+    response_model_exclude=WITHOUT_PRIMITIVES,
+)
 async def undo(project_id: UUID, container: ContainerDep, user: UserDep) -> CommandResponse:
     return _command_response(await container.projects.undo(user.id, project_id))
 
@@ -282,20 +301,35 @@ async def versions(project_id: UUID, container: ContainerDep, user: UserDep) -> 
     ]
 
 
-@router.get("/projects/{project_id}/versions/{seq}", response_model=ProjectView)
+@router.get(
+    "/projects/{project_id}/versions/{seq}",
+    response_model=ProjectView,
+    response_model_exclude=WITHOUT_PRIMITIVES,
+)
 async def get_version(
     project_id: UUID, seq: int, container: ContainerDep, user: UserDep
 ) -> ProjectView:
     """Read-only view of the project as it was after version ``seq``."""
     model = await container.projects.version(user.id, project_id, seq)
-    return ProjectView(project=model, can_undo=False)
+    return ProjectView(project=model, can_undo=False, seq=seq)
 
 
-@router.post("/projects/{project_id}/versions/{seq}/restore", response_model=CommandResponse)
+@router.post(
+    "/projects/{project_id}/versions/{seq}/restore",
+    response_model=CommandResponse,
+    response_model_exclude=WITHOUT_PRIMITIVES,
+)
 async def restore_version(
     project_id: UUID, seq: int, container: ContainerDep, user: UserDep
 ) -> CommandResponse:
     return _command_response(await container.projects.restore(user.id, project_id, seq))
+
+
+def _drawing_cache(seq: int | None) -> dict[str, str]:
+    """A drawing of a fixed version (?seq=) never changes; the current one may at any time."""
+    if seq is not None:
+        return {"Cache-Control": "private, max-age=31536000, immutable"}
+    return {"Cache-Control": "private, no-cache"}
 
 
 async def _model(
@@ -312,12 +346,18 @@ async def _model(
     responses={200: {"content": {"image/svg+xml": {}}}},
 )
 async def drawing(
-    project_id: UUID, view: str, container: ContainerDep, user: UserDep, seq: int | None = None
+    project_id: UUID,
+    view: str,
+    container: ContainerDep,
+    user: UserDep,
+    seq: int | None = None,
 ) -> Response:
     model = await _model(container, user.id, project_id, seq)
     for d in model.result.drawings:
         if d.view == view:
-            return Response(render_svg(d, element_id=f"drawing-{view}"), media_type="image/svg+xml")
+            # Rendering is CPU work; keep the event loop free for other requests and streams.
+            svg = await run_in_threadpool(render_svg, d, element_id=f"drawing-{view}")
+            return Response(svg, media_type="image/svg+xml", headers=_drawing_cache(seq))
     raise HTTPException(status_code=404, detail="Unknown view")
 
 

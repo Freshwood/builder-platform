@@ -39,3 +39,7 @@ var/
 
 # Task (taskfile.dev) checksum state
 .task/
+
+# Claude Code: personal settings and agent worktrees (shared config in .claude/ is committed)
+.claude/settings.local.json
+.claude/worktrees/

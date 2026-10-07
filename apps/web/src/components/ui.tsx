@@ -170,9 +170,11 @@ export function Segmented<T extends string>({
 }
 
 /** Relative German time ("vor 5 Min.") for list entries. */
+const RELATIVE = new Intl.RelativeTimeFormat("de-DE", { numeric: "auto", style: "short" });
+
 export function relativeTime(iso: string): string {
   const seconds = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  const format = new Intl.RelativeTimeFormat("de-DE", { numeric: "auto", style: "short" });
+  const format = RELATIVE;
   if (seconds < 60) return "gerade eben";
   if (seconds < 3600) return format.format(-Math.round(seconds / 60), "minute");
   if (seconds < 86400) return format.format(-Math.round(seconds / 3600), "hour");

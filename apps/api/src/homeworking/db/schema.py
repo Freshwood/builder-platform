@@ -77,6 +77,12 @@ class AgentRunRow(Base):
     status: Mapped[str] = mapped_column(String(16))
     model: Mapped[str] = mapped_column(String(128))
     prompt_version: Mapped[str] = mapped_column(String(32))
+    # Provenance and cost (ADR-0006); NULL for runs stored before migration 0003.
+    prompt_fingerprint: Mapped[str | None] = mapped_column(String(32))
+    safety_rules_version: Mapped[str | None] = mapped_column(String(16))
+    model_role: Mapped[str | None] = mapped_column(String(16))
+    routing_reason: Mapped[str | None] = mapped_column(String(32))
+    duration_ms: Mapped[int | None]
     ui_messages: Mapped[list[Any]] = mapped_column(JsonDocument)
     model_messages: Mapped[list[Any] | None] = mapped_column(JsonDocument)
     design_attempts: Mapped[list[Any]] = mapped_column(JsonDocument)

@@ -108,7 +108,7 @@ async def test_design_sent_as_json_string_is_accepted(settings: Settings) -> Non
         return ModelResponse(
             parts=[
                 ToolCallPart(
-                    "design_project",
+                    "save_design",
                     {"title": "Fensterladen", "design": design, "params": '{"width_mm": 600}'},
                 )
             ]

@@ -33,6 +33,13 @@ test("plan a raised bed, change it via chat and undo", async ({ page }) => {
   await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/);
   const costBefore = await page.getByTestId("material-cost").textContent();
 
+  // Drawings load only when shown: none is requested while the 3D model is visible.
+  const svgRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/drawings/")) svgRequests.push(request.url());
+  });
+  await page.getByRole("button", { name: "Pläne" }).click();
+  await page.getByRole("button", { name: "Draufsicht", exact: true }).click();
   const plan = page.getByTestId("drawing-plan");
   await expect(plan).toHaveAttribute("alt", /Draufsicht des Hochbeets, außen 2000 × 1000 mm/);
   await expect
@@ -43,6 +50,9 @@ test("plan a raised bed, change it via chat and undo", async ({ page }) => {
   await expect(summary).toHaveText("Hochbeet Lärche 2,00 m × 1,50 m, Höhe 0,87 m");
   await expect(page.getByTestId("material-cost")).not.toHaveText(costBefore ?? "");
   await expect(plan).toHaveAttribute("alt", /außen 2000 × 1500 mm/);
+  // One drawing per shown version, not one request per view.
+  expect(new Set(svgRequests.map((url) => new URL(url).pathname)).size).toBe(1);
+  await page.getByRole("tab", { name: "Material" }).click();
   await expect(page.getByTestId("bom")).toContainText("Hochbeeterde");
 
   await page.getByRole("button", { name: "Rückgängig" }).click();
@@ -78,6 +88,11 @@ test("plan a shelf from a template with 3D model and cutting plan", async ({ pag
   await expect(page.getByTestId("viewer-3d")).toBeVisible();
   await expect(page.getByRole("list", { name: "Positionen" })).toContainText("Fachboden");
 
+  await page.getByRole("button", { name: "Pläne" }).click();
+  await page
+    .getByRole("button", { name: /^Isometrie/ })
+    .first()
+    .click();
   const iso = page.getByTestId("drawing-iso");
   await expect(iso).toHaveAttribute("alt", /Isometrie.*800 × 300 × 1800 mm/);
   await expect

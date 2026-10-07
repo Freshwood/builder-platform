@@ -1,7 +1,8 @@
 "use client";
 
 import clsx from "clsx";
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import type { UIMessage } from "ai";
+import { memo, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
 import { ActivityList } from "@/components/Activity";
 import { AutoTextarea } from "@/components/AutoTextarea";
@@ -85,16 +86,88 @@ function Avatar() {
   );
 }
 
+/**
+ * One chat message. Memoised: while the assistant streams, only the last message changes, so
+ * earlier messages skip re-parsing their parts on every update.
+ */
+const MessageItem = memo(function MessageItem({
+  message,
+  live,
+}: {
+  message: UIMessage;
+  live: boolean;
+}) {
+  const isUser = message.role === "user";
+  const blocks = isUser
+    ? [
+        {
+          kind: "text" as const,
+          key: "t",
+          text: message.parts.map((p) => (p.type === "text" ? p.text : "")).join(""),
+        },
+      ]
+    : messageBlocks(message, live);
+  const outputs = toolOutputs(message);
+  const errors = outputs.filter((o) => o.error && !o.errors);
+  const cards = outputs.filter((o) => o.project?.summary);
+  if (!blocks.length && errors.length === 0 && cards.length === 0) return null;
+  if (isUser) {
+    return (
+      <li className="flex animate-fadein justify-end">
+        <p className="max-w-[88%] rounded-3xl rounded-br-md bg-surface-muted px-4 py-2.5 whitespace-pre-wrap">
+          {blocks[0]?.kind === "text" ? blocks[0].text.trim() : ""}
+        </p>
+      </li>
+    );
+  }
+  return (
+    <li className="flex animate-fadein gap-2">
+      <Avatar />
+      <div className="min-w-0 flex-1">
+        <span className="sr-only">KI-Assistent: </span>
+        {blocks.map((block) =>
+          block.kind === "text" ? (
+            <p key={block.key} className="leading-relaxed whitespace-pre-wrap">
+              {block.text.trim()}
+            </p>
+          ) : (
+            <ActivityList key={block.key} steps={block.steps} reasoning={block.reasoning} />
+          ),
+        )}
+        {cards.map((output, i) => (
+          <ProjectCard key={i} output={output} />
+        ))}
+        {errors.map((e, i) => (
+          <p key={i} className="mt-1 text-sm text-warning">
+            {e.error}
+          </p>
+        ))}
+      </div>
+    </li>
+  );
+});
+
 export function Chat({ assistant, projectId }: { assistant: Assistant; projectId: string | null }) {
   const { messages, status, error, busy, submit, retry, startedAt } = assistant;
   const [input, setInput] = useState("");
   const listRef = useRef<HTMLOListElement>(null);
 
-  // Follow the conversation while it grows.
+  const count = messages.length;
+  const shownCount = useRef(0);
+
+  // Follow the conversation while it grows: glide to a new message, but keep up with a
+  // streaming answer instantly (a smooth scroll per update stutters) and only while the user
+  // has not scrolled up to read.
   useEffect(() => {
     const list = listRef.current;
-    if (list) list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
-  }, [messages, busy]);
+    if (!list) return;
+    if (count !== shownCount.current) {
+      shownCount.current = count;
+      list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
+    } else if (list.scrollHeight - list.scrollTop - list.clientHeight < 160) {
+      list.scrollTop = list.scrollHeight;
+    }
+  }, [messages, count, busy]);
 
   function send(text = input) {
     if (submit(text) && text === input) setInput("");
@@ -135,57 +208,13 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
         className="scrollbar-thin min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4"
         data-testid="messages"
       >
-        {messages.map((message, index) => {
-          const isUser = message.role === "user";
-          const live = busy && index === messages.length - 1;
-          const blocks = isUser
-            ? [
-                {
-                  kind: "text" as const,
-                  key: "t",
-                  text: message.parts.map((p) => (p.type === "text" ? p.text : "")).join(""),
-                },
-              ]
-            : messageBlocks(message, live);
-          const outputs = toolOutputs(message);
-          const errors = outputs.filter((o) => o.error && !o.errors);
-          const cards = outputs.filter((o) => o.project?.summary);
-          if (!blocks.length && errors.length === 0 && cards.length === 0) return null;
-          if (isUser) {
-            return (
-              <li key={message.id} className="flex animate-fadein justify-end">
-                <p className="max-w-[88%] rounded-3xl rounded-br-md bg-surface-muted px-4 py-2.5 whitespace-pre-wrap">
-                  {blocks[0]?.kind === "text" ? blocks[0].text.trim() : ""}
-                </p>
-              </li>
-            );
-          }
-          return (
-            <li key={message.id} className="flex animate-fadein gap-2">
-              <Avatar />
-              <div className="min-w-0 flex-1">
-                <span className="sr-only">KI-Assistent: </span>
-                {blocks.map((block) =>
-                  block.kind === "text" ? (
-                    <p key={block.key} className="leading-relaxed whitespace-pre-wrap">
-                      {block.text.trim()}
-                    </p>
-                  ) : (
-                    <ActivityList key={block.key} steps={block.steps} reasoning={block.reasoning} />
-                  ),
-                )}
-                {cards.map((output, i) => (
-                  <ProjectCard key={i} output={output} />
-                ))}
-                {errors.map((e, i) => (
-                  <p key={i} className="mt-1 text-sm text-warning">
-                    {e.error}
-                  </p>
-                ))}
-              </div>
-            </li>
-          );
-        })}
+        {messages.map((message, index) => (
+          <MessageItem
+            key={message.id}
+            message={message}
+            live={busy && index === messages.length - 1}
+          />
+        ))}
         {busy && <WorkingIndicator startedAt={startedAt} waiting={status === "submitted"} />}
       </ol>
 

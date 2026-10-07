@@ -33,6 +33,12 @@ export type AddNote = {
  * AssemblyDesign
  *
  * A complete parametric design of a buildable object.
+ *
+ * Coordinates in mm: x = width (right), y = depth (back), z = height (up), floor z = 0.
+ * Numeric fields (size, at, count, quantity, when, deg) take a number or an arithmetic
+ * expression over parameters and the repeat variable, e.g. 'width_mm - 2 * 18' or
+ * 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round,
+ * floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
  */
 export type AssemblyDesign = {
     /**
@@ -261,11 +267,13 @@ export type CommandResponse = {
      * Can Undo
      */
     can_undo: boolean;
-    diff: ModelDiff;
     /**
      * Seq
+     *
+     * Command log position of this state (changes on every edit)
      */
     seq: number;
+    diff: ModelDiff;
 };
 
 /**
@@ -637,7 +645,7 @@ export type Drawing = {
     /**
      * Primitives
      */
-    primitives: Array<Rect | Line | Dimension | Label | Polygon | Callout>;
+    primitives?: Array<Rect | Line | Dimension | Label | Polygon | Callout>;
     /**
      * Legend
      */
@@ -695,8 +703,6 @@ export type HardwareSpec = {
     item: string;
     /**
      * Quantity
-     *
-     * Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
      */
     quantity: number | string;
     /**
@@ -1219,6 +1225,12 @@ export type ProjectView = {
      * Can Undo
      */
     can_undo: boolean;
+    /**
+     * Seq
+     *
+     * Command log position of this state (changes on every edit)
+     */
+    seq: number;
 };
 
 /**
@@ -1342,8 +1354,6 @@ export type Rename = {
 export type Repeat = {
     /**
      * Count
-     *
-     * Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
      */
     count: number | string;
     /**
@@ -1377,8 +1387,6 @@ export type Rotation = {
     axis: 'x' | 'y' | 'z';
     /**
      * Deg
-     *
-     * Number or arithmetic expression over parameters (and the repeat variable), e.g. 'width_mm - 2 * 18' or 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round, floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
      */
     deg: number | string;
 };

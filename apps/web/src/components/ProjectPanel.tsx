@@ -3,7 +3,7 @@
 import type { ProjectModel, Solid } from "@homeworking/api-client";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { BomTable } from "@/components/BomTable";
 import { PdfDownload } from "@/components/PdfDownload";
@@ -75,22 +75,24 @@ function Header({
   onToggleHistory: () => void;
 }) {
   const undo = useUndo(project.id);
+  const { mutate: undoNow, isPending: undoPending } = undo;
   const result = project.result;
   const trust = TRUST[result.trust ?? "pack"] ?? TRUST.pack!;
 
-  // Ctrl/Cmd+Z undoes the last change unless the user is typing.
+  // Ctrl/Cmd+Z undoes the last change unless the user is typing. Depends on the stable
+  // mutate function, not on the mutation object (a new object on every render).
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       const typing = target?.closest("input, textarea, select, [contenteditable]");
       if (typing || !(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z") return;
-      if (event.shiftKey || !canUndo || undo.isPending) return;
+      if (event.shiftKey || !canUndo || undoPending) return;
       event.preventDefault();
-      undo.mutate();
+      undoNow();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canUndo, undo]);
+  }, [canUndo, undoNow, undoPending]);
 
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
@@ -217,6 +219,12 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
   const solids = useMemo(() => result.solids ?? [], [result.solids]);
   const rows = useMemo(() => positions(solids), [solids]);
   const hasModel = solids.length > 0;
+  // The 3D view starts afresh (camera, scene) when the geometry parameters change, not on
+  // edits such as prices.
+  const modelKey = useMemo(
+    () => JSON.stringify(result.effective_params),
+    [result.effective_params],
+  );
   const [mode, setMode] = useState<StageMode>(hasModel ? "model" : "drawings");
   const [drawing, setDrawing] = useState(0);
   const [showParts, setShowParts] = useState(true);
@@ -243,7 +251,7 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
         {hasModel && (
           <div hidden={mode !== "model"} className="absolute inset-0">
             <Viewer3D
-              key={version}
+              key={modelKey}
               solids={solids}
               highlight={highlight}
               onHover={setHighlight}
@@ -255,17 +263,18 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
           hidden={mode !== "drawings"}
           className="drawing-frame absolute inset-0 flex items-center justify-center bg-white p-4 pt-16 pb-24"
         >
-          {drawings.map((d, index) => (
+          {/* Only the visible drawing is mounted: browsers fetch hidden images too, and every
+              SVG is rendered by the engine on the server. */}
+          {mode === "drawings" && current && (
             // eslint-disable-next-line @next/next/no-img-element -- dynamic SVG from the API
             <img
-              key={d.view}
-              src={`/api/projects/${project.id}/drawings/${d.view}.svg?v=${version}`}
-              alt={d.description}
-              hidden={index !== drawing}
+              key={current.view}
+              src={`/api/projects/${project.id}/drawings/${current.view}.svg?v=${version}`}
+              alt={current.description}
               className="max-h-full max-w-full object-contain"
-              data-testid={`drawing-${d.view}`}
+              data-testid={`drawing-${current.view}`}
             />
-          ))}
+          )}
         </div>
 
         {/* Floating top bar */}
@@ -541,7 +550,8 @@ function Panel({ tab, active, children }: { tab: TabKey; active: TabKey; childre
       hidden={tab !== active}
       className="pt-5"
     >
-      {children}
+      {/* Inactive tabs are not rendered (BOM rows, cut plan and steps are large). */}
+      {tab === active ? children : null}
     </div>
   );
 }
@@ -585,7 +595,8 @@ function VersionBanner({
   );
 }
 
-export function ProjectPanel({ projectId }: { projectId: string }) {
+/** Memoised: the chat streams many updates per second into the workspace around it. */
+export const ProjectPanel = memo(function ProjectPanel({ projectId }: { projectId: string }) {
   const current = useProject(projectId);
   const [viewSeq, setViewSeq] = useState<number | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -605,14 +616,13 @@ export function ProjectPanel({ projectId }: { projectId: string }) {
   }
   if (error || !data) return <p role="alert">Das Projekt konnte nicht geladen werden.</p>;
 
-  const { project, can_undo: canUndo } = data;
+  const { project, can_undo: canUndo, seq } = data;
   const result = project.result;
   const notes = project.inputs.notes ?? [];
-  // Query string of drawing and PDF URLs: changes with every parameter change (cache busting)
-  // and selects the displayed version.
-  const version =
-    encodeURIComponent(JSON.stringify(result.effective_params)) +
-    (viewSeq === null ? "" : `&seq=${viewSeq}`);
+  // Query string of drawing and PDF URLs: the log position changes with every edit, also with
+  // a redesign that keeps the parameters (cache busting); seq= selects an earlier version,
+  // which the API may cache for good.
+  const version = viewSeq === null ? String(seq) : `${viewSeq}&seq=${viewSeq}`;
   const hasParams = (result.param_specs ?? []).length > 0;
 
   const tabs: { key: TabKey; label: string; icon: IconName; count?: number }[] = [
@@ -698,4 +708,4 @@ export function ProjectPanel({ projectId }: { projectId: string }) {
       </p>
     </div>
   );
-}
+});

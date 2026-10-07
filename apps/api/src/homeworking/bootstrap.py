@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from calc_engine.engine import Engine, default_engine
 from homeworking.db.schema import Base
 from homeworking.db.session import make_engine, make_session_factory
-from homeworking.modules.agent.model import build_model
+from homeworking.modules.agent.model import Models, build_models
 from homeworking.modules.agent.tools import AgentDeps, build_agent
 from homeworking.modules.conversations.service import ConversationService
 from homeworking.modules.identity.service import IdentityProvider, SqlGuestIdentityProvider
@@ -29,7 +29,7 @@ class Container:
     identity: IdentityProvider
     conversations: ConversationService
     agent: Agent[AgentDeps, str]
-    model_name: str
+    models: Models
 
     async def create_schema(self) -> None:
         """Create tables directly (tests / SQLite dev). Production uses Alembic."""
@@ -44,7 +44,7 @@ def build_container(settings: Settings, engine: Engine | None = None) -> Contain
     db = make_engine(settings.database_url)
     sessions = make_session_factory(db)
     calc = engine or default_engine()
-    model = build_model(settings)
+    models = build_models(settings)
     return Container(
         settings=settings,
         db=db,
@@ -53,6 +53,6 @@ def build_container(settings: Settings, engine: Engine | None = None) -> Contain
         projects=ProjectService(SqlProjectRepository(sessions), calc),
         identity=SqlGuestIdentityProvider(sessions),
         conversations=ConversationService(sessions),
-        agent=build_agent(model, calc),
-        model_name=model.model_name,
+        agent=build_agent(models.designer, calc),
+        models=models,
     )

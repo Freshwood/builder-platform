@@ -4,7 +4,13 @@ import type { UIMessage } from "ai";
 import clsx from "clsx";
 
 import { Icon } from "@/components/ui";
-import { designProgress, planningStages, type ActivityStep, type StepState } from "@/lib/activity";
+import {
+  DESIGN_TOOLS,
+  designProgress,
+  planningStages,
+  type ActivityStep,
+  type StepState,
+} from "@/lib/activity";
 import { asToolPart, formatElapsed, messageText, useElapsed } from "@/lib/assistant";
 
 function StatusIcon({ state, className }: { state: StepState | "pending"; className?: string }) {
@@ -115,7 +121,7 @@ export function ActivityList({ steps, reasoning }: { steps: ActivityStep[]; reas
 function draftedParts(message: UIMessage | null): string[] {
   for (const [index, part] of (message?.parts ?? []).entries()) {
     const tool = asToolPart(part, String(index));
-    if (tool && (tool.name === "design_project" || tool.name === "redesign_project")) {
+    if (tool && DESIGN_TOOLS.has(tool.name)) {
       const names = designProgress(tool.input).parts;
       if (names.length) return names;
     }

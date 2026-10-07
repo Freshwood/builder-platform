@@ -25,9 +25,16 @@ class Settings(BaseSettings):
     llm_mode: Literal["test", "openai"] = "test"
     llm_base_url: str = "https://openrouter.ai/api/v1"
     llm_model: str = ""
+    # Optional cheaper/faster model for simple turns (templates, parameter changes, questions);
+    # free designs stay on llm_model (ADR-0006). Empty = llm_model for everything.
+    llm_model_fast: str = ""
     llm_api_key: SecretStr | None = None
     # Reasoning effort for OpenRouter models; keeps the model's thinking out of the answer text.
     llm_reasoning: Literal["off", "minimal", "low", "medium", "high"] = "low"
+    # Output cap per model request: a complete design plus explanation needs ~6K tokens.
+    llm_max_output_tokens: int = 12_000
+    # Low temperature: designs must follow the schema and the user's brief, not be creative.
+    llm_temperature: float = 0.2
     # Free-form designs need a few repair rounds and long tool arguments (ADR-0004).
     agent_request_limit: int = 12
     agent_total_tokens_limit: int = 200_000

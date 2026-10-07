@@ -162,11 +162,29 @@ tasks:
     cmds:
       - uv run pytest {{.CLI_ARGS}}
 
+  bench:
+    desc: "Offline token benchmark of the agent (no API calls). Label: task bench -- --label phase1"
+    deps: [install:py]
+    env:
+      PYDANTIC_AI_NO_BANNER: "1"
+    cmds:
+      - uv run python -m homeworking.modules.agent.bench {{.CLI_ARGS}}
+
+  prompt:lock:
+    desc: Record the prompt fingerprint after a prompt/tool change (needs a new PROMPT_VERSION)
+    deps: [install:py]
+    env:
+      PYDANTIC_AI_NO_BANNER: "1"
+    cmds:
+      - uv run python -m homeworking.modules.agent.provenance
+
   e2e:
     desc: Browser end-to-end tests with accessibility checks (offline LLM)
     deps: [install:py, install:web]
     cmds:
       - mkdir -p var
+      # Throwaway database: create_all does not add columns to an existing file (migrations do).
+      - rm -f var/e2e.db
       - "{{.PNPM}} --filter web e2e {{.CLI_ARGS}}"
 
   e2e:install:
