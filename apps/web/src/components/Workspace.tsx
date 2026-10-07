@@ -11,7 +11,7 @@ import { ProjectPanel } from "@/components/ProjectPanel";
 import { Icon, Spinner } from "@/components/ui";
 import { projectKey } from "@/lib/api";
 import { messageBlocks } from "@/lib/activity";
-import { messageText, useAssistant } from "@/lib/assistant";
+import { assistantErrorText, messageText, useAssistant } from "@/lib/assistant";
 import { EMPTY_BRIEF, type Brief } from "@/lib/brief";
 
 type MobileView = "chat" | "project";
@@ -122,7 +122,7 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
             <PlanningStopped
               request={lastRequest ? messageText(lastRequest) : ""}
               reply={lastReply}
-              failed={Boolean(assistant.error)}
+              failed={assistant.error ? assistantErrorText(assistant.error) : null}
               onAnswer={() => {
                 setMobileView("chat");
                 // Focus after the chat column became visible on small screens.

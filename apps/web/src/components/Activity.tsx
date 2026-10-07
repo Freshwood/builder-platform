@@ -248,7 +248,7 @@ export function PlanningStopped({
 }: {
   request: string;
   reply: string;
-  failed: boolean;
+  failed: string | null;
   onAnswer: () => void;
   onRetry: () => void;
 }) {
@@ -264,7 +264,7 @@ export function PlanningStopped({
       </h2>
       <p role={failed ? "alert" : undefined} className="mt-2 max-w-2xl text-sm text-white/80">
         {failed
-          ? "Die Verbindung zum Assistenten ist fehlgeschlagen."
+          ? failed
           : asked
             ? "Beantworte sie im Chat, dann geht es weiter."
             : "Der Assistent hat diesmal kein Projekt berechnet. Versuche es noch einmal."}

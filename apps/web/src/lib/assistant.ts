@@ -64,6 +64,20 @@ export function messageText(message: UIMessage): string {
     .trim();
 }
 
+/** User-facing text for a failed assistant turn: unreachable API vs. an aborted agent run. */
+export function assistantErrorText(error: Error | undefined): string {
+  const message = error?.message ?? "";
+  if (
+    /failed to fetch|networkerror|load failed|not found|econnrefused|bad gateway/i.test(message)
+  ) {
+    return "Die Verbindung zum Assistenten ist fehlgeschlagen.";
+  }
+  if (/retries|limit/i.test(message)) {
+    return "Der Assistent konnte diesmal keinen gültigen Entwurf erstellen. Versuche es erneut oder formuliere die Anfrage etwas anders.";
+  }
+  return "Der Assistent ist mit einem Fehler abgebrochen.";
+}
+
 /** Chat state shared by the brief form, the chat column and the progress panel. */
 export function useAssistant(projectId: string | null, onProjectChanged: (id: string) => void) {
   const [transport] = useState(

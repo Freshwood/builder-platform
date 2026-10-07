@@ -8,6 +8,7 @@ import { AutoTextarea } from "@/components/AutoTextarea";
 import { Icon, Spinner } from "@/components/ui";
 import { messageBlocks } from "@/lib/activity";
 import {
+  assistantErrorText,
   formatElapsed,
   toolOutputs,
   useElapsed,
@@ -194,7 +195,9 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
             className="mb-2 flex items-center gap-2 rounded-xl border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning"
           >
             <Icon name="warning" className="h-4 w-4" />
-            <span className="flex-1">Die Verbindung zum Assistenten ist fehlgeschlagen.</span>
+            <span className="flex-1" title={error.message}>
+              {assistantErrorText(error)}
+            </span>
             <button
               type="button"
               onClick={retry}

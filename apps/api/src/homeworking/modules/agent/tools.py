@@ -311,6 +311,11 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             explanation: Optional short German explanation of the construction (labelled as AI).
             untreated: True when the user wants no surface treatment (no oil or glaze).
         """
+        # Models tend to put the flag and design-level fields among the template parameters.
+        params = dict(params)
+        untreated = bool(params.pop("untreated", untreated))
+        for key in ("use", "support"):
+            params.pop(key, None)
         async with ctx.deps.write_lock:
             try:
                 outcome = await ctx.deps.projects.create_from_template(

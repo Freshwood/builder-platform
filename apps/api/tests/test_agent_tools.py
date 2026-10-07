@@ -142,8 +142,14 @@ async def test_template_can_be_built_untreated_in_pine(settings: Settings) -> No
                         {
                             "template_key": "window_shutter",
                             "title": "Fensterladen",
-                            "params": {"width_mm": 310, "height_mm": 380, "wood": "pine"},
-                            "untreated": True,
+                            # The flag and use often end up among the params
+                            "params": {
+                                "width_mm": 310,
+                                "height_mm": 380,
+                                "wood": "pine",
+                                "untreated": True,
+                                "use": "outdoor",
+                            },
                         },
                     )
                 ]

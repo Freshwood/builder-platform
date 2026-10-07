@@ -9,6 +9,8 @@ output: prefixed
 vars:
   PG_URL: postgresql+psycopg://homeworking:homeworking@localhost:5433/homeworking
   PNPM: corepack pnpm
+  # Change in .env when port 8000 is taken by another app (keep API_ORIGIN in sync).
+  API_PORT: '{{.API_PORT | default "8000"}}'
 
 tasks:
   default:
@@ -66,7 +68,7 @@ tasks:
   # --- Development ---------------------------------------------------------------------------
 
   dev:
-    desc: Run API (:8000) and web app (:3000) in development mode
+    desc: Run API (:8000, see API_PORT) and web app (:3000) in development mode
     deps: [install:web, migrate]
     cmds:
       - task: dev:servers
@@ -80,7 +82,7 @@ tasks:
     cmds:
       # Watch only the source trees; the default (whole repo incl. .venv, node_modules) is slow.
       - >-
-        uv run uvicorn homeworking.main:app --reload --port 8000
+        uv run uvicorn homeworking.main:app --reload --port {{.API_PORT}}
         --reload-dir apps/api/src
         --reload-dir packages/construction-model/src
         --reload-dir packages/calc-engine/src
