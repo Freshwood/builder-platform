@@ -44,19 +44,63 @@ from homeworking.modules.projects.service import (
 NOTE_MAX_CHARS = 4000
 
 
+_CLOSERS = {"}": "{", "]": "["}
+_OPENERS = {v: k for k, v in _CLOSERS.items()}
+
+
+def _balance_brackets(text: str) -> str:
+    """Drop closing brackets without a matching opener and close brackets left open.
+
+    Hand-written JSON of a whole design often has one brace too many or too few at the end;
+    the content is unaffected and the engine validates it anyway.
+    """
+    out: list[str] = []
+    stack: list[str] = []
+    in_string = escaped = False
+    for char in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+        elif char in _OPENERS:
+            stack.append(char)
+        elif char in _CLOSERS:
+            if not stack or stack[-1] != _CLOSERS[char]:
+                continue
+            stack.pop()
+        out.append(char)
+    out.extend(_OPENERS[opener] for opener in reversed(stack))
+    return "".join(out)
+
+
 def _parse_json_string(value: Any) -> Any:
     """Accept an object argument that the model sent as a JSON-encoded string.
 
     Models regularly serialise large nested arguments (a whole design) into a string. Strict
     validation then rejects every attempt with "Input should be an object" and the model cannot
-    see what is wrong, so the string is decoded before validation.
+    see what is wrong, so the string is decoded before validation. Unbalanced brackets are
+    repaired; any other syntax error is reported with its position so the model can fix it.
     """
-    if isinstance(value, str):
-        try:
-            return json.loads(value)
-        except json.JSONDecodeError:
-            return value
-    return value
+    if not isinstance(value, str):
+        return value
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError as exc:
+        error = exc
+    try:
+        return json.loads(_balance_brackets(value))
+    except json.JSONDecodeError:
+        pass
+    context = value[max(0, error.pos - 40) : error.pos + 20]
+    raise ValueError(
+        f"Kein gültiges JSON ({error.msg} bei Zeichen {error.pos}: …{context}…). "
+        "Übergib das Argument als Objekt, nicht als String."
+    )
 
 
 _JsonTolerant = BeforeValidator(_parse_json_string)

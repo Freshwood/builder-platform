@@ -1,10 +1,18 @@
+import json
+
+import pytest
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from calc_engine.assembly.templates import template
 from calc_engine.catalog import default_catalog
 from homeworking.bootstrap import build_container
-from homeworking.modules.agent.tools import AgentDeps, build_agent, design_materials
+from homeworking.modules.agent.tools import (
+    AgentDeps,
+    _parse_json_string,
+    build_agent,
+    design_materials,
+)
 from homeworking.settings import Settings
 
 
@@ -127,6 +135,24 @@ async def test_design_sent_as_json_string_is_accepted(settings: Settings) -> Non
         assert model.inputs.params["width_mm"] == 600
     finally:
         await container.close()
+
+
+def test_json_string_with_unbalanced_brackets_is_repaired() -> None:
+    """A stray or missing brace at the end of a design string must not cost a retry."""
+    design = template("window_shutter").design.model_dump(mode="json")
+    text = json.dumps(design)
+    # One brace too many inside the last list (the bug report's case) and one missing at the end.
+    stray = text[: text.rindex("]")] + "}" + text[text.rindex("]") :]
+    assert _parse_json_string(stray) == design
+    assert _parse_json_string(text[:-1]) == design
+    # Brackets inside strings are left alone.
+    assert _parse_json_string('{"summary": "a {b] c"}}') == {"summary": "a {b] c"}
+
+
+def test_invalid_json_string_names_the_error_position() -> None:
+    """The model must see where its JSON is broken, not only 'Input should be an object'."""
+    with pytest.raises(ValueError, match=r"bei Zeichen 8: …\{\"a\": 1 \"b\": 2\}…"):
+        _parse_json_string('{"a": 1 "b": 2}')
 
 
 async def test_template_can_be_built_untreated_in_pine(settings: Settings) -> None:
