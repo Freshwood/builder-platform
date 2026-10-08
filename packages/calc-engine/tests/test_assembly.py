@@ -143,7 +143,7 @@ def test_size_limit_for_free_designs() -> None:
         "at": ["i * 1500", 0, "height_mm - 18"],
         "repeat": {"count": 3},
     }
-    with pytest.raises(DesignRejectedError, match="Fachplanung"):
+    with pytest.raises(DesignRejectedError, match='category="building"'):
         build(design)
 
 

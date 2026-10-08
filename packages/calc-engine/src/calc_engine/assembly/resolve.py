@@ -8,10 +8,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from calc_engine.assembly.expr import ExprError, evaluate
-from construction_model.assembly import AssemblyDesign, DesignParam, PartSpec
+from construction_model.assembly import AssemblyDesign, Cutout, DesignParam, PartSpec, Shape
 from construction_model.model import ParamValue
 
 MAX_PARTS = 400
+MAX_PARTS_BUILDING = 1500
 MAX_REPEAT = 200
 _PLACEHOLDER = re.compile(r"\{([a-z][a-z0-9_]*)\}")
 
@@ -24,19 +25,52 @@ class DesignError(ValueError):
         self.errors = errors
 
 
+Vec3 = tuple[float, float, float]
+Pt = tuple[float, float]
+
+
+@dataclass(frozen=True)
+class ResolvedShape:
+    kind: str
+    radius: float | None = None
+    apex: float | None = None
+    bumps: int | None = None
+    points: tuple[Pt, ...] = ()
+
+
+@dataclass(frozen=True)
+class ResolvedCutout:
+    kind: str
+    at: Pt
+    size: Pt
+    points: tuple[Pt, ...] = ()
+
+
 @dataclass(frozen=True)
 class ResolvedPart:
     spec_id: str
     index: int
     name: str
     material: str
-    size: tuple[float, float, float]
-    at: tuple[float, float, float]
+    size: Vec3
+    """Box: extent along x, y, z. Member: (0, 0, 0); the engine derives it from start/end."""
+    at: Vec3
     rotation: tuple[str, float] | None
+    start: Vec3 | None = None
+    end: Vec3 | None = None
+    section: Pt | None = None
+    facing: str | None = None
+    cuts: tuple[str, str] = ("square", "square")
+    shape: ResolvedShape | None = None
+    cutouts: tuple[ResolvedCutout, ...] = ()
 
     @property
     def key(self) -> str:
         return f"{self.spec_id}[{self.index}]"
+
+    @property
+    def is_member(self) -> bool:
+        return self.start is not None
 
 
 def _number_env(params: Mapping[str, ParamValue]) -> dict[str, float]:
@@ -101,20 +135,49 @@ def _vec(
     values: tuple[float | str, float | str, float | str], env: Mapping[str, float]
 ) -> tuple[float, float, float]:
     x, y, z = (evaluate(v, env) for v in values)
-    return (x, y, z)
+    if not all(math.isfinite(v) for v in (x, y, z)):
+        raise ExprError("Maß ist keine endliche Zahl")
+    return (round(x, 1), round(y, 1), round(z, 1))
+
+
+def _pt(values: tuple[float | str, float | str], env: Mapping[str, float]) -> Pt:
+    u, v = (evaluate(x, env) for x in values)
+    if not all(math.isfinite(x) for x in (u, v)):
+        raise ExprError("Maß ist keine endliche Zahl")
+    return (round(u, 1), round(v, 1))
+
+
+def _shape(shape: Shape, env: Mapping[str, float]) -> ResolvedShape:
+    return ResolvedShape(
+        kind=shape.kind,
+        radius=None if shape.radius is None else evaluate(shape.radius, env),
+        apex=None if shape.apex is None else evaluate(shape.apex, env),
+        bumps=shape.bumps,
+        points=tuple(_pt(p, env) for p in shape.points),
+    )
+
+
+def _cutout(cutout: Cutout, env: Mapping[str, float]) -> ResolvedCutout:
+    return ResolvedCutout(
+        kind=cutout.kind,
+        at=_pt(cutout.at, env),
+        size=_pt(cutout.size, env),
+        points=tuple(_pt(p, env) for p in cutout.points),
+    )
 
 
 def resolve_parts(design: AssemblyDesign, params: Mapping[str, ParamValue]) -> list[ResolvedPart]:
     env = _number_env(params)
     errors: list[str] = []
     parts: list[ResolvedPart] = []
+    limit = MAX_PARTS_BUILDING if design.category == "building" else MAX_PARTS
     for spec in design.parts:
         try:
             parts.extend(_expand(spec, env, params))
         except ExprError as exc:
             errors.append(f"Bauteil '{spec.id}': {exc}")
-        if len(parts) > MAX_PARTS:
-            raise DesignError([f"Mehr als {MAX_PARTS} Bauteile – Entwurf vereinfachen"])
+        if len(parts) > limit:
+            raise DesignError([f"Mehr als {limit} Bauteile – Entwurf vereinfachen"])
     if errors:
         raise DesignError(errors)
     return parts
@@ -139,24 +202,39 @@ def _expand(
             local["n"] = float(count)
         if spec.when is not None and not evaluate(spec.when, local):
             continue
-        size = _vec(spec.size, local)
-        at = _vec(spec.at, local)
-        if any(not math.isfinite(v) for v in (*size, *at)):
-            raise ExprError("Maß ist keine endliche Zahl")
         rotation = None
         if spec.rotate is not None:
             deg = evaluate(spec.rotate.deg, local)
             if abs(deg) > 1e-9:
                 rotation = (spec.rotate.axis, deg)
+        start: Vec3 | None = None
+        end: Vec3 | None = None
+        if spec.start is not None and spec.end is not None:
+            size: Vec3 = (0.0, 0.0, 0.0)
+            at = start = _vec(spec.start, local)
+            end = _vec(spec.end, local)
+        else:
+            if spec.cuts != ("square", "square"):
+                raise ExprError("cuts gibt es nur für Stäbe mit start/end")
+            assert spec.size is not None
+            assert spec.at is not None
+            size, at = _vec(spec.size, local), _vec(spec.at, local)
         out.append(
             ResolvedPart(
                 spec_id=spec.id,
                 index=index,
                 name=spec.name,
                 material=substitute(spec.material, params),
-                size=(round(size[0], 1), round(size[1], 1), round(size[2], 1)),
-                at=(round(at[0], 1), round(at[1], 1), round(at[2], 1)),
+                size=size,
+                at=at,
                 rotation=rotation,
+                start=start,
+                end=end,
+                section=None if spec.section is None else _pt(spec.section, local),
+                facing=spec.facing,
+                cuts=spec.cuts,
+                shape=None if spec.shape is None else _shape(spec.shape, local),
+                cutouts=tuple(_cutout(c, local) for c in spec.cutouts),
             )
         )
     return out

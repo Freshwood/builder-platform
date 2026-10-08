@@ -54,6 +54,12 @@ export type AssemblyDesign = {
      */
     summary: string;
     /**
+     * Category
+     *
+     * building: house or shed with foundation, frame and roof
+     */
+    category?: 'object' | 'building';
+    /**
      * Use
      */
     use?: 'indoor' | 'outdoor';
@@ -72,6 +78,10 @@ export type AssemblyDesign = {
      * Parts
      */
     parts: Array<PartSpec>;
+    /**
+     * Joints
+     */
+    joints?: Array<JointSpec>;
     /**
      * Hardware
      */
@@ -484,6 +494,51 @@ export type CutLine = {
      * Position number in drawings
      */
     position?: number | null;
+    /**
+     * Note
+     *
+     * Contour, cutouts, end cuts or tenons
+     */
+    note?: string | null;
+};
+
+/**
+ * Cutout
+ *
+ * Hole through a part (window, slot, grip), in the face plane's (u, v) coordinates.
+ */
+export type Cutout = {
+    /**
+     * Kind
+     */
+    kind?: 'rect' | 'ellipse' | 'polygon';
+    /**
+     * At
+     *
+     * Minimum corner (u, v)
+     */
+    at?: [
+        number | string,
+        number | string
+    ];
+    /**
+     * Size
+     *
+     * Extent (u, v)
+     */
+    size?: [
+        number | string,
+        number | string
+    ];
+    /**
+     * Points
+     *
+     * polygon: (u, v)
+     */
+    points?: Array<[
+        number | string,
+        number | string
+    ]>;
 };
 
 /**
@@ -766,6 +821,29 @@ export type InstructionStep = {
      * Concrete sub-steps in working order (what to buy/cut, which parts, which screws)
      */
     details?: Array<string>;
+};
+
+/**
+ * JointSpec
+ *
+ * Carpentry joint between all touching or overlapping instances of two parts.
+ *
+ * tenon: ``part`` ends on ``into`` with a tenon and peg. half_lap: both cross and overlap,
+ * each notched by half. notch: ``part`` sits on ``into`` with a seat cut (rafter on plate).
+ */
+export type JointSpec = {
+    /**
+     * Kind
+     */
+    kind: 'tenon' | 'half_lap' | 'notch';
+    /**
+     * Part
+     */
+    part: string;
+    /**
+     * Into
+     */
+    into: string;
 };
 
 /**
@@ -1055,24 +1133,73 @@ export type PartSpec = {
     /**
      * Size
      *
-     * Extent along x, y, z in mm
+     * Box: extent along x, y, z in mm
      */
-    size: [
+    size?: [
         number | string,
         number | string,
         number | string
-    ];
+    ] | null;
     /**
      * At
      *
-     * Minimum corner (x, y, z) in mm before rotation
+     * Box: minimum corner (x, y, z) before rotation
      */
-    at: [
+    at?: [
         number | string,
         number | string,
         number | string
-    ];
+    ] | null;
     rotate?: Rotation | null;
+    /**
+     * Start
+     *
+     * Member: centre of the start end (x, y, z)
+     */
+    start?: [
+        number | string,
+        number | string,
+        number | string
+    ] | null;
+    /**
+     * End
+     *
+     * Member: centre of the other end
+     */
+    end?: [
+        number | string,
+        number | string,
+        number | string
+    ] | null;
+    /**
+     * Section
+     *
+     * Member: thickness × width, if the material does not fix it
+     */
+    section?: [
+        number | string,
+        number | string
+    ] | null;
+    /**
+     * Facing
+     *
+     * Member: thickness direction (default horizontal, across the member)
+     */
+    facing?: 'x' | 'y' | 'z' | null;
+    /**
+     * Cuts
+     *
+     * Member end cuts: square, level (horizontal), plumb (vertical), corner (both)
+     */
+    cuts?: [
+        'square' | 'level' | 'plumb' | 'corner',
+        'square' | 'level' | 'plumb' | 'corner'
+    ];
+    shape?: Shape | null;
+    /**
+     * Cutouts
+     */
+    cutouts?: Array<Cutout>;
     repeat?: Repeat | null;
     /**
      * When
@@ -1107,6 +1234,13 @@ export type Polygon = {
      * Shade
      */
     shade?: number;
+    /**
+     * Holes
+     */
+    holes?: Array<Array<[
+        number,
+        number
+    ]>>;
 };
 
 /**
@@ -1484,9 +1618,55 @@ export type SetRegion = {
 export type Severity = 'info' | 'warning' | 'critical';
 
 /**
+ * Shape
+ *
+ * Outline of a part in its face plane; the engine derives the exact contour.
+ *
+ * The face plane is the one perpendicular to the thinnest dimension (members: length × width).
+ * Local coordinates (u, v) in mm start at the minimum corner: u along the first, v along the
+ * second remaining axis in x, y, z order (members: u along the length from ``start``).
+ */
+export type Shape = {
+    /**
+     * Kind
+     */
+    kind: 'rect' | 'rounded' | 'ellipse' | 'triangle' | 'arch' | 'cloud' | 'polygon';
+    /**
+     * Radius
+     *
+     * rounded: corner radius
+     */
+    radius?: number | string | null;
+    /**
+     * Apex
+     *
+     * triangle: u of the apex (default centre)
+     */
+    apex?: number | string | null;
+    /**
+     * Bumps
+     *
+     * cloud: number of bumps on top
+     */
+    bumps?: number | null;
+    /**
+     * Points
+     *
+     * polygon: (u, v)
+     */
+    points?: Array<[
+        number | string,
+        number | string
+    ]>;
+};
+
+/**
  * Solid
  *
- * A placed box for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner.
+ * A placed part for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner.
+ *
+ * Plain boxes are described by ``size``, ``at`` and ``rotation``; shaped, cut or angled parts
+ * carry an engine-computed ``mesh`` (then ``size``/``at`` are their bounding box).
  */
 export type Solid = {
     /**
@@ -1526,6 +1706,31 @@ export type Solid = {
         number
     ];
     rotation?: SolidRotation | null;
+    mesh?: SolidMesh | null;
+};
+
+/**
+ * SolidMesh
+ *
+ * Triangle mesh in world coordinates for parts that are not plain boxes.
+ */
+export type SolidMesh = {
+    /**
+     * Vertices
+     */
+    vertices: Array<[
+        number,
+        number,
+        number
+    ]>;
+    /**
+     * Triangles
+     */
+    triangles: Array<[
+        number,
+        number,
+        number
+    ]>;
 };
 
 /**

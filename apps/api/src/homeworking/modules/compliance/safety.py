@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-SAFETY_RULES_VERSION = "1"
+SAFETY_RULES_VERSION = "2"
 
 
 @dataclass(frozen=True)
@@ -70,7 +70,9 @@ TOPICS: tuple[SafetyTopic, ...] = (
             r"wanddurchbruch",
             r"deckendurchbruch",
             r"decke\s+(öffnen|durchbrechen|entfernen)",
-            r"dachstuhl",
+            # Changes to an existing roof structure; planning a new house is allowed (ADR-0007).
+            r"dachstuhl\w*\s+(ändern|aendern|umbauen|kürzen|kuerzen|absägen|entfernen|öffnen)",
+            r"(sparren|kehlbalken|pfette)\w*\s+(kürzen|kuerzen|durchsägen|absägen|entfernen)",
             r"st(ü|ue)tze\s+entfernen",
             r"tr(ä|ae)ger\s+(einziehen|entfernen)",
         ),

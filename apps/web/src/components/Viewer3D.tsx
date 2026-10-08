@@ -19,7 +19,46 @@ function toThree([x, y, z]: readonly [number, number, number]): THREE.Vector3 {
   return new THREE.Vector3(x, z, -y);
 }
 
+function partMaterial(solid: Solid): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color: toneColor(solid.tone),
+    roughness: 0.85,
+    metalness: solid.tone === "steel" ? 0.6 : 0,
+  });
+}
+
+function withEdges(mesh: THREE.Mesh): THREE.Mesh {
+  // Only real edges (crease > 20°): triangulated faces of contours stay clean.
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(mesh.geometry, 20),
+    new THREE.LineBasicMaterial({ color: 0x374151, transparent: true, opacity: 0.55 }),
+  );
+  mesh.add(edges);
+  return mesh;
+}
+
+/** Shaped, cut or angled parts: the engine sends a triangle mesh in model coordinates. */
+function buildMesh(solid: Solid, mesh: NonNullable<Solid["mesh"]>): THREE.Group {
+  const positions = new Float32Array(mesh.triangles.length * 9);
+  mesh.triangles.forEach((triangle, t) => {
+    triangle.forEach((index, k) => {
+      const p = toThree(mesh.vertices[index] as [number, number, number]);
+      positions.set([p.x, p.y, p.z], t * 9 + k * 3);
+    });
+  });
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  // Not indexed: every face keeps its own normal (flat shading at sharp edges).
+  geometry.computeVertexNormals();
+  const part = new THREE.Mesh(geometry, partMaterial(solid));
+  part.userData.position = solid.position;
+  const group = new THREE.Group();
+  group.add(withEdges(part));
+  return group;
+}
+
 function buildPart(solid: Solid): THREE.Group {
+  if (solid.mesh) return buildMesh(solid, solid.mesh);
   const [sx, sy, sz] = solid.size;
   const pivot = new THREE.Group();
   pivot.position.copy(toThree(solid.at));
@@ -30,20 +69,10 @@ function buildPart(solid: Solid): THREE.Group {
     if (solid.rotation.axis === "z") pivot.rotation.y = angle;
   }
   const geometry = new THREE.BoxGeometry(sx, sz, sy);
-  const material = new THREE.MeshStandardMaterial({
-    color: toneColor(solid.tone),
-    roughness: 0.85,
-    metalness: solid.tone === "steel" ? 0.6 : 0,
-  });
-  const mesh = new THREE.Mesh(geometry, material);
+  const mesh = new THREE.Mesh(geometry, partMaterial(solid));
   mesh.position.set(sx / 2, sz / 2, -sy / 2);
   mesh.userData.position = solid.position;
-  const edges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(geometry),
-    new THREE.LineBasicMaterial({ color: 0x374151, transparent: true, opacity: 0.55 }),
-  );
-  mesh.add(edges);
-  pivot.add(mesh);
+  pivot.add(withEdges(mesh));
   return pivot;
 }
 

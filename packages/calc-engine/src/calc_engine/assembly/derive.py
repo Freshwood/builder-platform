@@ -5,13 +5,14 @@ from __future__ import annotations
 import math
 import re
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from calc_engine.assembly.check import CheckedDesign, PartInfo, check_design
-from calc_engine.assembly.geometry import TOUCH_TOL, Contact, bounds_of
-from calc_engine.assembly.projection import build_drawings
+from calc_engine.assembly.geometry import TOUCH_TOL, Box, Contact, bounds_of
+from calc_engine.assembly.joints import JointPlan, JointWork, member_angle, plan_joints
+from calc_engine.assembly.projection import MAX_TEMPLATES, build_drawings, build_template
 from calc_engine.assembly.resolve import (
     DesignError,
     is_included,
@@ -37,13 +38,14 @@ from construction_model.model import (
     RuleRef,
     Severity,
     Solid,
+    SolidMesh,
     SolidRotation,
     StockPlan,
     Tool,
 )
 
 DESIGN_PACK_ID = "design"
-DESIGN_PACK_VERSION = "1.0.0"
+DESIGN_PACK_VERSION = "1.1.0"
 _GUID_NS = uuid5(NAMESPACE_URL, "https://homeworking.example/packs/design")
 SCREW_SPACING_MM = 250
 SCREW_RESERVE = Decimal("1.1")
@@ -52,6 +54,7 @@ JOINTS_PER_GLUE = 60
 TIP_RATIO = 2.5
 TIP_MIN_HEIGHT = 900
 LUMBER_NOTE = "Maßholz: im Holzfachhandel/Hobelwerk in diesem Querschnitt bestellen"
+BULK_RESERVE = Decimal("1.05")
 # Hardware that building steps talk about must also be in the BOM (FD-HW).
 _HARDWARE_MENTIONS: dict[str, tuple[re.Pattern[str], str]] = {
     "hinge": (
@@ -85,7 +88,29 @@ RULES: dict[str, RuleRef] = {
             title="Alle Bauteile zusammenhängend, Boden- bzw. Wandkontakt",
         ),
         RuleRef(
-            id="FD-SIZE", version="1", title="Freie Entwürfe max. 4 × 4 m Grundfläche, 2,5 m Höhe"
+            id="FD-SIZE",
+            version="2",
+            title="Objekte max. 4 × 4 m Grundfläche, 2,5 m Höhe; Gebäude max. 25 × 25 m, 15 m Höhe",
+        ),
+        RuleRef(
+            id="FD-SHAPE",
+            version="1",
+            title="Konturen (Wolke, Ellipse, Giebel, Bogen, Polygon) und Ausschnitte aus dem Rohteil; Schablone je Position",
+        ),
+        RuleRef(
+            id="FD-JOINT",
+            version="1",
+            title="Zapfen: Stärke 1/3 Holz, Länge 0,4 × Gegenholz (30–60 mm), Holznagel je Zapfen; Blatt: halbe Überdeckung; Kerve: höchstens 1/3 der Höhe",
+        ),
+        RuleRef(
+            id="FD-BULK",
+            version="1",
+            title="Ausfachung, Dämmung, Beton nach Volumen, Dachdeckung und Schalung nach Fläche, +5 % Verschnitt",
+        ),
+        RuleRef(
+            id="FD-BUILD",
+            version="1",
+            title="Gebäude: Statik, Gründung und Baugenehmigung durch Fachplaner; Engine prüft nur Geometrie und Mengen",
         ),
         RuleRef(
             id="FD-SCREW",
@@ -138,7 +163,7 @@ def _positions(infos: list[PartInfo]) -> tuple[list[Position], list[int]]:
     positions: list[Position] = []
     numbers: list[int] = []
     for info in infos:
-        key = (info.part.name, info.item.id, info.length_mm, info.width_mm)
+        key = (info.part.name, info.item.id, info.length_mm, info.width_mm, info.signature)
         if key not in keys:
             keys[key] = len(positions) + 1
             positions.append(Position(keys[key], info.part.spec_id, info.part.name, info))
@@ -146,15 +171,43 @@ def _positions(infos: list[PartInfo]) -> tuple[list[Position], list[int]]:
     return positions, numbers
 
 
-def _cut_list(positions: list[Position], numbers: list[int]) -> list[CutLine]:
+def _cut_note(box: Box, extra_mm: int) -> str | None:
+    """How a part differs from a straight saw cut (contour, holes, angled ends, tenons)."""
+    notes: list[str] = []
+    if box.shaped:
+        notes.append("Kontur nach Schablone aussägen")
+    if box.holes:
+        notes.append(f"{len(box.holes)} Ausschnitt(e)")
+    angle = member_angle(box)
+    if angle is not None and box.part.cuts != ("square", "square"):
+        labels = {
+            "level": "Waagschnitt",
+            "plumb": "Lotschnitt",
+            "corner": "Klaue",
+            "square": "gerade",
+        }
+        ends = " / ".join(labels[c] for c in box.part.cuts)
+        notes.append(f"Enden {ends}, Neigung {angle:.1f}°".replace(".", ","))
+    if extra_mm:
+        notes.append(f"inkl. {extra_mm} mm Zapfen")
+    return "; ".join(notes) or None
+
+
+def _cut_list(
+    positions: list[Position], numbers: list[int], checked: CheckedDesign, plan: JointPlan
+) -> list[CutLine]:
     counts: dict[int, int] = defaultdict(int)
-    for n in numbers:
+    first: dict[int, int] = {}
+    for i, n in enumerate(numbers):
         counts[n] += 1
+        first.setdefault(n, i)
     lines: list[CutLine] = []
     for pos in positions:
         info = pos.info
-        if info.kind == "piece":
+        if info.kind in {"piece", "bulk"}:
             continue
+        i = first[pos.number]
+        note = _cut_note(checked.boxes[i], plan.extra_mm.get(i, 0))
         if info.kind == "linear":
             section = f"{info.thickness_mm} × {info.width_mm}"
             lines.append(
@@ -165,6 +218,7 @@ def _cut_list(positions: list[Position], numbers: list[int]) -> list[CutLine]:
                     length_mm=info.length_mm,
                     count=counts[pos.number],
                     position=pos.number,
+                    note=note,
                 )
             )
         else:
@@ -177,6 +231,7 @@ def _cut_list(positions: list[Position], numbers: list[int]) -> list[CutLine]:
                     width_mm=info.width_mm,
                     count=counts[pos.number],
                     position=pos.number,
+                    note=note,
                 )
             )
     return lines
@@ -256,22 +311,25 @@ class Joint:
     axis: int | None
 
 
-def _screws(checked: CheckedDesign, outdoor: bool, catalog: Catalog) -> tuple[list[Joint], bool]:
+def _screws(
+    checked: CheckedDesign, outdoor: bool, catalog: Catalog, skip: set[frozenset[int]]
+) -> tuple[list[Joint], bool]:
     screws = [i for i in catalog.items if i.kind == "screw" and i.outdoor == outdoor]
     longest = max(s.screw_length_mm or 0 for s in screws)
     joints: list[Joint] = []
     too_thick = False
     for contact in checked.contacts:
         a, b = checked.infos[contact.a], checked.infos[contact.b]
-        if a.kind == "piece" or b.kind == "piece":
+        if {a.kind, b.kind} & {"piece", "bulk"} or frozenset((contact.a, contact.b)) in skip:
             continue
         n = _screw_count(contact)
+        box_a, box_b = checked.boxes[contact.a], checked.boxes[contact.b]
         if contact.axis is None:
-            ta, tb = min(a.part.size), min(b.part.size)
+            ta, tb = box_a.dims[0], box_b.dims[0]
             t = min(ta, tb)
             cap = t + max(ta, tb) - 5
         else:
-            ta, tb = a.part.size[contact.axis], b.part.size[contact.axis]
+            ta, tb = box_a.size[contact.axis], box_b.size[contact.axis]
             t, cap = min(ta, tb), ta + tb - 5
         if t + 24.0 > longest:
             too_thick = True
@@ -316,31 +374,30 @@ def _missing_hardware(
     return errors
 
 
-def _surface_m2(infos: list[PartInfo]) -> float:
+def _surface_m2(checked: CheckedDesign) -> float:
+    """Wood surface to treat (no fittings, masonry, roofing or concrete)."""
     total = 0.0
-    for info in infos:
-        if info.kind == "piece":
+    for info, box in zip(checked.infos, checked.boxes, strict=True):
+        if info.kind in {"piece", "bulk"}:
             continue
-        x, y, z = info.part.size
-        total += 2 * (x * y + y * z + x * z)
+        total += box.surface_mm2
     return total / 1e6
 
 
-def _weight_kg(infos: list[PartInfo], catalog: Catalog) -> float:
+def _weight_kg(checked: CheckedDesign, catalog: Catalog) -> float:
     total = 0.0
-    for info in infos:
+    for info, box in zip(checked.infos, checked.boxes, strict=True):
         if info.kind == "piece" or not info.item.material:
             continue
         material = catalog.materials.get(info.item.material)
         if material:
-            x, y, z = info.part.size
-            total += x * y * z / 1e9 * material.density_kg_m3
+            total += box.volume_mm3 / 1e9 * material.density_kg_m3
     return total
 
 
 def _tip_risk(checked: CheckedDesign, design: AssemblyDesign) -> tuple[bool, str | None]:
     """Whether a floor-standing object should be anchored, and a stability warning."""
-    if design.support != "floor":
+    if design.support != "floor" or design.category == "building":
         return False, None
     lo, hi = bounds_of(checked.boxes)
     height = hi[2] - lo[2]
@@ -373,6 +430,12 @@ def _qty(value: Decimal) -> str:
 
 
 def _dims(info: PartInfo) -> str:
+    if info.kind == "bulk":
+        unit = "m²" if info.item.bulk_basis == "area" else "m³"
+        amount = f"{info.quantity:.2f}".replace(".", ",")
+        return (
+            f"{info.length_mm} × {info.width_mm} mm, {info.thickness_mm} mm stark, {amount} {unit}"
+        )
     if info.kind == "linear":
         return f"{info.thickness_mm} × {info.width_mm} mm, {info.length_mm} mm lang"
     if info.kind == "sheet":
@@ -400,7 +463,7 @@ def _direction(joint: Joint, checked: CheckedDesign) -> str:
 
 
 def _cut_details(
-    checked: CheckedDesign, numbers: list[int], stock_plan: list[StockPlan]
+    checked: CheckedDesign, numbers: list[int], stock_plan: list[StockPlan], joints: JointPlan
 ) -> list[str]:
     """Bar by bar what to saw, and which sheet pieces to cut, with position numbers."""
     infos = checked.infos
@@ -444,6 +507,64 @@ def _cut_details(
         details.append(
             f"Pos. {number} {info.part.name}: {sheet_counts[number]}× "
             f"{info.length_mm} × {info.width_mm} mm aus {info.item.name} {info.thickness_mm} mm"
+        )
+    noted: set[int] = set()
+    for i, (info, number) in enumerate(zip(infos, numbers, strict=True)):
+        if number in noted or info.kind in {"piece", "bulk"}:
+            continue
+        box = checked.boxes[i]
+        note = _cut_note(box, joints.extra_mm.get(i, 0))
+        if note is None:
+            continue
+        noted.add(number)
+        if box.holes:
+            note += (
+                f" – Kontur von Zeichnung „Schablone Pos. {number}“ übertragen, für "
+                "Ausschnitte innen ein 10-mm-Loch vorbohren, mit der Stichsäge sägen, Kanten "
+                "schleifen"
+            )
+        elif box.shaped:
+            note += (
+                f" – Kontur von Zeichnung „Schablone Pos. {number}“ übertragen, mit der "
+                "Stichsäge sägen, Kanten schleifen"
+            )
+        details.append(f"Pos. {number} {info.part.name}: {note}")
+    return details
+
+
+_BULK_WORK = {
+    "concrete": "betonieren: Schalung stellen, Beton lagenweise einbringen und verdichten, "
+    "Oberfläche abziehen und mehrere Tage feucht halten",
+    "clay": "ausmauern: Lehmsteine im Verband mit Lehmmörtel, Dreikantleisten an den Hölzern, "
+    "1 cm Fuge zum Holz",
+    "aerated": "ausmauern: Porenbeton-Plansteine mit Dünnbettmörtel, Dreikantleisten an den "
+    "Hölzern, Anschlussfuge zum Holz elastisch schließen",
+    "tile": "eindecken: Unterdeckbahn, Konter- und Traglattung, Ziegel von der Traufe zum First",
+    "wood_fiber": "fugenlos einpassen, Stöße versetzen",
+    "larch": "montieren: Lattung, dann Bretter von unten nach oben mit Edelstahlschrauben",
+}
+_CARPENTRY = {
+    "tenon": "einzapfen und mit Holznagel Ø 22 mm sichern (Bohrung 2–3 mm versetzt, zieht die Verbindung an)",
+    "half_lap": "überblatten und mit Holznagel Ø 22 mm sichern",
+    "notch": "mit der Kerve aufsetzen und je Stelle mit 1 Holzbauschraube 8 × 240 mm befestigen",
+}
+
+
+def _carpentry_details(
+    works: list[JointWork], checked: CheckedDesign, numbers: list[int]
+) -> list[str]:
+    infos = checked.infos
+    groups: dict[tuple[str, int, int], list[JointWork]] = defaultdict(list)
+    for w in works:
+        groups[(w.kind, numbers[w.part], numbers[w.into])].append(w)
+    details: list[str] = []
+    for (kind, a, b), items in groups.items():
+        places = len(items)
+        extra = sum(w.pegs for w in items)
+        details.append(
+            f"Pos. {a} {_name_of(a, infos, numbers)} in Pos. {b} {_name_of(b, infos, numbers)} "
+            f"{_CARPENTRY[kind]}: {places} {'Stelle' if places == 1 else 'Stellen'}"
+            + (f" ({extra} Holznägel)" if extra else "")
         )
     return details
 
@@ -492,6 +613,14 @@ def _assembly_details(
             + ("; Kontaktflächen vorher dünn mit Holzleim bestreichen" if glue else "")
         )
 
+    bulk: dict[int, PartInfo] = {}
+    for i in indices:
+        if infos[i].kind == "bulk":
+            bulk.setdefault(numbers[i], infos[i])
+    for n, info in sorted(bulk.items()):
+        work = _BULK_WORK.get(info.item.material or "", "einbauen")
+        details.append(f"Pos. {n} {info.part.name} ({info.item.name}) {work}")
+
     pieces = {i for i in indices if infos[i].kind == "piece"}
     piece_counts: dict[int, int] = defaultdict(int)
     partners: dict[int, set[int]] = defaultdict(set)
@@ -526,6 +655,7 @@ def _instructions(
     hardware: dict[str, int],
     catalog: Catalog,
     anchor: bool,
+    plan: JointPlan,
 ) -> list[InstructionStep]:
     """Step-by-step instructions: buy, cut bar by bar, assemble with concrete connections."""
     origin = Origin.AI if design.origin == Origin.AI else Origin.ENGINE
@@ -561,8 +691,24 @@ def _instructions(
         "Sägeschnitt kostet ca. 4 mm. Schreibe die Positionsnummer sofort mit Bleistift auf jedes "
         "Teil, brich alle Kanten mit Schleifpapier (Körnung 120) und schleife die Flächen vor."
         + (" Platten kannst du im Baumarkt nach Maß zuschneiden lassen." if has_sheets else ""),
-        _cut_details(checked, numbers, stock_plan),
+        _cut_details(checked, numbers, stock_plan, plan),
     )
+    if plan.works:
+        groups: dict[tuple[str, int, int, str], int] = defaultdict(int)
+        for w in plan.works:
+            groups[(w.kind, numbers[w.part], numbers[w.into], w.text)] += 1
+        add(
+            "Holzverbindungen anreißen und ausarbeiten",
+            "Reiße alle Verbindungen vom Bezugsmaß aus an (Schnurschlag, Zimmermannswinkel) und "
+            "nummeriere jede Stelle mit Abbundzeichen. Zapfen und Blätter mit der Säge "
+            "einschneiden und mit dem Stemmeisen ausarbeiten; Zapfenlöcher bohren oder stemmen. "
+            "Jede Verbindung trocken zur Probe stecken.",
+            [
+                f"Pos. {a} {_name_of(a, infos, numbers)} → Pos. {b} "
+                f"{_name_of(b, infos, numbers)}: {text} ({count}×)"
+                for (_, a, b, text), count in groups.items()
+            ],
+        )
 
     # Each part is mounted in the first design step that names it; the rest at the end.
     step_of = [len(design.steps)] * len(infos)
@@ -620,6 +766,11 @@ def _instructions(
             numbers,
             any(line.item_id == "glue_d3_750" for line in bom_lines),
         )
+        details += _carpentry_details(
+            [w for w in plan.works if max(step_of[w.part], step_of[w.into]) == k],
+            checked,
+            numbers,
+        )
         for kind, (pattern, _) in _HARDWARE_MENTIONS.items():
             if pattern.search(f"{title} {text}"):
                 for item_id in sorted(placed_kinds.get(kind, set()) - mentioned):
@@ -672,7 +823,10 @@ def build_design(
     """Build everything for a design with validated, effective parameters."""
     parts = resolve_parts(design, params)
     checked = check_design(design, parts, catalog)
-    infos = checked.infos
+    plan = plan_joints(design, checked)
+    infos = _with_tenons(checked, plan)
+    checked.infos = infos
+    building = design.category == "building"
     outdoor = design.use == "outdoor"
     positions, numbers = _positions(infos)
     bom = BomBuilder(catalog)
@@ -681,20 +835,44 @@ def build_design(
 
     linear: dict[str, list[int]] = defaultdict(list)
     sheets: dict[str, list[tuple[int, int]]] = defaultdict(list)
+    bulk: dict[str, float] = defaultdict(float)
     placed_pieces: dict[str, int] = defaultdict(int)
     for info in infos:
         if info.kind == "linear":
             linear[info.item.id].append(info.length_mm)
         elif info.kind == "sheet":
             sheets[info.item.id].append((info.length_mm, info.width_mm))
+        elif info.kind == "bulk":
+            bulk[info.item.id] += info.quantity
         else:
             placed_pieces[info.item.id] += 1
     for item_id, lengths in linear.items():
         stock_plan.append(_linear_stock(catalog.item(item_id), lengths, bom))
     for item_id, pieces in sheets.items():
         stock_plan.append(_sheet_stock(catalog.item(item_id), pieces, bom))
+    for item_id, amount in bulk.items():
+        unit = catalog.item(item_id).unit
+        need = Decimal(str(amount)) * BULK_RESERVE
+        bought = (need * 10).to_integral_value(rounding="ROUND_CEILING") / 10
+        bom.add(
+            item_id,
+            max(bought, Decimal("0.1")),
+            note=f"netto {amount:.2f} {unit}, +5 % Verschnitt".replace(".", ","),
+            used=Decimal(str(amount)),
+        )
     for item_id, count in placed_pieces.items():
         bom.add(item_id, count)
+    if plan.pegs:
+        bom.add("peg_oak_22", plan.pegs, note="für Zapfen und Blätter")
+    if plan.screws:
+        timber_screw = catalog.item("screw_timber_8x240_50")
+        assert timber_screw.pack_size is not None
+        bom.add(
+            timber_screw.id,
+            math.ceil(Decimal(plan.screws) * SCREW_RESERVE / timber_screw.pack_size),
+            note=f"ca. {plan.screws} Stk für Kerven",
+            used=Decimal(plan.screws) / timber_screw.pack_size,
+        )
 
     hardware: dict[str, int] = defaultdict(int)
     errors: list[str] = []
@@ -729,7 +907,7 @@ def build_design(
     joints = 0
     screw_joints: list[Joint] = []
     if design.auto_screws:
-        screw_joints, too_thick = _screws(checked, outdoor, catalog)
+        screw_joints, too_thick = _screws(checked, outdoor, catalog, plan.pairs)
         joints = len(screw_joints)
         screw_counts: dict[str, int] = defaultdict(int)
         for joint in screw_joints:
@@ -758,7 +936,7 @@ def build_design(
             used=Decimal(joints) / JOINTS_PER_GLUE,
         )
 
-    surface = _surface_m2(infos)
+    surface = _surface_m2(checked)
     if design.finish:
         item = catalog.find(design.finish)
         if item is None or item.kind != "finish" or item.coverage_m2 is None:
@@ -775,7 +953,11 @@ def build_design(
 
     if outdoor:
         unsuitable = sorted(
-            {i.item.name for i in infos if i.kind != "piece" and not i.item.outdoor}
+            {
+                i.item.name
+                for i in infos
+                if i.kind != "piece" and not i.item.outdoor and not _sheltered(i, building)
+            }
         )
         unsuitable += sorted(
             {
@@ -791,7 +973,7 @@ def build_design(
 
     lo, hi = bounds_of(checked.boxes)
     w, d, h = (round(hi[k] - lo[k]) for k in range(3))
-    weight = _weight_kg(infos, catalog)
+    weight = _weight_kg(checked, catalog)
     linear_bars = sum(s.stock_count for s in stock_plan if s.bars)
     sheet_count = sum(s.stock_count for s in stock_plan if not s.bars)
     stock_text = ", ".join(
@@ -810,13 +992,26 @@ def build_design(
         "Schrauben": f"ca. {screw_total} Stk" if screw_total else "–",
         "Holzoberfläche": f"{surface:.1f} m²".replace(".", ","),
     }
+    if plan.works:
+        key_figures["Holzverbindungen"] = f"{len(plan.works)}" + (
+            f", {plan.pegs} Holznägel" if plan.pegs else ""
+        )
+    if building:
+        lo_z = min(b.bounds()[0][2] for b in checked.boxes)
+        key_figures["Gebäudehöhe über Gelände"] = f"{round(hi[2])} mm"
+        if lo_z < 0:
+            key_figures["Gründungstiefe"] = f"{round(-lo_z)} mm"
     summary = substitute(design.summary, params).strip() or design.object_type
     summary = f"{summary} – {w} × {d} × {h} mm"
 
     tool_ids = ["tool_measure", "tool_saw", "tool_drill_driver", "tool_drill_bit"]
     tool_ids += ["tool_countersink", "tool_clamps", "tool_sander"]
-    if sheets:
+    if sheets or any(b.shaped or b.holes for b in checked.boxes):
         tool_ids.append("tool_jigsaw")
+    if plan.works:
+        tool_ids += ["tool_chisel", "tool_chainsaw_mortiser"]
+    if any(i.item.category == "masonry" for i in infos):
+        tool_ids.append("tool_mixer")
     if design.finish:
         tool_ids.append("tool_brush")
     if anchor or design.support == "wall":
@@ -861,16 +1056,32 @@ def build_design(
                 rule_id="FD-TIP",
             )
         )
-    notices.append(
-        Notice(
-            code="NO_STATICS",
-            severity=Severity.INFO,
-            message=(
-                "Planungshilfe ohne Statik: nicht für tragende Bauteile, Absturzsicherungen oder "
-                "Spielgeräte nach Norm verwenden."
-            ),
+    if building:
+        notices.append(
+            Notice(
+                code="BUILDING",
+                severity=Severity.WARNING,
+                message=(
+                    "Gebäude: Tragwerk, Gründung, Dach und Aussteifung brauchen eine Statik von "
+                    "einem Tragwerksplaner, in der Regel auch eine Baugenehmigung nach "
+                    "Landesbauordnung (Bauamt fragen). Die Engine prüft nur Geometrie, Mengen und "
+                    "Kosten – keine Standsicherheit, keinen Wärme-, Feuchte-, Brand- oder "
+                    "Schallschutz. Querschnitte vor dem Bau vom Fachplaner bestätigen lassen."
+                ),
+                rule_id="FD-BUILD",
+            )
         )
-    )
+    else:
+        notices.append(
+            Notice(
+                code="NO_STATICS",
+                severity=Severity.INFO,
+                message=(
+                    "Planungshilfe ohne Statik: nicht für tragende Bauteile, Absturzsicherungen "
+                    "oder Spielgeräte nach Norm verwenden."
+                ),
+            )
+        )
 
     components = [
         Component(
@@ -891,21 +1102,8 @@ def build_design(
         for info in infos
     ]
     solids = [
-        Solid(
-            position=number,
-            part_id=info.part.key,
-            name=info.part.name,
-            material=info.item.name,
-            tone=_tone(info, catalog),
-            size=info.part.size,
-            at=info.part.at,
-            rotation=(
-                SolidRotation(axis=info.part.rotation[0], deg=info.part.rotation[1])
-                if info.part.rotation
-                else None
-            ),
-        )
-        for info, number in zip(infos, numbers, strict=True)
+        _solid(info, box, number, catalog)
+        for info, box, number in zip(infos, checked.boxes, numbers, strict=True)
     ]
     legend = {_tone(info, catalog): _material_label(info, catalog) for info in infos}
     drawings = build_drawings(
@@ -917,13 +1115,25 @@ def build_design(
         legend,
         wall_side=design.support == "wall",
     )
+    templated: set[int] = set()
+    for info, box, number in zip(infos, checked.boxes, numbers, strict=True):
+        if (
+            (box.shaped or box.holes)
+            and info.kind in {"linear", "sheet"}
+            and number not in templated
+            and len(templated) < MAX_TEMPLATES
+        ):
+            templated.add(number)
+            drawings.append(
+                build_template(box, number, info.part.name, _tone(info, catalog), legend)
+            )
 
     return PackBuild(
         summary=summary,
         key_figures=key_figures,
         components=components,
         bom=bom.lines,
-        cut_list=_cut_list(positions, numbers),
+        cut_list=_cut_list(positions, numbers, checked, plan),
         stock_plan=stock_plan,
         fill_layers=[],
         tools=tools,
@@ -947,10 +1157,64 @@ def build_design(
             {item_id: q for item_id, q in hardware.items() if q > 0},
             catalog,
             anchor,
+            plan,
         ),
         notices=notices,
         rules=list(RULES.values()),
         solids=solids,
+    )
+
+
+def _with_tenons(checked: CheckedDesign, plan: JointPlan) -> list[PartInfo]:
+    """Add tenon lengths to the stock length of members (they are cut longer)."""
+    infos: list[PartInfo] = []
+    errors: list[str] = []
+    for i, info in enumerate(checked.infos):
+        extra = plan.extra_mm.get(i, 0)
+        if extra and info.kind == "linear":
+            length = info.length_mm + extra
+            longest = max(info.item.stock_lengths_mm)
+            if length > longest:
+                errors.append(
+                    f"Bauteil '{info.part.key}': mit Zapfen {length} mm, längste Handelslänge "
+                    f"{longest} mm – teilen oder anderes Holz wählen"
+                )
+            info = replace(info, length_mm=length)
+        infos.append(info)
+    if errors:
+        raise DesignError(errors)
+    return infos
+
+
+def _sheltered(info: PartInfo, building: bool) -> bool:
+    """Indoor-grade parts inside a building's envelope (insulation, frame behind cladding)."""
+    return building and info.item.category in {"insulation", "wood"}
+
+
+def _solid(info: PartInfo, box: Box, number: int, catalog: Catalog) -> Solid:
+    rotation = info.part.rotation
+    if box.aligned or (rotation is not None and box.part.shape is None and not box.holes):
+        return Solid(
+            position=number,
+            part_id=info.part.key,
+            name=info.part.name,
+            material=info.item.name,
+            tone=_tone(info, catalog),
+            size=info.part.size,
+            at=info.part.at,
+            rotation=SolidRotation(axis=rotation[0], deg=rotation[1]) if rotation else None,
+        )
+    lo, hi = box.bounds()
+    vertices, triangles = box.mesh()
+    return Solid(
+        position=number,
+        part_id=info.part.key,
+        name=info.part.name,
+        material=info.item.name,
+        tone=_tone(info, catalog),
+        size=(round(hi[0] - lo[0], 1), round(hi[1] - lo[1], 1), round(hi[2] - lo[2], 1)),
+        at=(round(lo[0], 1), round(lo[1], 1), round(lo[2], 1)),
+        mesh=SolidMesh(vertices=vertices, triangles=triangles),
     )
 
 

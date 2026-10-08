@@ -63,6 +63,12 @@ TONES: dict[str, str] = {
     "steel": "#9ca3af",
     "rubber": "#4b5563",
     "concrete": "#bdbab4",
+    "kvh": "#e9cf98",
+    "clay": "#cdb38b",
+    "aerated": "#e7e5e4",
+    "fiber": "#c8a97e",
+    "tile": "#b5603f",
+    "window": "#a9cbe0",
 }
 CALLOUT_R = 9.0
 LEGEND_ROW = 22.0
@@ -121,9 +127,20 @@ def _label(c: _Canvas, label: Label) -> str:
 
 
 def _polygon(c: _Canvas, poly: Polygon) -> str:
+    fill = tone_color(poly.tone, poly.shade)
+    if poly.holes:
+        # Cutouts: one path with even-odd filling keeps the holes transparent.
+        rings = [poly.points, *poly.holes]
+        d = " ".join(
+            "M" + " L".join(f"{c.x(x)},{c.y(y)}" for x, y in ring) + " Z" for ring in rings
+        )
+        return (
+            f'<path d="{d}" fill="{fill}" fill-rule="evenodd" '
+            'stroke="#374151" stroke-width="0.6" stroke-linejoin="round"/>'
+        )
     points = " ".join(f"{c.x(x)},{c.y(y)}" for x, y in poly.points)
     return (
-        f'<polygon points="{points}" fill="{tone_color(poly.tone, poly.shade)}" '
+        f'<polygon points="{points}" fill="{fill}" '
         'stroke="#374151" stroke-width="0.6" stroke-linejoin="round"/>'
     )
 

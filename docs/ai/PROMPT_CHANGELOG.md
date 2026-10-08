@@ -10,6 +10,30 @@ Each entry names the version, the fingerprint, what changed and why, and the eff
 offline token benchmark (`task bench`). Every stored agent run carries `prompt_version` and
 `prompt_fingerprint`, so a result can be traced back to exactly one entry.
 
+## 2026-10-08.1 (fingerprint `f17bb3be32d5a296`)
+
+Free forms, members, carpentry joints and buildings (ADR-0007). The model can now describe
+any outline and timber-frame houses; the engine computes contours, angles and lengths:
+
+- Design schema: parts are boxes (`size`/`at`) or members (`start`/`end` with `section`,
+  `facing` and end `cuts` square/level/plumb/corner), with an optional `shape` (cloud,
+  ellipse, rounded, triangle, arch, polygon) and `cutouts`. New `joints` (tenon, half_lap,
+  notch) and `category` ("building"). Field descriptions kept short; the rules live in the
+  system prompt.
+- Rule 10: members for sloped timbers, shapes instead of box mosaics ("never claim only
+  rectangles are possible" – the agent told a user a cloud shelf was impossible), joints,
+  buildings with concrete foundations below z = 0, area/volume materials.
+- Rule 6: new buildings are planned (with the statics and permit notice); interventions in
+  existing load-bearing structures are still referred to professionals.
+- Planning overview lists the new templates `cloud_shelf` and `timber_frame_house`.
+
+Offline benchmark (previous commit, identical to `2026-10-07-phase1.md` →
+`2026-10-08-prompt-2026-10-08-1.md`): static prefix 7,213 → 8,894 tokens per request
+(+23 %: instructions +562, `save_design` definition 2,398 → 3,517), input over all five
+scenarios 115,331 → 138,224 tokens (+20 %). Accepted because the schema now carries the
+geometry vocabulary that previously made free forms impossible; `test_token_budget.py`
+limits were raised accordingly (old values noted there).
+
 ## 2026-10-07.3 (fingerprint `aaa89bea761f5d94`)
 
 Token budget overhaul (review 2026-10-07, ADR-0006). Same rules, fewer tokens:

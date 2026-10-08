@@ -842,6 +842,16 @@
             "title": "Summary",
             "description": "One German sentence; may contain {param} placeholders"
           },
+          "category": {
+            "type": "string",
+            "enum": [
+              "object",
+              "building"
+            ],
+            "title": "Category",
+            "description": "building: house or shed with foundation, frame and roof",
+            "default": "object"
+          },
           "use": {
             "type": "string",
             "enum": [
@@ -881,6 +891,14 @@
             "maxItems": 120,
             "minItems": 1,
             "title": "Parts"
+          },
+          "joints": {
+            "items": {
+              "$ref": "#/components/schemas/JointSpec"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Joints"
           },
           "hardware": {
             "items": {
@@ -1589,6 +1607,18 @@
             ],
             "title": "Position",
             "description": "Position number in drawings"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "Contour, cutouts, end cuts or tenons"
           }
         },
         "additionalProperties": false,
@@ -1601,6 +1631,123 @@
           "count"
         ],
         "title": "CutLine"
+      },
+      "Cutout": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rect",
+              "ellipse",
+              "polygon"
+            ],
+            "title": "Kind",
+            "default": "rect"
+          },
+          "at": {
+            "prefixItems": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "At",
+            "description": "Minimum corner (u, v)",
+            "default": [
+              0,
+              0
+            ]
+          },
+          "size": {
+            "prefixItems": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Size",
+            "description": "Extent (u, v)",
+            "default": [
+              0,
+              0
+            ]
+          },
+          "points": {
+            "items": {
+              "prefixItems": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Points",
+            "description": "polygon: (u, v)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Cutout",
+        "description": "Hole through a part (window, slot, grip), in the face plane's (u, v) coordinates."
       },
       "DesignParam": {
         "properties": {
@@ -2093,6 +2240,38 @@
         ],
         "title": "InstructionStep"
       },
+      "JointSpec": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "tenon",
+              "half_lap",
+              "notch"
+            ],
+            "title": "Kind"
+          },
+          "part": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Part"
+          },
+          "into": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Into"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "part",
+          "into"
+        ],
+        "title": "JointSpec",
+        "description": "Carpentry joint between all touching or overlapping instances of two parts.\n\ntenon: ``part`` ends on ``into`` with a tenon and peg. half_lap: both cross and overlap,\neach notched by half. notch: ``part`` sits on ``into`` with a seat cut (rafter on plate)."
+      },
       "Label": {
         "properties": {
           "kind": {
@@ -2540,82 +2719,96 @@
             "description": "Catalog item id or made-to-order lumber 'lumber_<species>_<thickness>x<width>' (any species, any section, e.g. 'lumber_douglas_18x96'). May contain {param} placeholders for choice parameters, e.g. 'lumber_{wood}_18x96'."
           },
           "size": {
-            "prefixItems": [
+            "anyOf": [
               {
-                "anyOf": [
+                "prefixItems": [
                   {
-                    "type": "number"
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
                   },
                   {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
                   }
-                ]
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
               },
               {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string"
-                  }
-                ]
-              },
-              {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string"
-                  }
-                ]
+                "type": "null"
               }
             ],
-            "type": "array",
-            "maxItems": 3,
-            "minItems": 3,
             "title": "Size",
-            "description": "Extent along x, y, z in mm"
+            "description": "Box: extent along x, y, z in mm"
           },
           "at": {
-            "prefixItems": [
+            "anyOf": [
               {
-                "anyOf": [
+                "prefixItems": [
                   {
-                    "type": "number"
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
                   },
                   {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
                   }
-                ]
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
               },
               {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string"
-                  }
-                ]
-              },
-              {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string"
-                  }
-                ]
+                "type": "null"
               }
             ],
-            "type": "array",
-            "maxItems": 3,
-            "minItems": 3,
             "title": "At",
-            "description": "Minimum corner (x, y, z) in mm before rotation"
+            "description": "Box: minimum corner (x, y, z) before rotation"
           },
           "rotate": {
             "anyOf": [
@@ -2626,6 +2819,200 @@
                 "type": "null"
               }
             ]
+          },
+          "start": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start",
+            "description": "Member: centre of the start end (x, y, z)"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End",
+            "description": "Member: centre of the other end"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section",
+            "description": "Member: thickness × width, if the material does not fix it"
+          },
+          "facing": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facing",
+            "description": "Member: thickness direction (default horizontal, across the member)"
+          },
+          "cuts": {
+            "prefixItems": [
+              {
+                "type": "string",
+                "enum": [
+                  "square",
+                  "level",
+                  "plumb",
+                  "corner"
+                ]
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "square",
+                  "level",
+                  "plumb",
+                  "corner"
+                ]
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Cuts",
+            "description": "Member end cuts: square, level (horizontal), plumb (vertical), corner (both)",
+            "default": [
+              "square",
+              "square"
+            ]
+          },
+          "shape": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Shape"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cutouts": {
+            "items": {
+              "$ref": "#/components/schemas/Cutout"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Cutouts"
           },
           "repeat": {
             "anyOf": [
@@ -2658,9 +3045,7 @@
         "required": [
           "id",
           "name",
-          "material",
-          "size",
-          "at"
+          "material"
         ],
         "title": "PartSpec"
       },
@@ -2699,6 +3084,26 @@
             "minimum": 0.0,
             "title": "Shade",
             "default": 1.0
+          },
+          "holes": {
+            "items": {
+              "items": {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Holes"
           }
         },
         "additionalProperties": false,
@@ -3347,6 +3752,107 @@
         ],
         "title": "Severity"
       },
+      "Shape": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rect",
+              "rounded",
+              "ellipse",
+              "triangle",
+              "arch",
+              "cloud",
+              "polygon"
+            ],
+            "title": "Kind"
+          },
+          "radius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Radius",
+            "description": "rounded: corner radius"
+          },
+          "apex": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apex",
+            "description": "triangle: u of the apex (default centre)"
+          },
+          "bumps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 12.0,
+                "minimum": 2.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bumps",
+            "description": "cloud: number of bumps on top"
+          },
+          "points": {
+            "items": {
+              "prefixItems": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Points",
+            "description": "polygon: (u, v)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "Shape",
+        "description": "Outline of a part in its face plane; the engine derives the exact contour.\n\nThe face plane is the one perpendicular to the thinnest dimension (members: length × width).\nLocal coordinates (u, v) in mm start at the minimum corner: u along the first, v along the\nsecond remaining axis in x, y, z order (members: u along the length from ``start``)."
+      },
       "Solid": {
         "properties": {
           "position": {
@@ -3412,6 +3918,16 @@
                 "type": "null"
               }
             ]
+          },
+          "mesh": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SolidMesh"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -3426,7 +3942,59 @@
           "at"
         ],
         "title": "Solid",
-        "description": "A placed box for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner."
+        "description": "A placed part for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner.\n\nPlain boxes are described by ``size``, ``at`` and ``rotation``; shaped, cut or angled parts\ncarry an engine-computed ``mesh`` (then ``size``/``at`` are their bounding box)."
+      },
+      "SolidMesh": {
+        "properties": {
+          "vertices": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array",
+              "maxItems": 3,
+              "minItems": 3
+            },
+            "type": "array",
+            "title": "Vertices"
+          },
+          "triangles": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 3,
+              "minItems": 3
+            },
+            "type": "array",
+            "title": "Triangles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "vertices",
+          "triangles"
+        ],
+        "title": "SolidMesh",
+        "description": "Triangle mesh in world coordinates for parts that are not plain boxes."
       },
       "SolidRotation": {
         "properties": {

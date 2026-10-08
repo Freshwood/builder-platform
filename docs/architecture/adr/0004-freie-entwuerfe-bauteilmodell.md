@@ -47,6 +47,9 @@ reproduzierbar und passen nicht zur Stückliste.
 7. **Grenzen bleiben:** Keine tragenden Gebäudeteile, Dächer, Carports, Balkone, Treppen,
    Absturzsicherungen, Elektro/Gas. Das Sicherheits-Gate und die Größengrenzen der Engine setzen
    das durch; Ergebnisse bleiben Planungshilfe ohne Standsicherheitsnachweis.
+   *Seit [ADR-0007](0007-formen-holzverbindungen-gebaeude.md) sind neue Gebäude, Dächer und
+   Carports als `category="building"` planbar (mit Statik- und Genehmigungshinweis); Balkone,
+   Treppen, Absturzsicherungen, Elektro/Gas bleiben ausgeschlossen.*
 
 ## Konsequenzen
 

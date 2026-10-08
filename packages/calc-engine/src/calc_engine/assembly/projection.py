@@ -1,8 +1,9 @@
 """Drawings for free-form designs: orthographic views and an isometric view with callouts.
 
-Every view is a parallel projection of the part boxes. Visible faces become filled polygons
-(material tone plus light), painted back to front. For non-overlapping axis-aligned boxes the
-order is exact (separating planes); rotated parts fall back to centre depth.
+Every view is a parallel projection of the part solids. Visible faces become filled polygons
+(material tone plus light, holes for cutouts), painted back to front. For non-overlapping
+axis-aligned boxes the order is exact (separating planes); other parts fall back to centre depth.
+Shaped parts additionally get a full-size template view of their contour (``template_<pos>``).
 """
 
 from __future__ import annotations
@@ -13,10 +14,12 @@ from dataclasses import dataclass
 from itertools import combinations, pairwise
 
 from calc_engine.assembly.geometry import Box, Vec
+from calc_engine.assembly.solid import separating_axis
 from construction_model.drawing import (
     Callout,
     Dimension,
     Drawing,
+    Label,
     LegendEntry,
     Polygon,
     Primitive,
@@ -124,7 +127,11 @@ def _paint_order(boxes: list[Box], view: View) -> list[int]:
             continue
         if fi[3] <= fj[2] + 0.01 or fj[3] <= fi[2] + 0.01:
             continue
-        behind = _behind(bounds[i], bounds[j], view.camera, boxes[i].rotated or boxes[j].rotated)
+        # Bounding boxes that are apart along an axis order any two solids exactly; otherwise
+        # a separating plane of their convex pieces does (roof over rafters, braces in walls).
+        behind = _behind(bounds[i], bounds[j], view.camera, approx=False)
+        if behind is None and (boxes[i].rotated or boxes[j].rotated):
+            behind = _behind_solids(boxes[i], boxes[j], view.camera)
         if behind is None:
             behind = depth[i] <= depth[j]
         first, second = (i, j) if behind else (j, i)
@@ -165,6 +172,33 @@ def _behind(a: tuple[Vec, Vec], b: tuple[Vec, Vec], camera: Vec, approx: bool) -
         if bhi[k] <= alo[k] + _SEP_TOL:
             return camera[k] < 0
     return None
+
+
+def _mean(points: list[Vec]) -> Vec:
+    n = len(points)
+    return (
+        sum(p[0] for p in points) / n,
+        sum(p[1] for p in points) / n,
+        sum(p[2] for p in points) / n,
+    )
+
+
+def _behind_solids(a: Box, b: Box, camera: Vec) -> bool | None:
+    """Order two solids by separating planes between their pieces; None if inconsistent."""
+    votes: set[bool] = set()
+    for pa in a.pieces:
+        for pb in b.pieces:
+            if any(pa.hi[k] < pb.lo[k] or pb.hi[k] < pa.lo[k] for k in range(3)):
+                continue
+            axis = separating_axis(pa, pb)
+            if axis is None:
+                continue
+            facing = _dot(axis, camera)
+            if abs(facing) > 1e-6:
+                votes.add(facing > 0)
+            if len(votes) > 1:
+                return None
+    return votes.pop() if votes else None
 
 
 def _area(points: list[tuple[float, float]]) -> float:
@@ -219,13 +253,24 @@ def build_view(
     ys: list[float] = []
     for i in _paint_order(boxes, view):
         tone = solids[i].tone
-        for normal, corners in boxes[i].faces():
+        faces = boxes[i].faces()
+        if boxes[i].rotated:
+            # Non-convex parts (contours, cutouts): paint their own faces back to front.
+            faces = sorted(faces, key=lambda f: _dot(_mean(f[1]), view.camera))
+        for normal, corners, holes in faces:
             if _dot(normal, view.camera) <= 1e-6:
                 continue
             pts = [_project(p, view) for p in corners]
             if _area(pts) < 0.5:
                 continue
-            prims.append(Polygon(points=pts, tone=tone, shade=_shade(normal)))
+            prims.append(
+                Polygon(
+                    points=pts,
+                    tone=tone,
+                    shade=_shade(normal),
+                    holes=[[_project(p, view) for p in h] for h in holes],
+                )
+            )
             xs += [p[0] for p in pts]
             ys += [p[1] for p in pts]
             area = _area(pts)
@@ -340,3 +385,51 @@ def build_drawings(
 ) -> list[Drawing]:
     views = (*VIEWS, *WALL_SIDE_VIEWS) if wall_side else VIEWS
     return [build_view(v, object_type, boxes, numbers, names, solids, legend) for v in views]
+
+
+MAX_TEMPLATES = 8
+
+
+def build_template(box: Box, number: int, name: str, tone: str, legend: dict[str, str]) -> Drawing:
+    """Full-size contour of a shaped part in its face plane, with overall dimensions."""
+    lu, lv = box.lu, box.lv
+    outline = [(round(u, 2), round(-v, 2)) for u, v in box.outline]
+    holes = [[(round(u, 2), round(-v, 2)) for u, v in h] for h in box.holes]
+    size = max(lu, lv, 1.0)
+    offset = 0.08 * size
+    prims: list[Primitive] = [Polygon(points=outline, tone=tone, shade=1.0, holes=holes)]
+    prims.append(Dimension(x1=0, y1=0, x2=lu, y2=0, offset=offset, text=_fmt(lu)))
+    prims.append(Dimension(x1=0, y1=-lv, x2=0, y2=0, offset=-offset, text=_fmt(lv)))
+    for k, hole in enumerate(box.holes, start=1):
+        hu = [p[0] for p in hole]
+        hv = [p[1] for p in hole]
+        prims.append(
+            Label(
+                x=round(min(hu), 2),
+                y=round(-max(hv) - 0.02 * size, 2),
+                text=(
+                    f"Ausschnitt {k}: {_fmt(max(hu) - min(hu))} × {_fmt(max(hv) - min(hv))}"
+                    f" ab u {_fmt(min(hu))} / v {_fmt(min(hv))}"
+                ),
+                size="small",
+            )
+        )
+    pad = offset + 0.07 * size
+    return Drawing(
+        view=f"template_{number}",
+        title=f"Schablone Pos. {number} {name}",
+        description=(
+            f"Kontur von Pos. {number} {name} im Maßstab der Bemaßung: {_fmt(lu)} × {_fmt(lv)} mm"
+            f" Rohteil, {len(box.holes)} Ausschnitt(e). Auf Papier/Pappe übertragen oder direkt "
+            "anreißen und mit der Stichsäge aussägen."
+        ),
+        scale_hint="Maße in mm",
+        min_x=round(-pad, 2),
+        min_y=round(-lv - 0.05 * size - (0.03 * size if holes else 0), 2),
+        width=round(lu + 2 * pad, 2),
+        height=round(lv + 0.1 * size + pad + (0.03 * size if holes else 0), 2),
+        primitives=prims,
+        legend=[
+            LegendEntry(tone=t, label=label) for t, label in sorted(legend.items()) if t == tone
+        ],
+    )

@@ -50,6 +50,31 @@ platform, DB or LLM code, and only `homeworking.api` may use `modules.agent`.
   (`ProjectService._build`, `run_in_threadpool`).
 - Tests use the offline model. No test may need an API key or network access.
 
+## Security
+
+- Never read, print or commit secrets. `.env` holds the LLM key and DB credentials; only
+  `.env.example` is versioned.
+- Keep the safety gate (`modules/compliance/safety.py`) and the engine limits from ADR-0004 §7
+  and ADR-0007: no balconies, stairs, fall protection, fixed electrics or gas, and no changes to
+  existing load-bearing structures. New buildings (`category="building"`) are allowed, always
+  with the `BUILDING` statics and permit notice. Raise `SAFETY_RULES_VERSION` when the rules
+  change.
+- Treat model output and tool arguments as untrusted input: validate with pydantic, let the engine
+  reject, never `eval`. Expressions go through `calc_engine.assembly.expr` only.
+
+## Commits and pull requests
+
+- Do not commit or push; the maintainer reviews and commits.
+- Before handing work back, run `task check` and `task test` (and `task e2e` for UI changes) and
+  fix failures.
+
+## Agent instructions
+
+This file follows the [AGENTS.md](https://agents.md/) convention, stewarded by the Agentic AI
+Foundation (Linux Foundation). The closest AGENTS.md to the edited file wins (`apps/web/AGENTS.md`
+for the web client); explicit user instructions in the chat override both. Keep these files
+current when commands, layout or rules change.
+
 ## Environment notes
 
 - The repo usually sits on `/mnt/c` under WSL, so `next dev` compiles slowly. Use

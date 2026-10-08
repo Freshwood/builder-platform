@@ -16,6 +16,12 @@ export const TONES: Record<string, string> = {
   steel: "#9ca3af",
   rubber: "#4b5563",
   concrete: "#bdbab4",
+  kvh: "#e9cf98",
+  clay: "#cdb38b",
+  aerated: "#e7e5e4",
+  fiber: "#c8a97e",
+  tile: "#b5603f",
+  window: "#a9cbe0",
 };
 
 export function toneColor(tone: string): string {

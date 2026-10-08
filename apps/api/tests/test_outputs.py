@@ -69,6 +69,8 @@ def test_pdf_is_generated() -> None:
         ("Ich will eine Steckdose setzen", "electrical"),
         ("Gasleitung verlegen im Garten", "gas_fire"),
         ("Tragende Wand entfernen für Durchgang", "structural"),
+        ("Im Altbau einen Sparren kürzen für das Dachfenster", "structural"),
+        ("Fachwerkhaus 8 x 6 m mit Dachstuhl und Satteldach", None),
         ("Eternit-Platten vom Schuppen abschrauben", "hazardous"),
         ("Hochbeet 2 x 1 m aus Lärche", None),
     ],

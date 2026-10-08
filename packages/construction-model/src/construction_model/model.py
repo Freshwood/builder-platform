@@ -123,6 +123,7 @@ class CutLine(Frozen):
     count: int
     width_mm: Mm | None = Field(None, description="Second cut dimension for sheet parts")
     position: int | None = Field(None, description="Position number in drawings")
+    note: str | None = Field(None, description="Contour, cutouts, end cuts or tenons")
 
 
 class StockPlan(Frozen):
@@ -221,8 +222,19 @@ class SolidRotation(Frozen):
     deg: float
 
 
+class SolidMesh(Frozen):
+    """Triangle mesh in world coordinates for parts that are not plain boxes."""
+
+    vertices: list[tuple[float, float, float]]
+    triangles: list[tuple[int, int, int]]
+
+
 class Solid(Frozen):
-    """A placed box for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner."""
+    """A placed part for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner.
+
+    Plain boxes are described by ``size``, ``at`` and ``rotation``; shaped, cut or angled parts
+    carry an engine-computed ``mesh`` (then ``size``/``at`` are their bounding box).
+    """
 
     position: int
     part_id: str
@@ -232,6 +244,7 @@ class Solid(Frozen):
     size: tuple[float, float, float]
     at: tuple[float, float, float]
     rotation: SolidRotation | None = None
+    mesh: SolidMesh | None = None
 
 
 Trust = Literal["pack", "template", "ai_draft"]

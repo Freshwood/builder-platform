@@ -1,0 +1,43 @@
+{
+  "key": "cloud_shelf",
+  "title": "Wolkenregal",
+  "description": "Standregal mit Rückwand in Wolkenform und kleinen Fächern, z. B. für Tonie-Figuren, Bücher oder Deko",
+  "keywords": ["wolke", "wolkenregal", "tonie", "toniebox", "kinderregal", "kinderzimmer", "figurenregal", "deko"],
+  "design": {
+    "object_type": "Wolkenregal",
+    "summary": "Wolkenregal mit {shelves} Fächern",
+    "use": "indoor",
+    "support": "floor",
+    "origin": "engine",
+    "params": [
+      {"name": "width_mm", "label": "Breite (mm)", "kind": "length", "default": 750, "min": 500, "max": 1200},
+      {"name": "height_mm", "label": "Höhe (mm)", "kind": "length", "default": 500, "min": 350, "max": 1000},
+      {"name": "depth_mm", "label": "Tiefe (mm)", "kind": "length", "default": 150, "min": 100, "max": 250},
+      {"name": "shelves", "label": "Anzahl Fächer", "kind": "count", "default": 2, "min": 1, "max": 4},
+      {"name": "material", "label": "Material Boden und Fächer", "kind": "choice", "default": "plywood_birch_18",
+       "options": [{"value": "plywood_birch_18", "label": "Birke Multiplex"}, {"value": "glulam_spruce_18", "label": "Leimholz Fichte"}]}
+    ],
+    "parts": [
+      {"id": "base", "name": "Bodenplatte", "material": "{material}",
+       "size": ["width_mm", "depth_mm", 18], "at": [0, 0, 0]},
+      {"id": "cloud", "name": "Rückwand Wolke", "material": "plywood_birch_18",
+       "size": ["width_mm", 18, "height_mm - 18"], "at": [0, "depth_mm - 18", 18],
+       "shape": {"kind": "cloud"}},
+      {"id": "shelf", "name": "Fachboden", "material": "{material}",
+       "size": ["0.6 * width_mm", "depth_mm - 18", 18],
+       "at": ["0.2 * width_mm", 0, "18 + (i + 1) * (height_mm - 36) / (n + 1)"],
+       "repeat": {"count": "shelves", "var": "i"}}
+    ],
+    "hardware": [],
+    "finish": "finish_hardwax_750",
+    "steps": [
+      {"title": "Wolke aussägen", "text": "Übertrage die Wolkenkontur von der Schablone auf die Multiplexplatte, säge sie mit der Stichsäge aus und schleife die Rundungen mit Körnung 120 und 180 glatt.", "parts": []},
+      {"title": "Wolke auf die Bodenplatte setzen", "text": "Stelle die Wolke bündig an die Hinterkante der Bodenplatte, leime sie an und schraube von unten durch die Bodenplatte. Mit dem Winkel prüfen, dass sie senkrecht steht.", "parts": ["base", "cloud"]},
+      {"title": "Fächer anbringen", "text": "Zeichne die Fachhöhen hinten auf der Wolke an, leime die Fachböden an und schraube von hinten durch die Wolke in die Böden. Mit der Wasserwaage ausrichten.", "parts": ["shelf"]}
+    ],
+    "variants": [
+      {"key": "tall", "name": "Hoch", "description": "70 cm hoch mit 3 Fächern", "overrides": {"height_mm": 700, "shelves": 3}},
+      {"key": "spruce", "name": "Leimholz", "description": "Boden und Fächer aus Leimholz Fichte – etwas günstiger", "overrides": {"material": "glulam_spruce_18"}}
+    ]
+  }
+}

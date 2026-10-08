@@ -31,7 +31,7 @@ class CatalogItem(BaseModel):
     price_max: Decimal
     category: str
     # Fields used by free-form designs (ADR-0004). For ``linear`` items the price is per metre.
-    kind: Literal["piece", "linear", "sheet", "screw", "finish"] = "piece"
+    kind: Literal["piece", "linear", "sheet", "screw", "finish", "bulk"] = "piece"
     material: str | None = None
     section_mm: tuple[int, int] | None = Field(None, description="Linear: thickness × width")
     stock_lengths_mm: list[int] = Field(default_factory=list)
@@ -47,6 +47,12 @@ class CatalogItem(BaseModel):
         None, description="Function of a hardware piece, e.g. hinge or latch"
     )
     made_to_order: bool = Field(False, description="Lumber cut to any section (``lumber_…``)")
+    bulk_basis: Literal["area", "volume"] | None = Field(
+        None, description="Bulk: priced per m² of face area or per m³ of volume"
+    )
+    thickness_range_mm: tuple[int, int] | None = Field(
+        None, description="Bulk: allowed layer thickness (min, max)"
+    )
 
 
 class MaterialInfo(BaseModel):

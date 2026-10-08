@@ -81,6 +81,7 @@ class Polygon(_Frozen):
     points: list[tuple[float, float]]
     tone: str
     shade: float = Field(1.0, ge=0, le=1)
+    holes: list[list[tuple[float, float]]] = Field(default_factory=list)
 
 
 class Callout(_Frozen):

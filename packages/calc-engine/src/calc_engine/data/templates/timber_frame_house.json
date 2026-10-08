@@ -1,0 +1,978 @@
+{
+ "key": "timber_frame_house",
+ "title": "Fachwerkhaus",
+ "description": "Eingeschossiges Fachwerkhaus mit Satteldach: Streifenfundament, Schwelle, Ständer, Streben und Riegel gezapft, Gefache ausgemauert, Deckenbalken, Sparrendach mit Ziegeln, Fenster und Haustür",
+ "keywords": [
+  "fachwerk",
+  "fachwerkhaus",
+  "haus",
+  "gartenhaus",
+  "tiny house",
+  "hütte",
+  "holzhaus",
+  "satteldach"
+ ],
+ "design": {
+  "object_type": "Fachwerkhaus",
+  "summary": "Fachwerkhaus mit {bays_x} × {bays_y} Gefachen",
+  "category": "building",
+  "use": "outdoor",
+  "support": "floor",
+  "origin": "engine",
+  "params": [
+   {
+    "name": "length_mm",
+    "label": "Länge Traufseite (mm)",
+    "kind": "length",
+    "default": 8000,
+    "min": 5000,
+    "max": 10000
+   },
+   {
+    "name": "depth_mm",
+    "label": "Tiefe Giebelseite (mm)",
+    "kind": "length",
+    "default": 6000,
+    "min": 4000,
+    "max": 8000
+   },
+   {
+    "name": "wall_mm",
+    "label": "Wandhöhe bis Oberkante Rähm (mm)",
+    "kind": "length",
+    "default": 2700,
+    "min": 2600,
+    "max": 3200
+   },
+   {
+    "name": "roof_mm",
+    "label": "Dachhöhe über Decke (mm)",
+    "kind": "length",
+    "default": 3000,
+    "min": 1500,
+    "max": 4500
+   },
+   {
+    "name": "bays_x",
+    "label": "Gefache Traufseite",
+    "kind": "count",
+    "default": 5,
+    "min": 3,
+    "max": 6
+   },
+   {
+    "name": "bays_y",
+    "label": "Gefache Giebelseite",
+    "kind": "count",
+    "default": 4,
+    "min": 3,
+    "max": 5
+   },
+   {
+    "name": "wood",
+    "label": "Holz Fachwerk",
+    "kind": "choice",
+    "default": "oak_beam",
+    "options": [
+     {
+      "value": "oak_beam",
+      "label": "Eiche"
+     },
+     {
+      "value": "kvh",
+      "label": "Fichte KVH"
+     }
+    ]
+   },
+   {
+    "name": "infill",
+    "label": "Ausfachung",
+    "kind": "choice",
+    "default": "infill_clay",
+    "options": [
+     {
+      "value": "infill_clay",
+      "label": "Lehmstein"
+     },
+     {
+      "value": "infill_aerated",
+      "label": "Porenbeton"
+     }
+    ]
+   }
+  ],
+  "parts": [
+   {
+    "id": "found_x",
+    "name": "Streifenfundament Traufseite",
+    "material": "concrete_c25",
+    "size": [
+     "length_mm",
+     400,
+     1100
+    ],
+    "at": [
+     0,
+     "i * (depth_mm - 400)",
+     -800
+    ],
+    "repeat": {
+     "count": 2
+    }
+   },
+   {
+    "id": "found_y",
+    "name": "Streifenfundament Giebelseite",
+    "material": "concrete_c25",
+    "size": [
+     400,
+     "depth_mm - 800",
+     1100
+    ],
+    "at": [
+     "i * (length_mm - 400)",
+     400,
+     -800
+    ],
+    "repeat": {
+     "count": 2
+    }
+   },
+   {
+    "id": "slab",
+    "name": "Bodenplatte",
+    "material": "concrete_c25",
+    "size": [
+     "length_mm - 800",
+     "depth_mm - 800",
+     150
+    ],
+    "at": [
+     400,
+     400,
+     150
+    ]
+   },
+   {
+    "id": "sill_x",
+    "name": "Schwelle Traufseite",
+    "material": "lumber_{wood}_160x160",
+    "size": [
+     "length_mm - 240",
+     160,
+     160
+    ],
+    "at": [
+     120,
+     "120 + i * (depth_mm - 400)",
+     300
+    ],
+    "repeat": {
+     "count": 2
+    }
+   },
+   {
+    "id": "sill_y",
+    "name": "Schwelle Giebelseite",
+    "material": "lumber_{wood}_160x160",
+    "size": [
+     160,
+     "depth_mm - 240",
+     160
+    ],
+    "at": [
+     "120 + i * (length_mm - 400)",
+     120,
+     300
+    ],
+    "repeat": {
+     "count": 2
+    }
+   },
+   {
+    "id": "post_x",
+    "name": "Ständer Traufseite",
+    "material": "lumber_{wood}_160x160",
+    "size": [
+     160,
+     160,
+     "wall_mm - 320"
+    ],
+    "at": [
+     "120 + (i % (bays_x + 1)) * (length_mm - 400) / bays_x",
+     "120 + (i // (bays_x + 1)) * (depth_mm - 400)",
+     460
+    ],
+    "repeat": {
+     "count": "2 * (bays_x + 1)"
+    }
+   },
+   {
+    "id": "post_y",
+    "name": "Ständer Giebelseite",
+    "material": "lumber_{wood}_160x160",
+    "size": [
+     160,
+     160,
+     "wall_mm - 320"
+    ],
+    "at": [
+     "120 + (i // (bays_y - 1)) * (length_mm - 400)",
+     "120 + (i % (bays_y - 1) + 1) * (depth_mm - 400) / bays_y",
+     460
+    ],
+    "repeat": {
+     "count": "2 * (bays_y - 1)"
+    }
+   },
+   {
+    "id": "brace_x",
+    "name": "Strebe Traufseite",
+    "material": "lumber_{wood}_160x160",
+    "start": [
+     "if(i % 2 == 0, 120 + ((i % 2) * (bays_x - 1) + 1) * (length_mm - 400) / bays_x, 120 + (i % 2) * (bays_x - 1) * (length_mm - 400) / bays_x + 160)",
+     "200 + (i // 2) * (depth_mm - 400)",
+     460
+    ],
+    "end": [
+     "if(i % 2 == 0, 120 + (i % 2) * (bays_x - 1) * (length_mm - 400) / bays_x + 160, 120 + ((i % 2) * (bays_x - 1) + 1) * (length_mm - 400) / bays_x)",
+     "200 + (i // 2) * (depth_mm - 400)",
+     "wall_mm + 140"
+    ],
+    "cuts": [
+     "corner",
+     "corner"
+    ],
+    "repeat": {
+     "count": 4
+    }
+   },
+   {
+    "id": "brace_y",
+    "name": "Strebe Giebelseite",
+    "material": "lumber_{wood}_160x160",
+    "start": [
+     "200 + (i // 2) * (length_mm - 400)",
+     "if(i % 2 == 0, 120 + ((i % 2) * (bays_y - 1) + 1) * (depth_mm - 400) / bays_y, 120 + (i % 2) * (bays_y - 1) * (depth_mm - 400) / bays_y + 160)",
+     460
+    ],
+    "end": [
+     "200 + (i // 2) * (length_mm - 400)",
+     "if(i % 2 == 0, 120 + (i % 2) * (bays_y - 1) * (depth_mm - 400) / bays_y + 160, 120 + ((i % 2) * (bays_y - 1) + 1) * (depth_mm - 400) / bays_y)",
+     "wall_mm + 140"
+    ],
+    "cuts": [
+     "corner",
+     "corner"
+    ],
+    "repeat": {
+     "count": 4
+    }
+   },
+   {
+    "id": "rail_x",
+    "name": "Brustriegel Traufseite",
+    "material": "lumber_{wood}_160x160",
+    "size": [
+     "((length_mm - 400) / bays_x - 160)",
+     160,
+     160
+    ],
+    "at": [
+     "120 + (i % bays_x) * (length_mm - 400) / bays_x + 160",
+     "120 + (i // bays_x) * (depth_mm - 400)",
+     1300
+    ],
+    "repeat": {
+     "count": "2 * bays_x"
+    },
+    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and i % bays_x == bays_x // 2 and (length_mm - 400) / bays_x >= 1260)"
+   },
+   {
+    "id": "rail_y",
+    "name": "Brustriegel Giebelseite",
+    "material": "lumber_{wood}_160x160",
+    "size": [
+     160,
+     "((depth_mm - 400) / bays_y - 160)",
+     160
+    ],
+    "at": [
+     "120 + (i // bays_y) * (length_mm - 400)",
+     "120 + (i % bays_y) * (depth_mm - 400) / bays_y + 160",
+     1300
+    ],
+    "repeat": {
+     "count": "2 * bays_y"
+    },
+    "when": "i % bays_y > 0 and i % bays_y < bays_y - 1"
+   },
+   {
+    "id": "plate_x",
+    "name": "Rähm Traufseite",
+    "material": "lumber_{wood}_160x160",
+    "size": [
+     "length_mm - 240",
+     160,
+     160
+    ],
+    "at": [
+     120,
+     "120 + i * (depth_mm - 400)",
+     "wall_mm + 140"
+    ],
+    "repeat": {
+     "count": 2
+    }
+   },
+   {
+    "id": "plate_y",
+    "name": "Rähm Giebelseite",
+    "material": "lumber_{wood}_160x160",
+    "size": [
+     160,
+     "depth_mm - 240",
+     160
+    ],
+    "at": [
+     "120 + i * (length_mm - 400)",
+     120,
+     "wall_mm + 140"
+    ],
+    "repeat": {
+     "count": 2
+    }
+   },
+   {
+    "id": "fill_x_low",
+    "name": "Gefach Brüstung Traufseite",
+    "material": "{infill}",
+    "size": [
+     "((length_mm - 400) / bays_x - 160)",
+     160,
+     840
+    ],
+    "at": [
+     "120 + (i % bays_x) * (length_mm - 400) / bays_x + 160",
+     "120 + (i // bays_x) * (depth_mm - 400)",
+     460
+    ],
+    "repeat": {
+     "count": "2 * bays_x"
+    },
+    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and i % bays_x == bays_x // 2 and (length_mm - 400) / bays_x >= 1260)"
+   },
+   {
+    "id": "fill_x_top",
+    "name": "Gefach oben Traufseite",
+    "material": "{infill}",
+    "size": [
+     "((length_mm - 400) / bays_x - 160)",
+     160,
+     "wall_mm - 1320"
+    ],
+    "at": [
+     "120 + (i % bays_x) * (length_mm - 400) / bays_x + 160",
+     "120 + (i // bays_x) * (depth_mm - 400)",
+     1460
+    ],
+    "repeat": {
+     "count": "2 * bays_x"
+    },
+    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and i % bays_x == bays_x // 2 and (length_mm - 400) / bays_x >= 1260) and not (length_mm - 400) / bays_x >= 1160"
+   },
+   {
+    "id": "fill_x_win",
+    "name": "Gefach mit Fenster Traufseite",
+    "material": "{infill}",
+    "size": [
+     "((length_mm - 400) / bays_x - 160)",
+     160,
+     "wall_mm - 1320"
+    ],
+    "at": [
+     "120 + (i % bays_x) * (length_mm - 400) / bays_x + 160",
+     "120 + (i // bays_x) * (depth_mm - 400)",
+     1460
+    ],
+    "repeat": {
+     "count": "2 * bays_x"
+    },
+    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and i % bays_x == bays_x // 2 and (length_mm - 400) / bays_x >= 1260) and (length_mm - 400) / bays_x >= 1160",
+    "cutouts": [
+     {
+      "kind": "rect",
+      "at": [
+       "(((length_mm - 400) / bays_x - 160) - 800) / 2",
+       "(wall_mm - 2320) / 2"
+      ],
+      "size": [
+       800,
+       1000
+      ]
+     }
+    ]
+   },
+   {
+    "id": "window",
+    "name": "Fenster",
+    "material": "window_wood_800x1000",
+    "size": [
+     800,
+     78,
+     1000
+    ],
+    "at": [
+     "120 + (i % bays_x) * (length_mm - 400) / bays_x + 160 + (((length_mm - 400) / bays_x - 160) - 800) / 2",
+     "41 + 120 + (i // bays_x) * (depth_mm - 400)",
+     "1460 + (wall_mm - 2320) / 2"
+    ],
+    "repeat": {
+     "count": "2 * bays_x"
+    },
+    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and i % bays_x == bays_x // 2 and (length_mm - 400) / bays_x >= 1260) and (length_mm - 400) / bays_x >= 1160"
+   },
+   {
+    "id": "fill_x_up",
+    "name": "Gefach neben Strebe Traufseite",
+    "material": "{infill}",
+    "size": [
+     "((length_mm - 400) / bays_x - 160)",
+     160,
+     "(wall_mm - 320)"
+    ],
+    "at": [
+     "120 + (i % 2) * (bays_x - 1) * (length_mm - 400) / bays_x + 160",
+     "120 + (i // 2) * (depth_mm - 400)",
+     460
+    ],
+    "repeat": {
+     "count": 4
+    },
+    "shape": {
+     "kind": "polygon",
+     "points": [
+      [
+       "(1 - i % 2) * ((length_mm - 400) / bays_x - 160) + (2 * (i % 2) - 1) * (0)",
+       "80 * sqrt(((length_mm - 400) / bays_x - 160) * ((length_mm - 400) / bays_x - 160) + (wall_mm - 320) * (wall_mm - 320)) / ((length_mm - 400) / bays_x - 160)"
+      ],
+      [
+       "(1 - i % 2) * ((length_mm - 400) / bays_x - 160) + (2 * (i % 2) - 1) * (((length_mm - 400) / bays_x - 160) - 80 * sqrt(((length_mm - 400) / bays_x - 160) * ((length_mm - 400) / bays_x - 160) + (wall_mm - 320) * (wall_mm - 320)) / (wall_mm - 320))",
+       "(wall_mm - 320)"
+      ],
+      [
+       "(1 - i % 2) * ((length_mm - 400) / bays_x - 160) + (2 * (i % 2) - 1) * (0)",
+       "(wall_mm - 320)"
+      ]
+     ]
+    }
+   },
+   {
+    "id": "fill_x_dn",
+    "name": "Gefach unter Strebe Traufseite",
+    "material": "{infill}",
+    "size": [
+     "((length_mm - 400) / bays_x - 160)",
+     160,
+     "(wall_mm - 320)"
+    ],
+    "at": [
+     "120 + (i % 2) * (bays_x - 1) * (length_mm - 400) / bays_x + 160",
+     "120 + (i // 2) * (depth_mm - 400)",
+     460
+    ],
+    "repeat": {
+     "count": 4
+    },
+    "shape": {
+     "kind": "polygon",
+     "points": [
+      [
+       "(1 - i % 2) * ((length_mm - 400) / bays_x - 160) + (2 * (i % 2) - 1) * (80 * sqrt(((length_mm - 400) / bays_x - 160) * ((length_mm - 400) / bays_x - 160) + (wall_mm - 320) * (wall_mm - 320)) / (wall_mm - 320))",
+       "0"
+      ],
+      [
+       "(1 - i % 2) * ((length_mm - 400) / bays_x - 160) + (2 * (i % 2) - 1) * (((length_mm - 400) / bays_x - 160))",
+       "0"
+      ],
+      [
+       "(1 - i % 2) * ((length_mm - 400) / bays_x - 160) + (2 * (i % 2) - 1) * (((length_mm - 400) / bays_x - 160))",
+       "(wall_mm - 320) - 80 * sqrt(((length_mm - 400) / bays_x - 160) * ((length_mm - 400) / bays_x - 160) + (wall_mm - 320) * (wall_mm - 320)) / ((length_mm - 400) / bays_x - 160)"
+      ]
+     ]
+    }
+   },
+   {
+    "id": "door",
+    "name": "Haustür",
+    "material": "door_wood_1000x2100",
+    "size": [
+     1000,
+     78,
+     2100
+    ],
+    "at": [
+     "280 + (bays_x // 2) * (length_mm - 400) / bays_x + (((length_mm - 400) / bays_x - 160) - 1000) / 2",
+     161,
+     460
+    ],
+    "when": "(length_mm - 400) / bays_x >= 1260"
+   },
+   {
+    "id": "fill_door_side",
+    "name": "Gefach neben Tür",
+    "material": "{infill}",
+    "size": [
+     "(((length_mm - 400) / bays_x - 160) - 1000) / 2",
+     160,
+     2100
+    ],
+    "at": [
+     "280 + (bays_x // 2) * (length_mm - 400) / bays_x + i * (((length_mm - 400) / bays_x - 160) + 1000) / 2",
+     120,
+     460
+    ],
+    "repeat": {
+     "count": 2
+    },
+    "when": "(length_mm - 400) / bays_x >= 1260"
+   },
+   {
+    "id": "fill_door_top",
+    "name": "Gefach über Tür",
+    "material": "{infill}",
+    "size": [
+     "((length_mm - 400) / bays_x - 160)",
+     160,
+     "wall_mm - 2420"
+    ],
+    "at": [
+     "280 + (bays_x // 2) * (length_mm - 400) / bays_x",
+     120,
+     2560
+    ],
+    "when": "(length_mm - 400) / bays_x >= 1260"
+   },
+   {
+    "id": "fill_y_low",
+    "name": "Gefach Brüstung Giebelseite",
+    "material": "{infill}",
+    "size": [
+     160,
+     "((depth_mm - 400) / bays_y - 160)",
+     840
+    ],
+    "at": [
+     "120 + (i // bays_y) * (length_mm - 400)",
+     "120 + (i % bays_y) * (depth_mm - 400) / bays_y + 160",
+     460
+    ],
+    "repeat": {
+     "count": "2 * bays_y"
+    },
+    "when": "i % bays_y > 0 and i % bays_y < bays_y - 1"
+   },
+   {
+    "id": "fill_y_top",
+    "name": "Gefach oben Giebelseite",
+    "material": "{infill}",
+    "size": [
+     160,
+     "((depth_mm - 400) / bays_y - 160)",
+     "wall_mm - 1320"
+    ],
+    "at": [
+     "120 + (i // bays_y) * (length_mm - 400)",
+     "120 + (i % bays_y) * (depth_mm - 400) / bays_y + 160",
+     1460
+    ],
+    "repeat": {
+     "count": "2 * bays_y"
+    },
+    "when": "i % bays_y > 0 and i % bays_y < bays_y - 1"
+   },
+   {
+    "id": "fill_y_up",
+    "name": "Gefach neben Strebe Giebelseite",
+    "material": "{infill}",
+    "size": [
+     160,
+     "((depth_mm - 400) / bays_y - 160)",
+     "(wall_mm - 320)"
+    ],
+    "at": [
+     "120 + (i // 2) * (length_mm - 400)",
+     "120 + (i % 2) * (bays_y - 1) * (depth_mm - 400) / bays_y + 160",
+     460
+    ],
+    "repeat": {
+     "count": 4
+    },
+    "shape": {
+     "kind": "polygon",
+     "points": [
+      [
+       "(1 - i % 2) * ((depth_mm - 400) / bays_y - 160) + (2 * (i % 2) - 1) * (0)",
+       "80 * sqrt(((depth_mm - 400) / bays_y - 160) * ((depth_mm - 400) / bays_y - 160) + (wall_mm - 320) * (wall_mm - 320)) / ((depth_mm - 400) / bays_y - 160)"
+      ],
+      [
+       "(1 - i % 2) * ((depth_mm - 400) / bays_y - 160) + (2 * (i % 2) - 1) * (((depth_mm - 400) / bays_y - 160) - 80 * sqrt(((depth_mm - 400) / bays_y - 160) * ((depth_mm - 400) / bays_y - 160) + (wall_mm - 320) * (wall_mm - 320)) / (wall_mm - 320))",
+       "(wall_mm - 320)"
+      ],
+      [
+       "(1 - i % 2) * ((depth_mm - 400) / bays_y - 160) + (2 * (i % 2) - 1) * (0)",
+       "(wall_mm - 320)"
+      ]
+     ]
+    }
+   },
+   {
+    "id": "fill_y_dn",
+    "name": "Gefach unter Strebe Giebelseite",
+    "material": "{infill}",
+    "size": [
+     160,
+     "((depth_mm - 400) / bays_y - 160)",
+     "(wall_mm - 320)"
+    ],
+    "at": [
+     "120 + (i // 2) * (length_mm - 400)",
+     "120 + (i % 2) * (bays_y - 1) * (depth_mm - 400) / bays_y + 160",
+     460
+    ],
+    "repeat": {
+     "count": 4
+    },
+    "shape": {
+     "kind": "polygon",
+     "points": [
+      [
+       "(1 - i % 2) * ((depth_mm - 400) / bays_y - 160) + (2 * (i % 2) - 1) * (80 * sqrt(((depth_mm - 400) / bays_y - 160) * ((depth_mm - 400) / bays_y - 160) + (wall_mm - 320) * (wall_mm - 320)) / (wall_mm - 320))",
+       "0"
+      ],
+      [
+       "(1 - i % 2) * ((depth_mm - 400) / bays_y - 160) + (2 * (i % 2) - 1) * (((depth_mm - 400) / bays_y - 160))",
+       "0"
+      ],
+      [
+       "(1 - i % 2) * ((depth_mm - 400) / bays_y - 160) + (2 * (i % 2) - 1) * (((depth_mm - 400) / bays_y - 160))",
+       "(wall_mm - 320) - 80 * sqrt(((depth_mm - 400) / bays_y - 160) * ((depth_mm - 400) / bays_y - 160) + (wall_mm - 320) * (wall_mm - 320)) / ((depth_mm - 400) / bays_y - 160)"
+      ]
+     ]
+    }
+   },
+   {
+    "id": "joist",
+    "name": "Deckenbalken",
+    "material": "lumber_kvh_120x200",
+    "size": [
+     120,
+     "depth_mm - 240",
+     200
+    ],
+    "at": [
+     "120 + i * (length_mm - 360) / (n - 1)",
+     120,
+     "wall_mm + 300"
+    ],
+    "repeat": {
+     "count": "floor((length_mm - 360) / 900) + 2"
+    }
+   },
+   {
+    "id": "rafter",
+    "name": "Sparren vorne",
+    "material": "lumber_kvh_120x200",
+    "start": [
+     "180 + i * (length_mm - 360) / (n - 1)",
+     -300,
+     "wall_mm + 500 - 480 * (roof_mm / (depth_mm / 2 - 180)) + 100 * sqrt(1 + (roof_mm / (depth_mm / 2 - 180)) * (roof_mm / (depth_mm / 2 - 180)))"
+    ],
+    "end": [
+     "180 + i * (length_mm - 360) / (n - 1)",
+     "depth_mm / 2",
+     "wall_mm + 500 + roof_mm + 100 * sqrt(1 + (roof_mm / (depth_mm / 2 - 180)) * (roof_mm / (depth_mm / 2 - 180)))"
+    ],
+    "cuts": [
+     "plumb",
+     "plumb"
+    ],
+    "repeat": {
+     "count": "floor((length_mm - 360) / 900) + 2"
+    }
+   },
+   {
+    "id": "rafter_back",
+    "name": "Sparren hinten",
+    "material": "lumber_kvh_120x200",
+    "start": [
+     "180 + i * (length_mm - 360) / (n - 1)",
+     "depth_mm + 300",
+     "wall_mm + 500 - 480 * (roof_mm / (depth_mm / 2 - 180)) + 100 * sqrt(1 + (roof_mm / (depth_mm / 2 - 180)) * (roof_mm / (depth_mm / 2 - 180)))"
+    ],
+    "end": [
+     "180 + i * (length_mm - 360) / (n - 1)",
+     "depth_mm / 2",
+     "wall_mm + 500 + roof_mm + 100 * sqrt(1 + (roof_mm / (depth_mm / 2 - 180)) * (roof_mm / (depth_mm / 2 - 180)))"
+    ],
+    "cuts": [
+     "plumb",
+     "plumb"
+    ],
+    "repeat": {
+     "count": "floor((length_mm - 360) / 900) + 2"
+    }
+   },
+   {
+    "id": "gable",
+    "name": "Giebelschalung",
+    "material": "cladding_larch_24",
+    "size": [
+     24,
+     "depth_mm - 240",
+     "360 + roof_mm + 200 * sqrt(1 + (roof_mm / (depth_mm / 2 - 180)) * (roof_mm / (depth_mm / 2 - 180)))"
+    ],
+    "at": [
+     "96 + i * (length_mm - 216)",
+     120,
+     "wall_mm + 140"
+    ],
+    "repeat": {
+     "count": 2
+    },
+    "shape": {
+     "kind": "triangle"
+    }
+   },
+   {
+    "id": "roof",
+    "name": "Dachfläche",
+    "material": "roof_tiles_clay",
+    "start": [
+     "length_mm / 2",
+     "-300 + i * (depth_mm + 600)",
+     "wall_mm + 500 - 480 * (roof_mm / (depth_mm / 2 - 180)) + 230 * sqrt(1 + (roof_mm / (depth_mm / 2 - 180)) * (roof_mm / (depth_mm / 2 - 180)))"
+    ],
+    "end": [
+     "length_mm / 2",
+     "depth_mm / 2",
+     "wall_mm + 500 + roof_mm + 230 * sqrt(1 + (roof_mm / (depth_mm / 2 - 180)) * (roof_mm / (depth_mm / 2 - 180)))"
+    ],
+    "section": [
+     60,
+     "length_mm + 600"
+    ],
+    "facing": "z",
+    "cuts": [
+     "plumb",
+     "plumb"
+    ],
+    "repeat": {
+     "count": 2
+    }
+   }
+  ],
+  "joints": [
+   {
+    "kind": "half_lap",
+    "part": "sill_y",
+    "into": "sill_x"
+   },
+   {
+    "kind": "half_lap",
+    "part": "plate_y",
+    "into": "plate_x"
+   },
+   {
+    "kind": "tenon",
+    "part": "post_x",
+    "into": "sill_x"
+   },
+   {
+    "kind": "tenon",
+    "part": "post_x",
+    "into": "plate_x"
+   },
+   {
+    "kind": "tenon",
+    "part": "post_y",
+    "into": "sill_y"
+   },
+   {
+    "kind": "tenon",
+    "part": "post_y",
+    "into": "plate_y"
+   },
+   {
+    "kind": "tenon",
+    "part": "brace_x",
+    "into": "sill_x"
+   },
+   {
+    "kind": "tenon",
+    "part": "brace_x",
+    "into": "plate_x"
+   },
+   {
+    "kind": "tenon",
+    "part": "brace_y",
+    "into": "sill_y"
+   },
+   {
+    "kind": "tenon",
+    "part": "brace_y",
+    "into": "plate_y"
+   },
+   {
+    "kind": "tenon",
+    "part": "rail_x",
+    "into": "post_x"
+   },
+   {
+    "kind": "tenon",
+    "part": "rail_y",
+    "into": "post_y"
+   },
+   {
+    "kind": "notch",
+    "part": "joist",
+    "into": "plate_x"
+   },
+   {
+    "kind": "notch",
+    "part": "rafter",
+    "into": "joist"
+   },
+   {
+    "kind": "notch",
+    "part": "rafter_back",
+    "into": "joist"
+   }
+  ],
+  "hardware": [],
+  "auto_screws": false,
+  "finish": null,
+  "steps": [
+   {
+    "title": "Fundament und Bodenplatte",
+    "text": "Schnurgerüst aufstellen, Fundamentgräben frostfrei (mind. 80 cm) ausheben, Streifenfundamente und Bodenplatte nach Statik bewehren und betonieren. Oberkante Fundament waagerecht abziehen; Sperrbahn unter der Schwelle vorsehen.",
+    "parts": [
+     "found_x",
+     "found_y",
+     "slab"
+    ]
+   },
+   {
+    "title": "Schwellenkranz legen",
+    "text": "Schwellen auf Sperrbahn verlegen, an den Ecken überblatten, Diagonalen messen (gleich lang) und nach Statik mit dem Fundament verankern.",
+    "parts": [
+     "sill_x",
+     "sill_y"
+    ]
+   },
+   {
+    "title": "Wände abbinden und aufrichten",
+    "text": "Wandweise liegend abbinden: Ständer, Streben und Riegel einzapfen, Holznägel einschlagen. Wände aufrichten, lotrecht ausrichten und vorläufig abstreben.",
+    "parts": [
+     "post_x",
+     "post_y",
+     "brace_x",
+     "brace_y",
+     "rail_x",
+     "rail_y"
+    ]
+   },
+   {
+    "title": "Rähm auflegen",
+    "text": "Rähm auf die Ständerzapfen setzen, an den Ecken überblatten und vernageln. Diagonalen der Wände prüfen.",
+    "parts": [
+     "plate_x",
+     "plate_y"
+    ]
+   },
+   {
+    "title": "Deckenbalken verlegen",
+    "text": "Deckenbalken im gleichmäßigen Abstand auf das Rähm legen, an der Schnur ausrichten und befestigen.",
+    "parts": [
+     "joist"
+    ]
+   },
+   {
+    "title": "Dachstuhl richten",
+    "text": "Sparrenpaare am Boden vormontieren, aufstellen, auf die Deckenbalken kerven und am First verbinden. Windrispenband nach Statik anbringen.",
+    "parts": [
+     "rafter",
+     "rafter_back"
+    ]
+   },
+   {
+    "title": "Giebel schließen",
+    "text": "Giebeldreiecke mit Lattung und Boden-Deckel-Schalung schließen, unten mit Tropfkante.",
+    "parts": [
+     "gable"
+    ]
+   },
+   {
+    "title": "Dach decken",
+    "text": "Unterdeckbahn von der Traufe her überlappend verlegen, Konter- und Traglattung nach Ziegelmaß, dann Ziegel und Firststeine verlegen.",
+    "parts": [
+     "roof"
+    ]
+   },
+   {
+    "title": "Gefache ausfachen",
+    "text": "Dreikantleisten an Ständer und Riegel nageln, Gefache im Verband ausmauern und eine Fuge zum Holz lassen, damit das Holz schwinden kann.",
+    "parts": [
+     "fill_x_low",
+     "fill_x_top",
+     "fill_x_win",
+     "fill_x_up",
+     "fill_x_dn",
+     "fill_door_side",
+     "fill_door_top",
+     "fill_y_low",
+     "fill_y_top",
+     "fill_y_up",
+     "fill_y_dn"
+    ]
+   },
+   {
+    "title": "Fenster und Haustür einbauen",
+    "text": "Fenster und Tür in die Öffnungen setzen, ausrichten, mit Montageankern befestigen und umlaufend mit Kompriband abdichten.",
+    "parts": [
+     "window",
+     "door"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "key": "kvh",
+    "name": "Fichte KVH",
+    "description": "Fachwerk aus Konstruktionsvollholz Fichte statt Eiche – deutlich günstiger, braucht Holzschutz",
+    "overrides": {
+     "wood": "kvh"
+    }
+   },
+   {
+    "key": "aerated",
+    "name": "Porenbeton",
+    "description": "Gefache aus Porenbeton statt Lehmstein – leichter und schneller gemauert",
+    "overrides": {
+     "infill": "infill_aerated"
+    }
+   },
+   {
+    "key": "small",
+    "name": "Klein",
+    "description": "6 × 5 m Grundfläche mit 4 × 3 Gefachen",
+    "overrides": {
+     "length_mm": 6000,
+     "depth_mm": 5000,
+     "bays_x": 4,
+     "bays_y": 3
+    }
+   }
+  ]
+ }
+}

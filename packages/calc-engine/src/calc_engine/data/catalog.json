@@ -1,5 +1,5 @@
 {
-  "version": "2026.10-seed.3",
+  "version": "2026.10-seed.4",
   "as_of": "2026-10",
   "note": "Richtpreise (Seed-Daten) für Deutschland, keine Händlerangebote. Vor Produktivbetrieb durch echte Preisquellen ersetzen.",
   "items": [
@@ -76,7 +76,19 @@
     {"id": "glue_d3_750", "name": "Holzleim D3 wasserfest", "spec": "Flasche 750 g", "unit": "Fl", "price_min": "9.00", "price_max": "14.00", "category": "consumable", "kind": "piece", "outdoor": true, "designable": true},
     {"id": "finish_hardwax_750", "name": "Hartwachsöl farblos (innen)", "spec": "0,75 l, ca. 15 m² je Anstrich", "unit": "Dose", "price_min": "18.00", "price_max": "28.00", "category": "finish", "kind": "finish", "coverage_m2": "15", "outdoor": false, "designable": true},
     {"id": "finish_oil_outdoor_750", "name": "Holzöl außen für Douglasie/Lärche", "spec": "0,75 l, ca. 9 m² je Anstrich", "unit": "Dose", "price_min": "15.00", "price_max": "24.00", "category": "finish", "kind": "finish", "coverage_m2": "9", "outdoor": true, "designable": true},
-    {"id": "finish_glaze_750", "name": "Holzschutzlasur außen", "spec": "0,75 l, ca. 10 m² je Anstrich", "unit": "Dose", "price_min": "14.00", "price_max": "22.00", "category": "finish", "kind": "finish", "coverage_m2": "10", "outdoor": true, "designable": true}
+    {"id": "finish_glaze_750", "name": "Holzschutzlasur außen", "spec": "0,75 l, ca. 10 m² je Anstrich", "unit": "Dose", "price_min": "14.00", "price_max": "22.00", "category": "finish", "kind": "finish", "coverage_m2": "10", "outdoor": true, "designable": true},
+    {"id": "screw_timber_8x200_50", "name": "Holzbauschraube Tellerkopf verzinkt", "spec": "8 × 200 mm, Packung 50 Stk", "unit": "Pkg", "price_min": "28.00", "price_max": "45.00", "category": "fastener", "kind": "screw", "screw_length_mm": 200, "pack_size": 50, "outdoor": true},
+    {"id": "screw_timber_8x240_50", "name": "Holzbauschraube Tellerkopf verzinkt", "spec": "8 × 240 mm, Packung 50 Stk", "unit": "Pkg", "price_min": "34.00", "price_max": "55.00", "category": "fastener", "kind": "screw", "screw_length_mm": 240, "pack_size": 50, "outdoor": true},
+    {"id": "peg_oak_22", "name": "Holznagel Eiche, gespalten", "spec": "Ø 22 mm, 250 mm lang", "unit": "Stk", "price_min": "1.20", "price_max": "2.50", "category": "fastener", "kind": "piece", "material": "oak", "outdoor": true},
+    {"id": "concrete_c25", "name": "Transportbeton C25/30", "spec": "frei Baustelle, ohne Bewehrung und Pumpe", "unit": "m³", "price_min": "150.00", "price_max": "230.00", "category": "masonry", "kind": "bulk", "material": "concrete", "bulk_basis": "volume", "thickness_range_mm": [80, 1500], "outdoor": true, "designable": true},
+    {"id": "infill_clay", "name": "Gefachausmauerung Lehmstein inkl. Lehmmörtel", "spec": "Lehmsteine im Verband, beidseitig putzfähig", "unit": "m³", "price_min": "380.00", "price_max": "620.00", "category": "masonry", "kind": "bulk", "material": "clay", "bulk_basis": "volume", "thickness_range_mm": [80, 240], "outdoor": true, "designable": true},
+    {"id": "infill_aerated", "name": "Gefachausmauerung Porenbeton inkl. Dünnbettmörtel", "spec": "Plansteine, Dreikantleisten als Fugenanschluss", "unit": "m³", "price_min": "260.00", "price_max": "420.00", "category": "masonry", "kind": "bulk", "material": "aerated", "bulk_basis": "volume", "thickness_range_mm": [80, 365], "outdoor": true, "designable": true},
+    {"id": "insulation_wood_fiber", "name": "Holzfaserdämmplatte", "spec": "flexibel oder druckfest, WLS 040", "unit": "m³", "price_min": "190.00", "price_max": "320.00", "category": "insulation", "kind": "bulk", "material": "wood_fiber", "bulk_basis": "volume", "thickness_range_mm": [20, 300], "outdoor": false, "designable": true},
+    {"id": "roof_tiles_clay", "name": "Dachdeckung Tondachziegel", "spec": "inkl. Unterdeckbahn, Konterlattung, Lattung und Formziegel", "unit": "m²", "price_min": "48.00", "price_max": "85.00", "category": "roof", "kind": "bulk", "material": "tile", "bulk_basis": "area", "thickness_range_mm": [30, 120], "outdoor": true, "designable": true},
+    {"id": "cladding_larch_24", "name": "Boden-Deckel-Schalung Lärche", "spec": "24 mm, inkl. Lattung und Edelstahlschrauben", "unit": "m²", "price_min": "45.00", "price_max": "75.00", "category": "wood", "kind": "bulk", "material": "larch", "bulk_basis": "area", "thickness_range_mm": [20, 50], "outdoor": true, "designable": true},
+    {"id": "window_wood_800x1000", "name": "Holzfenster Dreh-Kipp, 2-fach verglast", "spec": "800 × 1000 mm, Bautiefe 78 mm", "unit": "Stk", "price_min": "380.00", "price_max": "750.00", "category": "building", "kind": "piece", "material": "window", "size_mm": [800, 78, 1000], "outdoor": true, "designable": true},
+    {"id": "window_wood_1000x1200", "name": "Holzfenster Dreh-Kipp, 2-fach verglast", "spec": "1000 × 1200 mm, Bautiefe 78 mm", "unit": "Stk", "price_min": "450.00", "price_max": "900.00", "category": "building", "kind": "piece", "material": "window", "size_mm": [1000, 78, 1200], "outdoor": true, "designable": true},
+    {"id": "door_wood_1000x2100", "name": "Holz-Haustür mit Zarge und Schloss", "spec": "1000 × 2100 mm, Bautiefe 78 mm", "unit": "Stk", "price_min": "1500.00", "price_max": "3500.00", "category": "building", "kind": "piece", "material": "window", "size_mm": [1000, 78, 2100], "outdoor": true, "designable": true}
   ],
   "tools": [
     {"id": "tool_drill_driver", "name": "Akku-Bohrschrauber mit Bits (TX25)", "price_min": "60.00", "price_max": "150.00"},
@@ -90,6 +102,9 @@
     {"id": "tool_wrench", "name": "Maulschlüssel SW 17 (2 Stk)", "price_min": "8.00", "price_max": "18.00"},
     {"id": "tool_ppe", "name": "Schutzbrille, Gehörschutz, Arbeitshandschuhe", "price_min": "15.00", "price_max": "35.00"},
     {"id": "tool_jigsaw", "name": "Stichsäge (für Plattenzuschnitt) oder Zuschnitt im Baumarkt", "price_min": "50.00", "price_max": "130.00"},
+    {"id": "tool_chisel", "name": "Stemmeisen 20/32 mm, Klüpfel, Zimmermannswinkel", "price_min": "40.00", "price_max": "110.00"},
+    {"id": "tool_chainsaw_mortiser", "name": "Kettenstemmer oder Oberfräse (für Zapfenlöcher, mietbar)", "price_min": "60.00", "price_max": "180.00"},
+    {"id": "tool_mixer", "name": "Rührwerk und Mörtelkübel", "price_min": "60.00", "price_max": "150.00"},
     {"id": "tool_sander", "name": "Schwingschleifer oder Schleifklotz mit Papier (K80/K120)", "price_min": "10.00", "price_max": "90.00"},
     {"id": "tool_clamps", "name": "Schraubzwingen (4 Stk)", "price_min": "20.00", "price_max": "45.00"},
     {"id": "tool_countersink", "name": "Kegelsenker", "price_min": "5.00", "price_max": "12.00"},
@@ -116,6 +131,13 @@
     "glulam_spruce": {"label": "Leimholz Fichte", "tone": "glulam", "density_kg_m3": 470, "outdoor": false},
     "steel": {"label": "Stahl", "tone": "steel", "density_kg_m3": 7850, "outdoor": true},
     "rubber": {"label": "Gummi", "tone": "rubber", "density_kg_m3": 1200, "outdoor": true},
-    "concrete": {"label": "Beton", "tone": "concrete", "density_kg_m3": 2300, "outdoor": true}
+    "concrete": {"label": "Beton", "tone": "concrete", "density_kg_m3": 2300, "outdoor": true},
+    "kvh": {"label": "Konstruktionsvollholz Fichte (KVH)", "tone": "kvh", "density_kg_m3": 470, "outdoor": false, "lumber_price_m3": ["550", "850"], "lumber_stock_lengths_mm": [3000, 4000, 5000, 6000, 7000, 8000, 10000, 13000]},
+    "oak_beam": {"label": "Eichenbalken (Bauholz)", "tone": "oak", "density_kg_m3": 750, "outdoor": true, "lumber_price_m3": ["1500", "2600"], "lumber_stock_lengths_mm": [3000, 4000, 5000, 6000, 7000, 8000, 10000]},
+    "clay": {"label": "Lehmstein", "tone": "clay", "density_kg_m3": 1600, "outdoor": true},
+    "aerated": {"label": "Porenbeton", "tone": "aerated", "density_kg_m3": 500, "outdoor": true},
+    "wood_fiber": {"label": "Holzfaser", "tone": "fiber", "density_kg_m3": 160, "outdoor": false},
+    "tile": {"label": "Tondachziegel", "tone": "tile", "density_kg_m3": 900, "outdoor": true},
+    "window": {"label": "Fenster und Türen", "tone": "window", "density_kg_m3": 600, "outdoor": true}
   }
 }

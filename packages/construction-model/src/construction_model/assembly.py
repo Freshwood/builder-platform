@@ -1,7 +1,8 @@
 """Parametric assembly design: the generic input format for free-form projects (ADR-0004).
 
-A design describes *what* is built: named parameters and parts as boxes whose size and position
-are expressions over those parameters. It is written by the LLM (or shipped as a template) and
+A design describes *what* is built: named parameters and parts (boxes, or members between two
+points) whose size and position are expressions over those parameters, optionally with an
+outline shape, cutouts, end cuts and carpentry joints. It is written by the LLM (or shipped as a template) and
 stored as project input. Everything derived from it (BOM, cut list, costs, drawings) is computed
 by the engine.
 
@@ -72,6 +73,31 @@ class Repeat(_Frozen):
     var: Identifier = "i"
 
 
+Vec2 = tuple[Expr, Expr]
+ShapeKind = Literal["rect", "rounded", "ellipse", "triangle", "arch", "cloud", "polygon"]
+EndCut = Literal["square", "level", "plumb", "corner"]
+
+
+class Shape(_Frozen):
+    """Outline on the face across the thinnest size; (u, v) in mm from the minimum corner, u
+    along the first remaining axis in x, y, z order (members: along the length)."""
+
+    kind: ShapeKind
+    radius: Expr | None = None
+    apex: Expr | None = None
+    bumps: int | None = Field(None, ge=2, le=12)
+    points: list[Vec2] = Field(default_factory=list, max_length=40)
+
+
+class Cutout(_Frozen):
+    """Hole in (u, v): rect/ellipse by at and size, polygon by points."""
+
+    kind: Literal["rect", "ellipse", "polygon"] = "rect"
+    at: Vec2 = (0, 0)
+    size: Vec2 = (0, 0)
+    points: list[Vec2] = Field(default_factory=list, max_length=40)
+
+
 class PartSpec(_Frozen):
     id: Identifier
     name: str = Field(
@@ -85,11 +111,30 @@ class PartSpec(_Frozen):
         ),
         max_length=80,
     )
-    size: Vec3 = Field(description="Extent along x, y, z in mm")
-    at: Vec3 = Field(description="Minimum corner (x, y, z) in mm before rotation")
+    size: Vec3 | None = Field(None, description="Box: extent along x, y, z in mm")
+    at: Vec3 | None = Field(None, description="Box: minimum corner (x, y, z) before rotation")
     rotate: Rotation | None = None
+    start: Vec3 | None = Field(None, description="Member: centre of one end")
+    end: Vec3 | None = None
+    section: Vec2 | None = None
+    facing: Literal["x", "y", "z"] | None = Field(None, description="Member thickness direction")
+    cuts: tuple[EndCut, EndCut] = ("square", "square")
+    shape: Shape | None = None
+    cutouts: list[Cutout] = Field(default_factory=list, max_length=12)
     repeat: Repeat | None = None
     when: Expr | None = Field(None, description="Include the part only if this evaluates truthy")
+
+    @model_validator(mode="after")
+    def _placement(self) -> PartSpec:
+        box = self.size is not None and self.at is not None
+        member = self.start is not None and self.end is not None
+        if box == member:
+            raise ValueError(
+                f"Part '{self.id}' needs either size and at (box) or start and end (member)"
+            )
+        if member and self.rotate is not None:
+            raise ValueError(f"Part '{self.id}': rotate is only for boxes")
+        return self
 
 
 class HardwareSpec(_Frozen):
@@ -99,6 +144,14 @@ class HardwareSpec(_Frozen):
     quantity: Expr
     note: str | None = Field(None, max_length=120)
     when: Expr | None = None
+
+
+class JointSpec(_Frozen):
+    """Carpentry joint between all touching or overlapping instances of two parts."""
+
+    kind: Literal["tenon", "half_lap", "notch"]
+    part: Identifier
+    into: Identifier
 
 
 class DesignStep(_Frozen):
@@ -121,8 +174,9 @@ class AssemblyDesign(_Frozen):
     """A complete parametric design of a buildable object.
 
     Coordinates in mm: x = width (right), y = depth (back), z = height (up), floor z = 0.
-    Numeric fields (size, at, count, quantity, when, deg) take a number or an arithmetic
-    expression over parameters and the repeat variable, e.g. 'width_mm - 2 * 18' or
+    Numeric fields (size, at, start, end, section, points, count, quantity, when, deg) take a
+    number or an arithmetic expression over parameters and the repeat variable, e.g.
+    'width_mm - 2 * 18' or
     'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round,
     floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
     """
@@ -132,6 +186,7 @@ class AssemblyDesign(_Frozen):
         max_length=200,
         description="One German sentence; may contain {param} placeholders",
     )
+    category: Literal["object", "building"] = "object"
     use: Literal["indoor", "outdoor"] = "indoor"
     support: Literal["floor", "wall"] = Field(
         "floor", description="floor: stands on z=0; wall: back side (max y) is fixed to a wall"
@@ -139,6 +194,7 @@ class AssemblyDesign(_Frozen):
     origin: Origin = Origin.AI
     params: list[DesignParam] = Field(max_length=30)
     parts: list[PartSpec] = Field(min_length=1, max_length=120)
+    joints: list[JointSpec] = Field(default_factory=list, max_length=40)
     hardware: list[HardwareSpec] = Field(default_factory=list, max_length=30)
     auto_screws: bool = Field(True, description="Derive screws from contact faces")
     finish: str | None = Field(None, description="Catalog item id of an oil/glaze, or null")
@@ -155,4 +211,8 @@ class AssemblyDesign(_Frozen):
             duplicates = sorted({i for i in ids if ids.count(i) > 1})
             if duplicates:
                 raise ValueError(f"Duplicate {label} ids: {', '.join(duplicates)}")
+        known = {p.id for p in self.parts}
+        unknown = sorted({i for j in self.joints for i in (j.part, j.into) if i not in known})
+        if unknown:
+            raise ValueError(f"Joints name unknown part ids: {', '.join(unknown)}")
         return self
