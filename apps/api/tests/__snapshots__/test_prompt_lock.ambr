@@ -49,8 +49,9 @@
          interne Begriffe (Pack, Katalog, Material-IDs, Werkzeugnamen).
       9. Packs und Vorlagen stehen unten in der Übersicht. Nutze immer zuerst ein passendes Pack
          (create_project) oder eine Vorlage (create_from_template) und passe sie über Parameter an
-         (Maße, Flügel, Holzart, Brettstärke); „unbehandelt“ → untreated=true. Nur wenn nichts
-         passt, entwirf frei mit save_design.
+         (Maße, Flügel, Holzart, Brettstärke); „unbehandelt“ → untreated=true, Einsatzort und
+         Montage → use/support. Weicht nur Montage oder Oberfläche ab, passt die Vorlage trotzdem.
+         Nur wenn nichts passt, entwirf frei mit save_design.
       10. Freie Entwürfe (save_design):
          - Erst list_materials, bei Bedarf get_template_design als Formatbeispiel. Katalogartikel
            nur mit ihren Maßen; sonst Maßholz (z. B. lumber_douglas_18x96).
@@ -78,7 +79,8 @@
            wie "width_mm - 2 * 18", repeat (Index i, Anzahl n), optionale Teile mit when, Holzart als
            choice-Parameter mit Material-Platzhalter "frame_{wood}_45x70". Klammern {} nur im
            Material; Bedingungen als if(bedingung, a, b), nie "a ? b : c". Brettbreite im Material
-           ist eine Zahl passend zum Bauteilmaß. design als JSON-Objekt, nie als String.
+           ist eine Zahl passend zum Bauteilmaß. Jeder Ausdruck ist ein String in Anführungszeichen
+           ("at": [0, 0, "18 + i * 116"]), nur reine Zahlen ohne. design als JSON-Objekt.
          - use="outdoor" für draußen (outdoor-taugliche Materialien). Schrauben, Leim, Oberfläche und
            Kippsicherung ergänzt die Engine. Was sich öffnet, braucht mind. 2 Bänder je Flügel/Tür,
            einen Verschluss und ggf. Griffe; draußen verzinkt oder Edelstahl. Beschläge mit festen
@@ -118,7 +120,7 @@
       
       Planbar ohne freien Entwurf (Parameter in Klammern, Längen in mm):
       - Pack raised_bed – Hochbeet aus Holz: Rechteckiges Hochbeet aus horizontalen Brettern an innenliegenden Eckpfosten, optional mit Noppenbahn, Wühlmausgitter und Sitzkante. (length_mm, width_mm, height_mm, wood, liner, vole_mesh, top_cap) → create_project
-      - Vorlage cloud_shelf – Wolkenregal: Standregal mit Rückwand in Wolkenform und kleinen Fächern, z. B. für Tonie-Figuren, Bücher oder Deko (width_mm, height_mm, depth_mm, shelves, material=plywood_birch_18|glulam_spruce_18) → create_from_template
+      - Vorlage cloud_shelf – Wolkenregal: Regal mit Rückwand in Wolkenform und kleinen Fächern, stehend oder an der Wand, z. B. für Tonie-Figuren, Bücher oder Deko (width_mm, height_mm, depth_mm, shelves, material=plywood_birch_18|glulam_spruce_18) → create_from_template
       - Vorlage garden_bench – Gartenbank: Massive Gartenbank aus Douglasie oder Lärche mit Sitzlatten, optional mit Rückenlehne (length_mm, seat_height_mm, slats, backrest, wood=douglas|larch) → create_from_template
       - Vorlage shelf – Standregal: Regal aus Leimholz oder Multiplex mit einstellbarer Anzahl Böden und optionaler Rückwand (width_mm, depth_mm, height_mm, shelves, back_panel, material=glulam_spruce_18|plywood_birch_18) → create_from_template
       - Vorlage timber_frame_house – Fachwerkhaus: Eingeschossiges Fachwerkhaus mit Satteldach: Streifenfundament, Schwelle, Ständer, Streben und Riegel gezapft, Gefache ausgemauert, Deckenbalken, Sparrendach mit Ziegeln, Fenster und Haustür (length_mm, depth_mm, wall_mm, roof_mm, bays_x, bays_y, wood=oak_beam|kvh, infill=infill_clay|infill_aerated) → create_from_template
@@ -210,6 +212,22 @@
               'description': 'Template parameters (lengths in mm).',
               'type': 'object',
             }),
+            'support': dict({
+              'anyOf': list([
+                dict({
+                  'enum': list([
+                    'floor',
+                    'wall',
+                  ]),
+                  'type': 'string',
+                }),
+                dict({
+                  'type': 'null',
+                }),
+              ]),
+              'default': None,
+              'description': '"wall" for wall mounting, "floor" for standing (otherwise the template\'s).',
+            }),
             'template_key': dict({
               'description': 'Template key, e.g. "shelf".',
               'type': 'string',
@@ -222,6 +240,22 @@
               'default': False,
               'description': 'True when the user wants no surface treatment (no oil or glaze).',
               'type': 'boolean',
+            }),
+            'use': dict({
+              'anyOf': list([
+                dict({
+                  'enum': list([
+                    'indoor',
+                    'outdoor',
+                  ]),
+                  'type': 'string',
+                }),
+                dict({
+                  'type': 'null',
+                }),
+              ]),
+              'default': None,
+              'description': '"outdoor" or "indoor" if the brief says so (otherwise the template\'s).',
             }),
           }),
           'required': list([

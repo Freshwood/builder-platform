@@ -10,6 +10,33 @@ Each entry names the version, the fingerprint, what changed and why, and the eff
 offline token benchmark (`task bench`). Every stored agent run carries `prompt_version` and
 `prompt_fingerprint`, so a result can be traced back to exactly one entry.
 
+## 2026-10-09.1 (fingerprint `95953ba37c29e83d`)
+
+Bug report "Construction not working" (Tonie cloud shelf, no progress in a whole turn): the
+model wrote formulas unquoted (`"at": [150, 0, 18 + (i + 1) * …]`), the JSON was invalid, the
+error told it to "pass an object, not a string", and it repeated the same mistake until
+`save_design` ran out of retries. The `cloud_shelf` template would have fitted, but could not
+be wall-mounted, so the model designed freely.
+
+- Rule 10: every expression is a quoted string (with example), only plain numbers unquoted.
+- Rule 9: brief location and mounting go to `use`/`support` of the template; a template that
+  differs only in mounting or finish still fits (material wishes stay binding, rule 8).
+- `create_from_template`: new arguments `use` and `support` (they were silently dropped when
+  sent among the params).
+- Template `cloud_shelf`: description says "stehend oder an der Wand". The cloud stays birch
+  plywood: spruce glulam panels are only 600 mm wide and the template must stay valid over its
+  whole parameter range (now also tested wall-mounted).
+- Not visible to the model, but part of the fix: `modules/agent/args.py` repairs unquoted
+  expressions and unbalanced brackets in the raw tool call (`RepairToolArgs`) and in object
+  arguments sent as strings; the error message now names the likely cause.
+
+Offline benchmark (`2026-10-08-prompt-2026-10-08-1.md` → `2026-10-09-prompt-2026-10-09-1.md`):
+static prefix 8,894 → 9,082 tokens per request (+188, +2.1 %: instructions +70,
+`create_from_template` 309 → 427), input over all five scenarios 138,224 → 140,662 (+1.8 %).
+Accepted: a failed design turn like the reported one (about six requests of 11–13K tokens)
+costs as much as the added prefix over roughly 400 requests; all scenarios stay within the
+existing `test_token_budget.py` limits (unchanged).
+
 ## 2026-10-08.1 (fingerprint `f17bb3be32d5a296`)
 
 Free forms, members, carpentry joints and buildings (ADR-0007). The model can now describe

@@ -61,6 +61,9 @@ platform, DB or LLM code, and only `homeworking.api` may use `modules.agent`.
   change.
 - Treat model output and tool arguments as untrusted input: validate with pydantic, let the engine
   reject, never `eval`. Expressions go through `calc_engine.assembly.expr` only.
+- Hand-written JSON in tool arguments (unquoted formulas, stray brackets) is repaired in one place,
+  `modules/agent/args.py`, never per tool. Add every malformed call from a bug report to
+  `apps/api/tests/fixtures/tool_args/` as a regression case.
 
 ## Commits and pull requests
 

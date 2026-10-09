@@ -849,7 +849,6 @@
               "building"
             ],
             "title": "Category",
-            "description": "building: house or shed with foundation, frame and roof",
             "default": "object"
           },
           "use": {
@@ -952,7 +951,7 @@
           "parts"
         ],
         "title": "AssemblyDesign",
-        "description": "A complete parametric design of a buildable object.\n\nCoordinates in mm: x = width (right), y = depth (back), z = height (up), floor z = 0.\nNumeric fields (size, at, count, quantity, when, deg) take a number or an arithmetic\nexpression over parameters and the repeat variable, e.g. 'width_mm - 2 * 18' or\n'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round,\nfloor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+        "description": "A complete parametric design of a buildable object.\n\nCoordinates in mm: x = width (right), y = depth (back), z = height (up), floor z = 0.\nNumeric fields (size, at, start, end, section, points, count, quantity, when, deg) take a\nnumber or an arithmetic expression over parameters and the repeat variable, e.g.\n'width_mm - 2 * 18' or\n'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round,\nfloor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
       },
       "BomLine": {
         "properties": {
@@ -1671,7 +1670,6 @@
             "maxItems": 2,
             "minItems": 2,
             "title": "At",
-            "description": "Minimum corner (u, v)",
             "default": [
               0,
               0
@@ -1704,7 +1702,6 @@
             "maxItems": 2,
             "minItems": 2,
             "title": "Size",
-            "description": "Extent (u, v)",
             "default": [
               0,
               0
@@ -1740,14 +1737,13 @@
             },
             "type": "array",
             "maxItems": 40,
-            "title": "Points",
-            "description": "polygon: (u, v)"
+            "title": "Points"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "Cutout",
-        "description": "Hole through a part (window, slot, grip), in the face plane's (u, v) coordinates."
+        "description": "Hole in (u, v): rect/ellipse by at and size, polygon by points."
       },
       "DesignParam": {
         "properties": {
@@ -2270,7 +2266,7 @@
           "into"
         ],
         "title": "JointSpec",
-        "description": "Carpentry joint between all touching or overlapping instances of two parts.\n\ntenon: ``part`` ends on ``into`` with a tenon and peg. half_lap: both cross and overlap,\neach notched by half. notch: ``part`` sits on ``into`` with a seat cut (rafter on plate)."
+        "description": "Carpentry joint between all touching or overlapping instances of two parts."
       },
       "Label": {
         "properties": {
@@ -2864,7 +2860,7 @@
               }
             ],
             "title": "Start",
-            "description": "Member: centre of the start end (x, y, z)"
+            "description": "Member: centre of one end"
           },
           "end": {
             "anyOf": [
@@ -2909,8 +2905,7 @@
                 "type": "null"
               }
             ],
-            "title": "End",
-            "description": "Member: centre of the other end"
+            "title": "End"
           },
           "section": {
             "anyOf": [
@@ -2945,8 +2940,7 @@
                 "type": "null"
               }
             ],
-            "title": "Section",
-            "description": "Member: thickness × width, if the material does not fix it"
+            "title": "Section"
           },
           "facing": {
             "anyOf": [
@@ -2963,7 +2957,7 @@
               }
             ],
             "title": "Facing",
-            "description": "Member: thickness direction (default horizontal, across the member)"
+            "description": "Member thickness direction"
           },
           "cuts": {
             "prefixItems": [
@@ -2990,7 +2984,6 @@
             "maxItems": 2,
             "minItems": 2,
             "title": "Cuts",
-            "description": "Member end cuts: square, level (horizontal), plumb (vertical), corner (both)",
             "default": [
               "square",
               "square"
@@ -3779,8 +3772,7 @@
                 "type": "null"
               }
             ],
-            "title": "Radius",
-            "description": "rounded: corner radius"
+            "title": "Radius"
           },
           "apex": {
             "anyOf": [
@@ -3794,8 +3786,7 @@
                 "type": "null"
               }
             ],
-            "title": "Apex",
-            "description": "triangle: u of the apex (default centre)"
+            "title": "Apex"
           },
           "bumps": {
             "anyOf": [
@@ -3808,8 +3799,7 @@
                 "type": "null"
               }
             ],
-            "title": "Bumps",
-            "description": "cloud: number of bumps on top"
+            "title": "Bumps"
           },
           "points": {
             "items": {
@@ -3841,8 +3831,7 @@
             },
             "type": "array",
             "maxItems": 40,
-            "title": "Points",
-            "description": "polygon: (u, v)"
+            "title": "Points"
           }
         },
         "additionalProperties": false,
@@ -3851,7 +3840,7 @@
           "kind"
         ],
         "title": "Shape",
-        "description": "Outline of a part in its face plane; the engine derives the exact contour.\n\nThe face plane is the one perpendicular to the thinnest dimension (members: length × width).\nLocal coordinates (u, v) in mm start at the minimum corner: u along the first, v along the\nsecond remaining axis in x, y, z order (members: u along the length from ``start``)."
+        "description": "Outline on the face across the thinnest size; (u, v) in mm from the minimum corner, u\nalong the first remaining axis in x, y, z order (members: along the length)."
       },
       "Solid": {
         "properties": {

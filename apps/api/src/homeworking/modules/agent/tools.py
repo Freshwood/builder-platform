@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from dataclasses import dataclass, field
 from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import BeforeValidator, Field
+from pydantic import Field
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.capabilities import AbstractCapability, ProcessHistory
 from pydantic_ai.messages import ModelResponse
@@ -18,7 +17,7 @@ from calc_engine.assembly.derive import DESIGN_PACK_ID
 from calc_engine.assembly.templates import template, templates
 from calc_engine.catalog import Catalog
 from calc_engine.engine import DesignRejectedError, Engine, ParameterError, UnknownPackError
-from construction_model.assembly import AssemblyDesign
+from construction_model.assembly import SUPPORTS, USES, AssemblyDesign, Support, Use
 from construction_model.commands import (
     AddNote,
     ChangeParameterBy,
@@ -32,6 +31,7 @@ from construction_model.commands import (
 )
 from construction_model.diff import ModelDiff
 from construction_model.model import Origin, ParamValue, ProjectModel
+from homeworking.modules.agent.args import JsonTolerant, RepairToolArgs
 from homeworking.modules.agent.history import process_history
 from homeworking.modules.agent.prompts import INSTRUCTIONS
 from homeworking.modules.projects.service import (
@@ -44,74 +44,13 @@ from homeworking.modules.projects.service import (
 NOTE_MAX_CHARS = 4000
 
 
-_CLOSERS = {"}": "{", "]": "["}
-_OPENERS = {v: k for k, v in _CLOSERS.items()}
-
-
-def _balance_brackets(text: str) -> str:
-    """Drop closing brackets without a matching opener and close brackets left open.
-
-    Hand-written JSON of a whole design often has one brace too many or too few at the end;
-    the content is unaffected and the engine validates it anyway.
-    """
-    out: list[str] = []
-    stack: list[str] = []
-    in_string = escaped = False
-    for char in text:
-        if in_string:
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == '"':
-                in_string = False
-        elif char == '"':
-            in_string = True
-        elif char in _OPENERS:
-            stack.append(char)
-        elif char in _CLOSERS:
-            if not stack or stack[-1] != _CLOSERS[char]:
-                continue
-            stack.pop()
-        out.append(char)
-    out.extend(_OPENERS[opener] for opener in reversed(stack))
-    return "".join(out)
-
-
-def _parse_json_string(value: Any) -> Any:
-    """Accept an object argument that the model sent as a JSON-encoded string.
-
-    Models regularly serialise large nested arguments (a whole design) into a string. Strict
-    validation then rejects every attempt with "Input should be an object" and the model cannot
-    see what is wrong, so the string is decoded before validation. Unbalanced brackets are
-    repaired; any other syntax error is reported with its position so the model can fix it.
-    """
-    if not isinstance(value, str):
-        return value
-    try:
-        return json.loads(value)
-    except json.JSONDecodeError as exc:
-        error = exc
-    try:
-        return json.loads(_balance_brackets(value))
-    except json.JSONDecodeError:
-        pass
-    context = value[max(0, error.pos - 40) : error.pos + 20]
-    raise ValueError(
-        f"Kein gültiges JSON ({error.msg} bei Zeichen {error.pos}: …{context}…). "
-        "Übergib das Argument als Objekt, nicht als String."
-    )
-
-
-_JsonTolerant = BeforeValidator(_parse_json_string)
-
 AgentCommand = Annotated[
     SetParameters | ChangeParameterBy | SelectVariant | Rename | SetRegion | SetPrice,
     Field(discriminator="type"),
-    _JsonTolerant,
+    JsonTolerant,
 ]
-DesignArg = Annotated[AssemblyDesign, _JsonTolerant]
-ParamsArg = Annotated[dict[str, ParamValue], _JsonTolerant]
+DesignArg = Annotated[AssemblyDesign, JsonTolerant]
+ParamsArg = Annotated[dict[str, ParamValue], JsonTolerant]
 
 
 @dataclass
@@ -212,6 +151,11 @@ def diff_summary(diff: ModelDiff) -> dict[str, Any]:
         f"{_eur(diff.material_cost_after[0])} – {_eur(diff.material_cost_after[1])}"
     )
     return out
+
+
+def _literal[T: str](value: Any, allowed: tuple[T, ...]) -> T | None:
+    """``value`` if it is one of ``allowed`` (a design-level field found among the params)."""
+    return next((a for a in allowed if a == value), None)
 
 
 def _error(message: str) -> dict[str, Any]:
@@ -442,7 +386,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         deps_type=AgentDeps,
         instructions=[INSTRUCTIONS, planning_overview(engine)],
         retries=2,
-        capabilities=[ProcessHistory(process_history), RecordUsage()],
+        capabilities=[ProcessHistory(process_history), RepairToolArgs(), RecordUsage()],
     )
 
     @agent.tool
@@ -485,6 +429,8 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         params: ParamsArg,
         explanation: str | None = None,
         untreated: bool = False,
+        use: Use | None = None,
+        support: Support | None = None,
         new_project: bool = False,
     ) -> dict[str, Any]:
         """Create a project from a design template; omitted parameters use template defaults.
@@ -495,14 +441,16 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             params: Template parameters (lengths in mm).
             explanation: The "Warum so?" explanation (see instructions).
             untreated: True when the user wants no surface treatment (no oil or glaze).
+            use: "outdoor" or "indoor" if the brief says so (otherwise the template's).
+            support: "wall" for wall mounting, "floor" for standing (otherwise the template's).
             new_project: Only true if the user explicitly wants another, separate project.
         """
         target = _target(ctx, new_project)
         # Models tend to put the flag and design-level fields among the template parameters.
         params = dict(params)
         untreated = bool(params.pop("untreated", untreated))
-        for key in ("use", "support"):
-            params.pop(key, None)
+        use = _literal(params.pop("use", None), USES) or use
+        support = _literal(params.pop("support", None), SUPPORTS) or support
         async with ctx.deps.write_lock:
             try:
                 outcome = await ctx.deps.projects.create_from_template(
@@ -511,6 +459,8 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                     title=title,
                     params=params,
                     untreated=untreated,
+                    use=use,
+                    support=support,
                     replace_project_id=target,
                     actor="agent",
                     trace_id=ctx.deps.trace_id,

@@ -7,9 +7,9 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from calc_engine.assembly.templates import template
 from calc_engine.catalog import default_catalog
 from homeworking.bootstrap import build_container
+from homeworking.modules.agent.args import _parse_json_string
 from homeworking.modules.agent.tools import (
     AgentDeps,
-    _parse_json_string,
     build_agent,
     design_materials,
 )

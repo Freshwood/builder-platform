@@ -246,16 +246,20 @@ def test_objects_keep_their_size_limit() -> None:
     height=st.integers(350, 1000),
     depth=st.integers(100, 250),
     shelves=st.integers(1, 4),
+    material=st.sampled_from(["plywood_birch_18", "glulam_spruce_18"]),
+    support=st.sampled_from(["floor", "wall"]),
 )
 def test_cloud_shelf_is_valid_for_all_parameters(
-    width: int, height: int, depth: int, shelves: int
+    width: int, height: int, depth: int, shelves: int, material: str, support: str
 ) -> None:
+    """Valid standing and wall-mounted (create_from_template applies support from the brief)."""
     r = build(
-        templates()["cloud_shelf"].design,
+        templates()["cloud_shelf"].design.model_copy(update={"support": support}),
         width_mm=width,
         height_mm=height,
         depth_mm=depth,
         shelves=shelves,
+        material=material,
     )
     assert r.key_figures["Außenmaße (B × T × H)"] == f"{width} × {depth} × {height} mm"
 

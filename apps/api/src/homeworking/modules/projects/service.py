@@ -12,7 +12,7 @@ import anyio
 from calc_engine.assembly.derive import DESIGN_PACK_ID
 from calc_engine.assembly.templates import template
 from calc_engine.engine import ENGINE_VERSION, Engine, UnknownPackError
-from construction_model.assembly import AssemblyDesign
+from construction_model.assembly import AssemblyDesign, Support, Use
 from construction_model.commands import (
     Command,
     CommandError,
@@ -141,19 +141,28 @@ class ProjectService:
         params: dict[str, ParamValue] | None = None,
         region: Region | None = None,
         untreated: bool = False,
+        use: Use | None = None,
+        support: Support | None = None,
         replace_project_id: UUID | None = None,
         actor: Actor = "user",
         trace_id: str | None = None,
     ) -> CommandOutcome:
         """Create a free-form project from a curated design template (ADR-0004).
 
-        With ``replace_project_id`` the template becomes a new version of that project instead.
+        ``untreated``, ``use`` and ``support`` adapt the template to the brief (no finish,
+        outdoor, wall mounting); the engine checks the result like any other design. With
+        ``replace_project_id`` the template becomes a new version of that project instead.
         """
         try:
             tpl = template(template_key)
         except KeyError:
             raise UnknownPackError(template_key) from None
-        design = tpl.design.model_copy(update={"finish": None}) if untreated else tpl.design
+        update: dict[str, Any] = {
+            k: v for k, v in {"use": use, "support": support}.items() if v is not None
+        }
+        if untreated:
+            update["finish"] = None
+        design = tpl.design.model_copy(update=update)
         if replace_project_id is not None:
             return await self.replan(
                 owner_id,

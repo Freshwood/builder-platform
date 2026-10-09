@@ -35,8 +35,9 @@ export type AddNote = {
  * A complete parametric design of a buildable object.
  *
  * Coordinates in mm: x = width (right), y = depth (back), z = height (up), floor z = 0.
- * Numeric fields (size, at, count, quantity, when, deg) take a number or an arithmetic
- * expression over parameters and the repeat variable, e.g. 'width_mm - 2 * 18' or
+ * Numeric fields (size, at, start, end, section, points, count, quantity, when, deg) take a
+ * number or an arithmetic expression over parameters and the repeat variable, e.g.
+ * 'width_mm - 2 * 18' or
  * 'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round,
  * floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
  */
@@ -55,8 +56,6 @@ export type AssemblyDesign = {
     summary: string;
     /**
      * Category
-     *
-     * building: house or shed with foundation, frame and roof
      */
     category?: 'object' | 'building';
     /**
@@ -505,7 +504,7 @@ export type CutLine = {
 /**
  * Cutout
  *
- * Hole through a part (window, slot, grip), in the face plane's (u, v) coordinates.
+ * Hole in (u, v): rect/ellipse by at and size, polygon by points.
  */
 export type Cutout = {
     /**
@@ -514,8 +513,6 @@ export type Cutout = {
     kind?: 'rect' | 'ellipse' | 'polygon';
     /**
      * At
-     *
-     * Minimum corner (u, v)
      */
     at?: [
         number | string,
@@ -523,8 +520,6 @@ export type Cutout = {
     ];
     /**
      * Size
-     *
-     * Extent (u, v)
      */
     size?: [
         number | string,
@@ -532,8 +527,6 @@ export type Cutout = {
     ];
     /**
      * Points
-     *
-     * polygon: (u, v)
      */
     points?: Array<[
         number | string,
@@ -827,9 +820,6 @@ export type InstructionStep = {
  * JointSpec
  *
  * Carpentry joint between all touching or overlapping instances of two parts.
- *
- * tenon: ``part`` ends on ``into`` with a tenon and peg. half_lap: both cross and overlap,
- * each notched by half. notch: ``part`` sits on ``into`` with a seat cut (rafter on plate).
  */
 export type JointSpec = {
     /**
@@ -1154,7 +1144,7 @@ export type PartSpec = {
     /**
      * Start
      *
-     * Member: centre of the start end (x, y, z)
+     * Member: centre of one end
      */
     start?: [
         number | string,
@@ -1163,8 +1153,6 @@ export type PartSpec = {
     ] | null;
     /**
      * End
-     *
-     * Member: centre of the other end
      */
     end?: [
         number | string,
@@ -1173,8 +1161,6 @@ export type PartSpec = {
     ] | null;
     /**
      * Section
-     *
-     * Member: thickness × width, if the material does not fix it
      */
     section?: [
         number | string,
@@ -1183,13 +1169,11 @@ export type PartSpec = {
     /**
      * Facing
      *
-     * Member: thickness direction (default horizontal, across the member)
+     * Member thickness direction
      */
     facing?: 'x' | 'y' | 'z' | null;
     /**
      * Cuts
-     *
-     * Member end cuts: square, level (horizontal), plumb (vertical), corner (both)
      */
     cuts?: [
         'square' | 'level' | 'plumb' | 'corner',
@@ -1620,11 +1604,8 @@ export type Severity = 'info' | 'warning' | 'critical';
 /**
  * Shape
  *
- * Outline of a part in its face plane; the engine derives the exact contour.
- *
- * The face plane is the one perpendicular to the thinnest dimension (members: length × width).
- * Local coordinates (u, v) in mm start at the minimum corner: u along the first, v along the
- * second remaining axis in x, y, z order (members: u along the length from ``start``).
+ * Outline on the face across the thinnest size; (u, v) in mm from the minimum corner, u
+ * along the first remaining axis in x, y, z order (members: along the length).
  */
 export type Shape = {
     /**
@@ -1633,26 +1614,18 @@ export type Shape = {
     kind: 'rect' | 'rounded' | 'ellipse' | 'triangle' | 'arch' | 'cloud' | 'polygon';
     /**
      * Radius
-     *
-     * rounded: corner radius
      */
     radius?: number | string | null;
     /**
      * Apex
-     *
-     * triangle: u of the apex (default centre)
      */
     apex?: number | string | null;
     /**
      * Bumps
-     *
-     * cloud: number of bumps on top
      */
     bumps?: number | null;
     /**
      * Points
-     *
-     * polygon: (u, v)
      */
     points?: Array<[
         number | string,

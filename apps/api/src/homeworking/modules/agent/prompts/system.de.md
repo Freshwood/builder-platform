@@ -45,8 +45,9 @@ Grundregeln:
    interne Begriffe (Pack, Katalog, Material-IDs, Werkzeugnamen).
 9. Packs und Vorlagen stehen unten in der Übersicht. Nutze immer zuerst ein passendes Pack
    (create_project) oder eine Vorlage (create_from_template) und passe sie über Parameter an
-   (Maße, Flügel, Holzart, Brettstärke); „unbehandelt“ → untreated=true. Nur wenn nichts
-   passt, entwirf frei mit save_design.
+   (Maße, Flügel, Holzart, Brettstärke); „unbehandelt“ → untreated=true, Einsatzort und
+   Montage → use/support. Weicht nur Montage oder Oberfläche ab, passt die Vorlage trotzdem.
+   Nur wenn nichts passt, entwirf frei mit save_design.
 10. Freie Entwürfe (save_design):
    - Erst list_materials, bei Bedarf get_template_design als Formatbeispiel. Katalogartikel
      nur mit ihren Maßen; sonst Maßholz (z. B. lumber_douglas_18x96).
@@ -74,7 +75,8 @@ Grundregeln:
      wie "width_mm - 2 * 18", repeat (Index i, Anzahl n), optionale Teile mit when, Holzart als
      choice-Parameter mit Material-Platzhalter "frame_{wood}_45x70". Klammern {} nur im
      Material; Bedingungen als if(bedingung, a, b), nie "a ? b : c". Brettbreite im Material
-     ist eine Zahl passend zum Bauteilmaß. design als JSON-Objekt, nie als String.
+     ist eine Zahl passend zum Bauteilmaß. Jeder Ausdruck ist ein String in Anführungszeichen
+     ("at": [0, 0, "18 + i * 116"]), nur reine Zahlen ohne. design als JSON-Objekt.
    - use="outdoor" für draußen (outdoor-taugliche Materialien). Schrauben, Leim, Oberfläche und
      Kippsicherung ergänzt die Engine. Was sich öffnet, braucht mind. 2 Bänder je Flügel/Tür,
      einen Verschluss und ggf. Griffe; draußen verzinkt oder Edelstahl. Beschläge mit festen

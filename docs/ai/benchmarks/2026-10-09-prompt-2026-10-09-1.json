@@ -1,0 +1,219 @@
+{
+  "prefix": {
+    "instructions": 3450,
+    "tools_total": 5632,
+    "tools": {
+      "save_design": 3517,
+      "change_project": 920,
+      "create_from_template": 427,
+      "create_project": 285,
+      "list_construction_packs": 85,
+      "get_template_design": 84,
+      "add_explanation": 79,
+      "get_current_design": 65,
+      "list_materials": 60,
+      "get_project": 60,
+      "undo_last_change": 52
+    }
+  },
+  "pack_create": {
+    "requests": 2,
+    "prefix_tokens_per_request": 9082,
+    "input_tokens": 19158,
+    "output_tokens": 408,
+    "prefix_share": 0.948,
+    "max_request_input_tokens": 10064,
+    "stable_prefix": true,
+    "per_request": [
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 36,
+        "output": 989
+      },
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 3144,
+        "output": 317
+      }
+    ],
+    "role": "fast"
+  },
+  "template_create": {
+    "requests": 2,
+    "prefix_tokens_per_request": 9082,
+    "input_tokens": 19035,
+    "output_tokens": 408,
+    "prefix_share": 0.954,
+    "max_request_input_tokens": 9947,
+    "stable_prefix": true,
+    "per_request": [
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 22,
+        "output": 987
+      },
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 2767,
+        "output": 317
+      }
+    ],
+    "role": "fast"
+  },
+  "free_design": {
+    "requests": 5,
+    "prefix_tokens_per_request": 9082,
+    "input_tokens": 59116,
+    "output_tokens": 3330,
+    "prefix_share": 0.768,
+    "max_request_input_tokens": 13297,
+    "stable_prefix": true,
+    "per_request": [
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 33,
+        "output": 59
+      },
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 7561,
+        "output": 3438
+      },
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 11229,
+        "output": 3438
+      },
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 11550,
+        "output": 3404
+      },
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 13489,
+        "output": 317
+      }
+    ],
+    "role": "designer",
+    "design_attempts": [
+      false,
+      false,
+      true
+    ]
+  },
+  "followup_1": {
+    "requests": 2,
+    "prefix_tokens_per_request": 9082,
+    "input_tokens": 20923,
+    "output_tokens": 44,
+    "prefix_share": 0.868,
+    "max_request_input_tokens": 10826,
+    "stable_prefix": true,
+    "per_request": [
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 3248,
+        "output": 86
+      },
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 5582,
+        "output": 54
+      }
+    ],
+    "role": "fast"
+  },
+  "followup_2": {
+    "requests": 2,
+    "prefix_tokens_per_request": 9082,
+    "input_tokens": 22430,
+    "output_tokens": 44,
+    "prefix_share": 0.81,
+    "max_request_input_tokens": 11580,
+    "stable_prefix": true,
+    "per_request": [
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 5657,
+        "output": 87
+      },
+      {
+        "instructions": 11041,
+        "tools": 18021,
+        "history": 7995,
+        "output": 54
+      }
+    ],
+    "role": "fast"
+  },
+  "costs_usd": {
+    "solar_only": {
+      "scenarios": {
+        "pack_create": 0.001217106,
+        "template_create": 0.001205856,
+        "free_design": 0.003903264,
+        "followup_1": 0.001245006,
+        "followup_2": 0.0013806360000000002
+      },
+      "total": 0.008951868,
+      "per_repair_round": 0.0008659259999999999
+    },
+    "luna_only": {
+      "scenarios": {
+        "pack_create": 0.0026862400000000003,
+        "template_create": 0.00266084,
+        "free_design": 0.00927896,
+        "followup_1": 0.0026026400000000002,
+        "followup_2": 0.00290404
+      },
+      "total": 0.02013272,
+      "per_repair_round": 0.0021722399999999998
+    },
+    "flash_only": {
+      "scenarios": {
+        "pack_create": 0.009767399999999999,
+        "template_create": 0.0096729,
+        "free_design": 0.03229935,
+        "followup_1": 0.0097269,
+        "followup_2": 0.01085715
+      },
+      "total": 0.07232369999999999,
+      "per_repair_round": 0.0073403999999999995
+    },
+    "routed_flash_designer": {
+      "scenarios": {
+        "pack_create": 0.001217106,
+        "template_create": 0.001205856,
+        "free_design": 0.03229935,
+        "followup_1": 0.001245006,
+        "followup_2": 0.0013806360000000002
+      },
+      "total": 0.037347953999999996,
+      "per_repair_round": 0.0073403999999999995
+    },
+    "routed_luna_designer": {
+      "scenarios": {
+        "pack_create": 0.001217106,
+        "template_create": 0.001205856,
+        "free_design": 0.00927896,
+        "followup_1": 0.001245006,
+        "followup_2": 0.0013806360000000002
+      },
+      "total": 0.014327564,
+      "per_repair_round": 0.0021722399999999998
+    }
+  }
+}

@@ -23,6 +23,10 @@ Identifier = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,39}$")]
 # cost ~2.7K characters in every LLM request that carries the design schema.
 Expr = float | str
 Vec3 = tuple[Expr, Expr, Expr]
+Use = Literal["indoor", "outdoor"]
+Support = Literal["floor", "wall"]
+USES: tuple[Use, ...] = ("indoor", "outdoor")
+SUPPORTS: tuple[Support, ...] = ("floor", "wall")
 
 
 class _Frozen(BaseModel):
@@ -187,8 +191,8 @@ class AssemblyDesign(_Frozen):
         description="One German sentence; may contain {param} placeholders",
     )
     category: Literal["object", "building"] = "object"
-    use: Literal["indoor", "outdoor"] = "indoor"
-    support: Literal["floor", "wall"] = Field(
+    use: Use = "indoor"
+    support: Support = Field(
         "floor", description="floor: stands on z=0; wall: back side (max y) is fixed to a wall"
     )
     origin: Origin = Origin.AI
