@@ -114,9 +114,15 @@ export default function Viewer3D({ solids, highlight, onHover, label }: Props) {
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
     const radius = Math.max(size.length() / 2, 1);
+    // The floor follows the theme (a light disc on a dark stage glares).
+    const floor = getComputedStyle(host).getPropertyValue("--surface-muted").trim() || "#e2e5e0";
     const ground = new THREE.Mesh(
       new THREE.CircleGeometry(radius * 1.6, 48),
-      new THREE.MeshBasicMaterial({ color: 0xe7e5e4, transparent: true, opacity: 0.6 }),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(floor),
+        transparent: true,
+        opacity: 0.6,
+      }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(center.x, box.min.y - 1, center.z);
@@ -138,7 +144,7 @@ export default function Viewer3D({ solids, highlight, onHover, label }: Props) {
         const material = mesh.material as THREE.MeshStandardMaterial;
         const active = highlight !== null && mesh.userData.position === highlight;
         const dimmed = highlight !== null && !active;
-        material.emissive.set(active ? 0x2563eb : 0x000000);
+        material.emissive.set(active ? 0x1e4e8c : 0x000000);
         material.emissiveIntensity = active ? 0.35 : 0;
         material.transparent = dimmed;
         material.opacity = dimmed ? 0.45 : 1;

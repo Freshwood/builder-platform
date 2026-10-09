@@ -1,51 +1,52 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f8f6f2;
+  /* Workshop palette: limewash grey, pine ink, folding-rule yellow, blueprint blue for the AI. */
+  --bg: #eceeea;
   --surface: #ffffff;
-  --surface-muted: #f3f0ea;
-  --border: #e6e1d8;
-  --text: #1c1917;
-  --text-muted: #5d5650;
-  --accent: #b45309;
-  --accent-strong: #8a3f06;
-  --accent-soft: #fdf0dc;
-  --ai: #4f46e5;
-  --ai-soft: #eef0ff;
-  --warning: #b45309;
-  --warning-soft: #fff7e6;
-  --success: #047857;
-  --success-soft: #e7f6ef;
-  --focus: #2563eb;
+  --surface-muted: #e2e5e0;
+  --border: #cdd2cb;
+  --text: #18201c;
+  --text-muted: #4f5a54;
+  --accent: #f2be22;
+  --accent-strong: #6b4b00;
+  --accent-soft: #fbf0c8;
+  --ai: #1e4e8c;
+  --ai-soft: #e2eaf5;
+  --warning: #9a3412;
+  --warning-soft: #fbe9e1;
+  --success: #17663f;
+  --success-soft: #e1f1e7;
+  --focus: #1e4e8c;
   --stage-from: #ffffff;
-  --stage-to: #ece7de;
+  --stage-to: #e3e6e1;
   --blueprint: #1e3a5f;
   --blueprint-line: rgb(255 255 255 / 0.07);
-  --on-accent: #ffffff;
+  --on-accent: #18201c;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f0d0c;
-    --surface: #1a1715;
-    --surface-muted: #26221f;
-    --border: #3a3430;
-    --text: #f5f3f0;
-    --text-muted: #c9c2ba;
-    --accent: #f59e0b;
-    --accent-strong: #fbbf24;
-    --accent-soft: #3a2508;
-    --ai: #a5b4fc;
-    --ai-soft: #1e1b4b;
-    --warning: #fbbf24;
-    --warning-soft: #3d2405;
-    --success: #6ee7b7;
-    --success-soft: #0b2e22;
-    --focus: #60a5fa;
-    --stage-from: #2a2522;
-    --stage-to: #161311;
+    --bg: #121614;
+    --surface: #1a1f1c;
+    --surface-muted: #242a26;
+    --border: #363e39;
+    --text: #edf0ec;
+    --text-muted: #b4bdb7;
+    --accent: #f5c542;
+    --accent-strong: #f7d372;
+    --accent-soft: #3a3110;
+    --ai: #9dbdf0;
+    --ai-soft: #15253b;
+    --warning: #fdba8c;
+    --warning-soft: #3a1a0c;
+    --success: #7fd6a4;
+    --success-soft: #0f2c1d;
+    --focus: #9dbdf0;
+    --stage-from: #252c28;
+    --stage-to: #141816;
     --blueprint: #0d1f35;
-    --on-accent: #1c1917;
+    --on-accent: #18201c;
   }
 }
 
@@ -67,8 +68,7 @@
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-blueprint: var(--blueprint);
-  --font-sans:
-    ui-sans-serif, system-ui, "Segoe UI Variable", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   --animate-fadein: fadein 0.35s ease-out both;
   --animate-pop: pop 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
 }
@@ -79,9 +79,33 @@ body {
   color: var(--text);
 }
 
-:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
+/* Headlines in a narrow, heavy cut of the same family, like a stamp on timber. */
+@layer base {
+  /* In the base layer so that utilities such as outline-none on custom-framed inputs win. */
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-stretch: 78%;
+  }
+}
+
+/* Folding-rule strip: yellow band with centimetre and half-centimetre ticks. */
+.rule {
+  background-color: var(--accent);
+  background-image:
+    repeating-linear-gradient(90deg, var(--on-accent) 0 1.5px, transparent 1.5px 40px),
+    repeating-linear-gradient(90deg, var(--on-accent) 0 1px, transparent 1px 20px),
+    repeating-linear-gradient(90deg, var(--on-accent) 0 1px, transparent 1px 4px);
+  background-size:
+    100% 55%,
+    100% 35%,
+    100% 18%;
+  background-repeat: no-repeat;
 }
 
 .drawing-frame img {

@@ -31,7 +31,7 @@ export function ProjectThumb({ id, className }: { id: string; className?: string
           className="h-full w-full object-contain p-1"
         />
       ) : (
-        <Icon name="cube" className="h-1/2 w-1/2 text-stone-400" />
+        <Icon name="cube" className="h-1/2 w-1/2 text-muted" />
       )}
     </span>
   );
@@ -45,7 +45,7 @@ export function ProjectList() {
     return (
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
         {[0, 1, 2].map((i) => (
-          <li key={i} className="h-64 animate-pulse rounded-2xl bg-surface-muted" />
+          <li key={i} className="h-64 animate-pulse rounded-lg bg-surface-muted" />
         ))}
       </ul>
     );
@@ -62,7 +62,7 @@ export function ProjectList() {
 
   if (!projects.length) {
     return (
-      <div className="rounded-3xl border border-dashed border-border px-6 py-16 text-center">
+      <div className="rounded-xl border border-dashed border-border px-6 py-16 text-center">
         <Icon name="folder" className="mx-auto h-10 w-10 text-muted" />
         <p className="mt-3 text-lg font-semibold">Noch keine Projekte</p>
         <p className="mt-1 text-muted">
@@ -89,7 +89,7 @@ export function ProjectList() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Projekte durchsuchen …"
-            className="w-full rounded-xl border border-border bg-surface py-2 pr-3 pl-9 focus:border-accent focus:outline-none"
+            className="w-full rounded-md border border-border bg-surface py-2 pr-3 pl-9 focus:border-text focus:ring-1 focus:ring-text focus:outline-none"
           />
         </label>
       )}
@@ -97,7 +97,7 @@ export function ProjectList() {
         <li>
           <Link
             href="/"
-            className="flex h-full min-h-48 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border text-muted transition hover:border-accent/50 hover:text-accent-strong"
+            className="flex h-full min-h-48 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border text-muted transition hover:border-text/40 hover:text-accent-strong"
           >
             <Icon name="plus" className="h-8 w-8" />
             <span className="font-semibold">Neues Projekt</span>
@@ -107,7 +107,7 @@ export function ProjectList() {
           <li key={project.id}>
             <Link
               href={`/projects/${project.id}`}
-              className="group block overflow-hidden rounded-2xl border border-border bg-surface transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lg"
+              className="group block overflow-hidden rounded-lg border border-border bg-surface transition hover:border-text/40"
             >
               <ProjectThumb id={project.id} className="h-40 w-full border-0 border-b" />
               <span className="block p-4">

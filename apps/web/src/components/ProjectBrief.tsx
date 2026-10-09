@@ -115,7 +115,7 @@ function Chips({
             className={clsx(
               "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm transition",
               selected(option.value)
-                ? "border-accent bg-accent-soft font-medium text-accent-strong"
+                ? "border-text bg-accent-soft font-medium"
                 : "border-border bg-surface hover:border-muted/50 hover:bg-surface-muted",
             )}
           >
@@ -129,7 +129,7 @@ function Chips({
 }
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-surface px-3 py-2 text-base placeholder:text-muted/70 focus:border-accent focus:outline-none";
+  "w-full rounded-md border border-border bg-surface px-3 py-2 text-base placeholder:text-muted/70 focus:border-text focus:ring-1 focus:ring-text focus:outline-none";
 
 function NumberInput({
   label,
@@ -319,7 +319,7 @@ export function ProjectBrief({
   return (
     <form
       onSubmit={submit}
-      className="group rounded-3xl border border-border bg-surface p-2 shadow-[0_10px_40px_-12px_rgb(0_0_0/0.18)] transition focus-within:border-accent/60 focus-within:shadow-[0_14px_50px_-12px_rgb(180_83_9/0.28)]"
+      className="group rounded-xl border border-border bg-surface p-2 transition focus-within:border-text focus-within:ring-1 focus-within:ring-text"
       data-testid="project-brief"
     >
       <label htmlFor="brief-description" className="sr-only">
@@ -348,7 +348,7 @@ export function ProjectBrief({
                 className={clsx(
                   "inline-flex items-center rounded-full border text-sm transition",
                   value
-                    ? "border-accent/50 bg-accent-soft text-accent-strong"
+                    ? "border-text/50 bg-accent-soft"
                     : active
                       ? "border-text/30 bg-surface-muted"
                       : "border-dashed border-border text-muted hover:border-muted/60 hover:text-text",
@@ -386,15 +386,14 @@ export function ProjectBrief({
 
       <div className="mt-2 flex items-center justify-between gap-3 border-t border-border/70 px-2 pt-2">
         <span className="hidden text-xs text-muted sm:block">
-          Details sind optional · Enter startet, Umschalt + Enter für neue Zeile
+          Details sind optional. Enter startet, Umschalt + Enter macht eine neue Zeile.
         </span>
         <button
           type="submit"
           disabled={!canSend}
-          className="ml-auto inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-5 font-semibold text-on-accent shadow-sm transition hover:brightness-110 active:scale-[0.97] disabled:opacity-35"
+          className="ml-auto inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 font-semibold text-on-accent transition hover:brightness-105 active:scale-[0.97] disabled:opacity-35"
         >
           Planung starten
-          <Icon name="send" className="h-4 w-4" />
         </button>
       </div>
 
@@ -403,7 +402,7 @@ export function ProjectBrief({
           id="brief-detail"
           role="region"
           aria-label={openDetail.label}
-          className="m-2 mt-3 animate-fadein rounded-2xl border border-border bg-surface-muted/60 p-4"
+          className="m-2 mt-3 animate-fadein rounded-lg border border-border bg-surface-muted/60 p-4"
         >
           <DetailPanel detail={openDetail.key} brief={brief} set={set} onKeyDown={onKeyDown} />
           <div className="mt-4 flex justify-end">

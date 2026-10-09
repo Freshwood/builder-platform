@@ -149,7 +149,7 @@ export function PlanningProgress({
   return (
     <section
       aria-labelledby="progress-heading"
-      className="blueprint relative flex h-full min-h-[28rem] flex-col overflow-hidden rounded-3xl p-6 text-white sm:p-8"
+      className="blueprint relative flex h-full min-h-[28rem] flex-col overflow-hidden rounded-xl p-6 text-white sm:p-8"
       data-testid="planning-progress"
     >
       {/* Scanning line over the blueprint */}
@@ -161,7 +161,7 @@ export function PlanningProgress({
         <h2 id="progress-heading" className="text-2xl font-semibold tracking-tight">
           Dein Projekt entsteht
         </h2>
-        <span className="font-mono text-sm tabular-nums text-sky-200" aria-label="Laufzeit">
+        <span className="text-sm tabular-nums text-sky-200" aria-label="Laufzeit">
           {formatElapsed(elapsed)}
         </span>
       </div>
@@ -184,7 +184,7 @@ export function PlanningProgress({
           <li
             key={stage.label}
             className={clsx(
-              "flex items-center gap-3 rounded-2xl border px-4 py-3 transition",
+              "flex items-center gap-3 rounded-lg border px-4 py-3 transition",
               stage.state === "running"
                 ? "border-sky-300/60 bg-white/10"
                 : stage.state === "done"
@@ -192,7 +192,7 @@ export function PlanningProgress({
                   : "border-white/10 text-white/75",
             )}
           >
-            <span className="font-mono text-xs text-sky-200">0{index + 1}</span>
+            <span className="text-xs font-semibold tabular-nums text-sky-200">0{index + 1}</span>
             <span className="flex-1 text-sm font-medium">{stage.label}</span>
             <StatusIcon
               state={stage.state}
@@ -204,14 +204,12 @@ export function PlanningProgress({
 
       {counts.size > 0 && (
         <div className="relative mt-6">
-          <h3 className="text-xs font-semibold tracking-wide text-sky-200 uppercase">
-            Bauteile im Entwurf
-          </h3>
+          <h3 className="text-sm font-semibold text-sky-200">Bauteile im Entwurf</h3>
           <ul className="mt-2 flex flex-wrap gap-1.5 text-sm">
             {[...counts].map(([name, n]) => (
               <li
                 key={name}
-                className="animate-pop rounded-lg border border-sky-200/30 bg-sky-200/10 px-2.5 py-1 font-mono text-xs"
+                className="animate-pop rounded-lg border border-sky-200/30 bg-sky-200/10 px-2.5 py-1 text-xs"
               >
                 {n > 1 ? `${n}× ` : ""}
                 {name}
@@ -222,8 +220,8 @@ export function PlanningProgress({
       )}
 
       {said && (
-        <p className="relative mt-6 max-w-2xl rounded-2xl bg-white/10 px-4 py-3 text-sm leading-relaxed">
-          <span className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-sky-200 uppercase">
+        <p className="relative mt-6 max-w-2xl rounded-lg bg-white/10 px-4 py-3 text-sm leading-relaxed">
+          <span className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-sky-200">
             <Icon name="sparkles" className="h-3.5 w-3.5" /> KI-Assistent
           </span>
           {said}
@@ -231,9 +229,7 @@ export function PlanningProgress({
       )}
 
       <div className="relative mt-auto pt-8">
-        <h3 className="text-xs font-semibold tracking-wide text-sky-200 uppercase">
-          Deine Anfrage
-        </h3>
+        <h3 className="text-sm font-semibold text-sky-200">Deine Anfrage</h3>
         <p className="mt-1 line-clamp-4 text-sm whitespace-pre-wrap text-white/80">{request}</p>
         <p className="mt-4 text-xs text-white/75">
           Vorlagen sind in Sekunden fertig. Freie Entwürfe schreibt die KI Bauteil für Bauteil;
@@ -262,7 +258,7 @@ export function PlanningStopped({
   return (
     <section
       aria-labelledby="stopped-heading"
-      className="blueprint relative flex h-full min-h-[28rem] flex-col overflow-hidden rounded-3xl p-6 text-white sm:p-8"
+      className="blueprint relative flex h-full min-h-[28rem] flex-col overflow-hidden rounded-xl p-6 text-white sm:p-8"
       data-testid="planning-stopped"
     >
       <h2 id="stopped-heading" className="text-2xl font-semibold tracking-tight">
@@ -277,8 +273,8 @@ export function PlanningStopped({
       </p>
 
       {asked && (
-        <p className="relative mt-6 max-h-[24rem] max-w-2xl overflow-y-auto rounded-2xl bg-white/10 px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap">
-          <span className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-sky-200 uppercase">
+        <p className="relative mt-6 max-h-[24rem] max-w-2xl overflow-y-auto rounded-lg bg-white/10 px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap">
+          <span className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-sky-200">
             <Icon name="sparkles" className="h-3.5 w-3.5" /> KI-Assistent
           </span>
           {reply}
@@ -290,7 +286,7 @@ export function PlanningStopped({
           <button
             type="button"
             onClick={onAnswer}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-sky-100"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-sky-100"
           >
             <Icon name="message" className="h-4 w-4" /> Im Chat antworten
           </button>
@@ -299,7 +295,7 @@ export function PlanningStopped({
           type="button"
           onClick={onRetry}
           className={clsx(
-            "inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition",
+            "inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition",
             asked
               ? "border border-white/30 hover:bg-white/10"
               : "bg-white text-slate-900 hover:bg-sky-100",
@@ -310,9 +306,7 @@ export function PlanningStopped({
       </div>
 
       <div className="relative mt-auto pt-8">
-        <h3 className="text-xs font-semibold tracking-wide text-sky-200 uppercase">
-          Deine Anfrage
-        </h3>
+        <h3 className="text-sm font-semibold text-sky-200">Deine Anfrage</h3>
         <p className="mt-1 line-clamp-4 text-sm whitespace-pre-wrap text-white/80">{request}</p>
       </div>
     </section>

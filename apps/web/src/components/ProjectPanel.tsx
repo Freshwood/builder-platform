@@ -35,28 +35,29 @@ type Result = ProjectModel["result"];
 
 function costLabel(result: Result): string {
   const priced = result.costs.user_priced ?? 0;
-  if (priced === 0) return "Material · Richtpreis";
-  return priced === result.bom.length ? "Material · deine Preise" : "Material · teils deine Preise";
+  if (priced === 0) return "Material, Richtpreis";
+  return priced === result.bom.length ? "Material, deine Preise" : "Material, teils deine Preise";
 }
 
 function CostCard({ result }: { result: Result }) {
   const used = result.costs.material_used;
   const leftover = used ? Number(result.costs.material.min) - Number(used.min) : 0;
   return (
-    <div className="rounded-2xl bg-accent px-4 py-2 text-on-accent shadow-sm">
-      <span className="block text-[11px] font-medium tracking-wide uppercase">
-        {costLabel(result)}
-      </span>
-      <span
-        className="block text-2xl leading-tight font-bold tabular-nums"
-        data-testid="material-cost"
-      >
-        {formatCost(result.costs.material)}
-      </span>
-      <span className="block text-[11px]">
-        {!isExact(result.costs.material) && formatRange(result.costs.material)}
-        {used && leftover > 0.5 && <> · verbraucht {formatCost(used)}</>}
-      </span>
+    <div className="overflow-hidden rounded-md bg-accent text-on-accent">
+      <div aria-hidden="true" className="rule h-2" />
+      <div className="px-4 pt-1 pb-2">
+        <span className="block text-xs font-medium">{costLabel(result)}</span>
+        <span
+          className="block text-3xl leading-tight font-extrabold tabular-nums [font-stretch:78%]"
+          data-testid="material-cost"
+        >
+          {formatCost(result.costs.material)}
+        </span>
+        <span className="block text-[11px]">
+          {!isExact(result.costs.material) && formatRange(result.costs.material)}
+          {used && leftover > 0.5 && <>, verbraucht {formatCost(used)}</>}
+        </span>
+      </div>
     </div>
   );
 }
@@ -98,7 +99,9 @@ function Header({
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{project.inputs.title}</h2>
+          <h2 className="text-3xl leading-tight font-extrabold sm:text-4xl">
+            {project.inputs.title}
+          </h2>
           <Pill className={trust.className} title={trust.hint} testId="trust-badge">
             {trust.label}
           </Pill>
@@ -145,11 +148,9 @@ function Figures({ result }: { result: Result }) {
       {figures.map(([key, value]) => (
         <li
           key={key}
-          className="shrink-0 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm"
+          className="shrink-0 rounded-md border border-border bg-surface px-3 py-1.5 text-sm"
         >
-          <span className="block text-[11px] font-medium tracking-wide text-muted uppercase">
-            {key}
-          </span>
+          <span className="block text-xs text-muted">{key}</span>
           <span className="font-semibold whitespace-nowrap">{value}</span>
         </li>
       ))}
@@ -166,14 +167,14 @@ function Notices({ result }: { result: Result }) {
       {warnings.map((notice) => (
         <p
           key={notice.code}
-          className="flex gap-2 rounded-xl border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning"
+          className="flex gap-2 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning"
         >
           <Icon name="warning" className="h-4 w-4 translate-y-0.5" />
           <span>{notice.message}</span>
         </p>
       ))}
       {infos.length > 0 && (
-        <details className="group rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+        <details className="group rounded-md border border-border bg-surface px-3 py-2 text-sm">
           <summary className="flex cursor-pointer list-none items-center gap-2 text-muted select-none">
             <Icon name="info" className="h-4 w-4" />
             <span className="flex-1">
@@ -245,7 +246,7 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
     <section
       aria-label="Ansicht"
       ref={stageRef}
-      className="stage relative overflow-hidden rounded-3xl border border-border shadow-sm"
+      className="stage relative overflow-hidden rounded-xl border border-border shadow-sm"
     >
       <div className="relative h-[22rem] sm:h-[30rem] lg:h-[min(62vh,40rem)]">
         {hasModel && (
@@ -312,7 +313,7 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
                 type="button"
                 aria-pressed={showParts}
                 onClick={() => setShowParts(!showParts)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/85 px-3 py-1.5 text-sm font-medium shadow-sm backdrop-blur hover:bg-surface"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface/85 px-3 py-1.5 text-sm font-medium shadow-sm backdrop-blur hover:bg-surface"
               >
                 <Icon name="layers" className="h-4 w-4" />
                 Bauteile
@@ -324,7 +325,7 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
               onClick={fullscreen}
               aria-label="Vollbild"
               title="Vollbild"
-              className="flex h-[34px] w-[34px] items-center justify-center rounded-xl border border-border bg-surface/85 shadow-sm backdrop-blur hover:bg-surface"
+              className="flex h-[34px] w-[34px] items-center justify-center rounded-md border border-border bg-surface/85 shadow-sm backdrop-blur hover:bg-surface"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -345,7 +346,7 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
         {mode === "model" && showParts && rows.length > 0 && (
           <ol
             aria-label="Positionen"
-            className="scrollbar-thin absolute top-14 right-3 hidden max-h-[calc(100%-4.5rem)] w-60 animate-fadein space-y-0.5 overflow-y-auto rounded-2xl border border-border bg-surface/90 p-1.5 shadow-lg backdrop-blur sm:block"
+            className="scrollbar-thin absolute top-14 right-3 hidden max-h-[calc(100%-4.5rem)] w-60 animate-fadein space-y-0.5 overflow-y-auto rounded-lg border border-border bg-surface/90 p-1.5 shadow-lg backdrop-blur sm:block"
           >
             {rows.map((row) => (
               <li key={row.number}>
@@ -356,7 +357,7 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
                   onFocus={() => setHighlight(row.number)}
                   onBlur={() => setHighlight(null)}
                   className={clsx(
-                    "flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm transition",
+                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition",
                     highlight === row.number ? "bg-accent-soft" : "hover:bg-surface-muted",
                   )}
                 >
@@ -376,8 +377,8 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
         {mode === "model" ? (
           <p className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-surface/85 px-3 py-1 text-xs text-muted shadow-sm backdrop-blur">
             {active
-              ? `Pos. ${active.number} · ${active.name} · ${active.material}`
-              : "Ziehen zum Drehen · Scrollen zum Zoomen"}
+              ? `Pos. ${active.number}: ${active.name}, ${active.material}`
+              : "Ziehen dreht, Scrollen zoomt"}
           </p>
         ) : (
           <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
@@ -389,7 +390,7 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
                     aria-pressed={index === drawing}
                     onClick={() => setDrawing(index)}
                     className={clsx(
-                      "rounded-xl border px-3 py-1.5 text-xs font-medium shadow-sm transition",
+                      "rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm transition",
                       index === drawing
                         ? "border-text bg-text text-bg"
                         : "border-border bg-surface/90 text-muted hover:text-text",
@@ -405,7 +406,7 @@ function Stage({ project, version }: { project: ProjectModel; version: string })
                 href={`/api/projects/${project.id}/drawings/${current.view}.svg?v=${version}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden shrink-0 rounded-xl border border-border bg-surface/90 px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-surface sm:inline-block"
+                className="hidden shrink-0 rounded-md border border-border bg-surface/90 px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-surface sm:inline-block"
               >
                 Groß öffnen<span className="sr-only"> (öffnet neues Fenster)</span>
               </a>
@@ -426,10 +427,7 @@ function Variants({ project }: { project: ProjectModel }) {
   const cheapest = Math.min(...variants.map((v) => Number(v.material_cost.min)));
   return (
     <section aria-labelledby="variants-heading">
-      <h3
-        id="variants-heading"
-        className="mb-2 text-sm font-semibold tracking-wide text-muted uppercase"
-      >
+      <h3 id="variants-heading" className="mb-2 text-xl font-bold">
         Varianten
       </h3>
       <ul className="scrollbar-thin -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1">
@@ -443,10 +441,10 @@ function Variants({ project }: { project: ProjectModel }) {
                 onClick={() => command.mutate({ type: "select_variant", variant_key: variant.key })}
                 aria-label={`Variante ${variant.name} wählen`}
                 className={clsx(
-                  "flex h-full w-full flex-col rounded-2xl border p-3 text-left transition",
+                  "flex h-full w-full flex-col rounded-lg border p-3 text-left transition",
                   variant.is_selected
-                    ? "border-accent bg-accent-soft/60 ring-1 ring-accent"
-                    : "border-border bg-surface hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md",
+                    ? "border-text bg-accent-soft ring-1 ring-text"
+                    : "border-border bg-surface hover:border-text/40",
                 )}
               >
                 <span className="flex items-center justify-between gap-2">
@@ -502,7 +500,7 @@ function Tabs({
     <div
       role="tablist"
       aria-label="Projektdetails"
-      className="scrollbar-thin flex gap-1 overflow-x-auto rounded-2xl bg-surface-muted p-1"
+      className="scrollbar-thin flex gap-1 overflow-x-auto rounded-lg bg-surface-muted p-1"
     >
       {tabs.map((tab) => (
         <button
@@ -524,7 +522,7 @@ function Tabs({
             }
           }}
           className={clsx(
-            "inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition",
+            "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition",
             active === tab.key ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text",
           )}
         >
@@ -570,10 +568,10 @@ function VersionBanner({
   return (
     <div
       role="status"
-      className="sticky top-3 z-20 flex flex-wrap items-center gap-3 rounded-2xl border border-accent/40 bg-accent-soft/95 px-4 py-3 text-sm shadow-lg backdrop-blur"
+      className="sticky top-3 z-20 flex flex-wrap items-center gap-3 rounded-lg border border-accent bg-accent-soft/95 px-4 py-3 text-sm shadow-lg backdrop-blur"
       data-testid="version-banner"
     >
-      <Icon name="layers" className="h-4 w-4 text-accent" />
+      <Icon name="layers" className="h-4 w-4 text-accent-strong" />
       <span className="flex-1">
         Du siehst <strong>Version {seq}</strong> – nur zum Ansehen. Wiederherstellen legt sie als
         neue Version an; nichts geht verloren.
@@ -608,8 +606,8 @@ export const ProjectPanel = memo(function ProjectPanel({ projectId }: { projectI
   if (isLoading) {
     return (
       <div className="space-y-4" aria-busy="true">
-        <div className="h-16 animate-pulse rounded-2xl bg-surface-muted" />
-        <div className="h-[30rem] animate-pulse rounded-3xl bg-surface-muted" />
+        <div className="h-16 animate-pulse rounded-lg bg-surface-muted" />
+        <div className="h-[30rem] animate-pulse rounded-xl bg-surface-muted" />
         <p className="sr-only">Projekt wird geladen …</p>
       </div>
     );
@@ -662,7 +660,7 @@ export const ProjectPanel = memo(function ProjectPanel({ projectId }: { projectI
 
       <section
         aria-label="Details"
-        className="rounded-3xl border border-border bg-surface p-3 shadow-sm sm:p-4"
+        className="rounded-xl border border-border bg-surface p-3 shadow-sm sm:p-4"
       >
         <Tabs tabs={tabs} active={active} onChange={setTab} />
 
@@ -702,7 +700,7 @@ export const ProjectPanel = memo(function ProjectPanel({ projectId }: { projectI
         <span>
           Planungshilfe – kein Standsicherheitsnachweis. Ob ein Vorhaben genehmigungspflichtig ist,
           regelt die Landesbauordnung; verbindlich ist die Auskunft des Bauamts. Engine{" "}
-          {result.provenance.engine_version} · Pack {result.provenance.pack_id}{" "}
+          {result.provenance.engine_version}, Pack {result.provenance.pack_id}{" "}
           {result.provenance.pack_version}
         </span>
       </p>

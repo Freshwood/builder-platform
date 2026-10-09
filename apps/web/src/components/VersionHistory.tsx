@@ -28,7 +28,7 @@ export function VersionHistory({
   return (
     <section
       aria-labelledby="versions-heading"
-      className="rounded-3xl border border-border bg-surface p-4 shadow-sm"
+      className="rounded-xl border border-border bg-surface p-4 shadow-sm"
       data-testid="version-history"
     >
       <div className="flex items-baseline justify-between gap-2">
@@ -57,13 +57,13 @@ export function VersionHistory({
                 onClick={() => onSelect(entry.current ? null : entry.seq)}
                 aria-current={active ? "true" : undefined}
                 className={clsx(
-                  "flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left text-sm transition",
-                  active ? "bg-accent-soft ring-1 ring-accent/40" : "hover:bg-surface-muted",
+                  "flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition",
+                  active ? "bg-accent-soft ring-1 ring-text/40" : "hover:bg-surface-muted",
                 )}
               >
                 <span
                   className={clsx(
-                    "mt-0.5 shrink-0 rounded-md px-1.5 font-mono text-xs",
+                    "mt-0.5 shrink-0 rounded-md px-1.5 text-xs",
                     entry.construction ? "bg-text text-bg" : "bg-surface-muted text-muted",
                   )}
                 >

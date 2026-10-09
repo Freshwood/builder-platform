@@ -154,7 +154,7 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
         aria-label="Bereich"
         className="fixed inset-x-0 bottom-0 z-30 flex justify-center border-t border-border bg-surface/90 px-4 py-2.5 backdrop-blur lg:hidden"
       >
-        <div className="inline-flex rounded-2xl bg-surface-muted p-1">
+        <div className="inline-flex rounded-lg bg-surface-muted p-1">
           {(
             [
               { key: "chat", label: "Chat", icon: "message" },
@@ -167,7 +167,7 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
               aria-pressed={mobileView === item.key}
               onClick={() => setMobileView(item.key)}
               className={clsx(
-                "inline-flex items-center gap-1.5 rounded-xl px-5 py-1.5 text-sm font-medium transition",
+                "inline-flex items-center gap-1.5 rounded-md px-5 py-1.5 text-sm font-medium transition",
                 mobileView === item.key ? "bg-surface shadow-sm" : "text-muted",
               )}
             >

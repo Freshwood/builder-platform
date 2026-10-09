@@ -46,7 +46,7 @@ function PriceEditor({ line, projectId }: { line: BomLine; projectId: string }) 
         aria-invalid={error}
         className={clsx(
           "w-24 rounded-md border bg-surface px-2 py-1 text-right tabular-nums",
-          error ? "border-warning" : own ? "border-accent" : "border-border",
+          error ? "border-warning" : own ? "border-accent-strong" : "border-border",
         )}
       />
       {own && (
@@ -97,7 +97,7 @@ export function BomTable({
   const savings = used ? Number(costs.material.min) - Number(used.min) : 0;
   return (
     <>
-      <div className="mb-3 rounded-xl border border-border bg-surface-muted/60 px-3 py-2 text-sm">
+      <div className="mb-3 rounded-md border border-border bg-surface-muted/60 px-3 py-2 text-sm">
         <p className="font-medium">Woher kommen die Preise?</p>
         <p className="mt-1 text-muted">
           Ohne deine Angabe ist jeder Preis ein <strong>Richtpreis</strong>: die Spanne typischer
@@ -114,7 +114,7 @@ export function BomTable({
       <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Materialliste">
         <table className="w-full text-left text-sm" data-testid="bom">
           <thead>
-            <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+            <tr className="border-b border-border text-xs font-medium text-muted">
               <th scope="col" className="py-2 pr-2">
                 Material
               </th>

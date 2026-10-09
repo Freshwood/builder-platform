@@ -22,7 +22,7 @@ const ART: Record<string, ReactNode> = {
     <>
       <path d="M20 4h24v42H20z" />
       <path d="M20 14h24M20 24h24M20 34h24" />
-      <path d="M24 8v6M27 9v5M36 18v6M39 18v6M25 28v6" className="text-accent" />
+      <path d="M24 8v6M27 9v5M36 18v6M39 18v6M25 28v6" className="text-accent-strong" />
     </>
   ),
   bench: (
@@ -35,13 +35,13 @@ const ART: Record<string, ReactNode> = {
     <>
       <path d="M12 6h18v38H12zM34 6h18v38H34z" />
       <path d="M16 6v38M21 6v38M26 6v38M38 6v38M43 6v38M48 6v38" className="opacity-50" />
-      <path d="M12 14h18M34 14h18M12 36h18M34 36h18" className="text-accent" />
+      <path d="M12 14h18M34 14h18M12 36h18M34 36h18" className="text-accent-strong" />
     </>
   ),
   workbench: (
     <>
       <path d="M4 14h56v6H4zM8 20v24M56 20v24M8 34h48" />
-      <path d="M40 8h12v6H40z" className="text-accent" />
+      <path d="M40 8h12v6H40z" className="text-accent-strong" />
     </>
   ),
   herbs: (
@@ -59,7 +59,7 @@ export const IDEAS: { key: string; title: string; hint: string; brief: Partial<B
   {
     key: "bed",
     title: "Hochbeet",
-    hint: "Lärche · 2 × 1 m",
+    hint: "Lärche, 2 × 1 m",
     brief: {
       description: "Ein Hochbeet für Gemüse an der Terrasse.",
       location: "outdoor",
@@ -73,7 +73,7 @@ export const IDEAS: { key: string; title: string; hint: string; brief: Partial<B
   {
     key: "shelf",
     title: "Bücherregal",
-    hint: "5 Böden · innen",
+    hint: "5 Böden, innen",
     brief: {
       description: "Ein Bücherregal mit 5 Böden für das Arbeitszimmer.",
       location: "indoor",
@@ -87,7 +87,7 @@ export const IDEAS: { key: string; title: string; hint: string; brief: Partial<B
   {
     key: "bench",
     title: "Gartenbank",
-    hint: "1,6 m · mit Lehne",
+    hint: "1,6 m mit Lehne",
     brief: {
       description: "Eine Gartenbank 1,6 m lang mit Rückenlehne.",
       location: "outdoor",
@@ -98,7 +98,7 @@ export const IDEAS: { key: string; title: string; hint: string; brief: Partial<B
   {
     key: "shutter",
     title: "Fensterläden",
-    hint: "zweiflügelig · Douglasie",
+    hint: "zweiflügelig, Douglasie",
     brief: {
       description: "Zwei Fensterläden aus Brettern für ein Fenster, zweiflügelig.",
       location: "outdoor",
@@ -113,7 +113,7 @@ export const IDEAS: { key: string; title: string; hint: string; brief: Partial<B
   {
     key: "workbench",
     title: "Werkbank",
-    hint: "stabil · mit Ablage",
+    hint: "stabil, mit Ablage",
     brief: {
       description: "Eine stabile Werkbank für die Garage mit Ablageboden.",
       location: "indoor",
@@ -126,7 +126,7 @@ export const IDEAS: { key: string; title: string; hint: string; brief: Partial<B
   {
     key: "herbs",
     title: "Kräuterregal",
-    hint: "Balkon · 3 Ebenen",
+    hint: "Balkon, 3 Ebenen",
     brief: {
       description: "Ein Kräuterregal für den Balkon mit drei schrägen Ebenen.",
       location: "covered",
@@ -142,7 +142,7 @@ function IdeaCard({ idea, onPick }: { idea: (typeof IDEAS)[number]; onPick: () =
     <button
       type="button"
       onClick={onPick}
-      className="group flex flex-col items-start rounded-2xl border border-border bg-surface p-3 text-left transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lg active:translate-y-0"
+      className="group flex flex-col items-start rounded-lg border border-border bg-surface p-3 text-left transition hover:border-text/40"
     >
       <svg
         viewBox="0 0 64 48"
@@ -180,6 +180,24 @@ const STEPS: { icon: IconName; title: string; text: string }[] = [
   },
 ];
 
+/**
+ * The one loud element of the page: a folding-rule strip under the headline, numbered every
+ * 10 cm like the real thing. Purely decorative.
+ */
+function MeasuringRule() {
+  return (
+    <div aria-hidden="true" className="rule relative mt-6 h-7 overflow-hidden rounded-[3px]">
+      <span className="absolute inset-x-0 bottom-0.5 flex text-[11px] leading-none font-semibold text-on-accent tabular-nums">
+        {Array.from({ length: 24 }, (_, i) => (
+          <span key={i} className="w-[40px] shrink-0 pl-[3px]">
+            {i > 0 ? i * 10 : ""}
+          </span>
+        ))}
+      </span>
+    </div>
+  );
+}
+
 function RecentProjects() {
   const { data } = useProjects();
   const recent = (data ?? [])
@@ -190,10 +208,7 @@ function RecentProjects() {
   return (
     <section aria-labelledby="recent-heading" className="mt-12">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2
-          id="recent-heading"
-          className="text-sm font-semibold uppercase tracking-wide text-muted"
-        >
+        <h2 id="recent-heading" className="text-xl font-bold">
           Weiter planen
         </h2>
         <Link href="/projects" className="text-sm font-medium text-accent-strong hover:underline">
@@ -205,9 +220,9 @@ function RecentProjects() {
           <li key={project.id}>
             <Link
               href={`/projects/${project.id}`}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-2 pr-3 transition hover:border-accent/40 hover:shadow-md"
+              className="flex items-center gap-3 rounded-lg border border-border bg-surface p-2 pr-3 transition hover:border-text/40"
             >
-              <ProjectThumb id={project.id} className="h-14 w-14 shrink-0 rounded-xl" />
+              <ProjectThumb id={project.id} className="h-14 w-14 shrink-0 rounded-md" />
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{project.title}</span>
                 {project.updated_at && (
@@ -236,31 +251,21 @@ export function Landing({
   busy: boolean;
 }) {
   return (
-    <div className="relative mx-auto max-w-3xl px-4 pt-10 pb-16 sm:pt-20">
-      {/* Soft warm glow behind the prompt */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 mx-auto h-80 max-w-2xl rounded-full bg-[radial-gradient(closest-side,var(--accent-soft),transparent)] opacity-90 blur-2xl"
-      />
-      <p className="mb-4 flex justify-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-muted backdrop-blur">
-          <Icon name="sparkles" className="h-3.5 w-3.5 text-ai" />
-          KI-Planung · exakt gerechnet
-        </span>
-      </p>
-      <h1 className="text-center text-4xl font-bold tracking-tight text-balance sm:text-5xl">
+    <div className="mx-auto max-w-3xl px-4 pt-10 pb-16 sm:pt-16">
+      <h1 className="text-5xl leading-[0.95] font-extrabold text-balance [font-stretch:68%] sm:text-7xl">
         Was möchtest du bauen oder reparieren?
       </h1>
-      <p className="mx-auto mt-3 max-w-xl text-center text-lg text-muted text-balance">
+      <MeasuringRule />
+      <p className="mt-5 max-w-xl text-lg text-muted">
         Beschreib es in einem Satz. Du bekommst 3D-Modell, Zeichnungen, Materialliste, Kosten und
-        eine Bauanleitung.
+        eine Bauanleitung, auf den Millimeter gerechnet.
       </p>
 
       <div className="mt-8">
         <ProjectBrief brief={brief} onChange={onBriefChange} onSubmit={onSubmit} busy={busy} />
         <p
           role="note"
-          className="mt-3 flex items-start justify-center gap-1.5 text-center text-xs text-muted"
+          className="mt-3 flex items-start gap-1.5 text-xs text-muted"
           data-testid="ai-disclosure"
         >
           <Icon name="sparkles" className="mt-px h-3.5 w-3.5 text-ai" />
@@ -272,10 +277,7 @@ export function Landing({
       </div>
 
       <section aria-labelledby="ideas-heading" className="mt-10">
-        <h2
-          id="ideas-heading"
-          className="mb-3 text-center text-sm font-semibold uppercase tracking-wide text-muted"
-        >
+        <h2 id="ideas-heading" className="mb-3 text-xl font-bold">
           Oder starte mit einer Idee
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -301,7 +303,7 @@ export function Landing({
         <ol className="grid gap-4 sm:grid-cols-3">
           {STEPS.map((step, index) => (
             <li key={step.title} className="flex gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-surface-muted text-accent-strong">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-muted">
                 <Icon name={step.icon} />
               </span>
               <span>
@@ -314,7 +316,7 @@ export function Landing({
             </li>
           ))}
         </ol>
-        <p className="mt-6 text-center text-xs text-muted">
+        <p className="mt-6 text-xs text-muted">
           Tragende Bauwerke (Carport, Dach, Balkon) plant Homeworking nicht. Freie Entwürfe brauchen
           ein angebundenes Sprachmodell.
         </p>

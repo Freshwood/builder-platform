@@ -36,14 +36,14 @@ function ProjectCard({ output }: { output: ToolOutput }) {
   const project = output.project;
   if (!project?.summary) return null;
   return (
-    <div className="mt-2 flex items-center gap-3 rounded-2xl border border-border bg-surface px-3 py-2 text-sm shadow-sm">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
+    <div className="mt-2 flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm shadow-sm">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent-strong">
         <Icon name="cube" className="h-4 w-4" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-xs font-semibold text-accent-strong">
           {ACTION_LABEL[output.action ?? ""] ?? "Projekt"}
-          {project.trust === "ai_draft" && " · KI-Entwurf"}
+          {project.trust === "ai_draft" && ", KI-Entwurf"}
         </span>
         <span className="block truncate font-medium">{project.summary}</span>
       </span>
@@ -70,7 +70,7 @@ function WorkingIndicator({ startedAt, waiting }: { startedAt: number | null; wa
         ))}
       </span>
       {waiting ? "liest deine Angaben" : "arbeitet"}
-      <span className="font-mono text-xs tabular-nums">{formatElapsed(elapsed)}</span>
+      <span className="text-xs tabular-nums">{formatElapsed(elapsed)}</span>
     </li>
   );
 }
@@ -79,7 +79,7 @@ function Avatar() {
   return (
     <span
       aria-hidden="true"
-      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-ai to-fuchsia-500 text-white"
+      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-ai text-surface"
     >
       <Icon name="sparkles" className="h-4 w-4" />
     </span>
@@ -114,7 +114,7 @@ const MessageItem = memo(function MessageItem({
   if (isUser) {
     return (
       <li className="flex animate-fadein justify-end">
-        <p className="max-w-[88%] rounded-3xl rounded-br-md bg-surface-muted px-4 py-2.5 whitespace-pre-wrap">
+        <p className="max-w-[88%] rounded-xl rounded-br-sm bg-surface-muted px-4 py-2.5 whitespace-pre-wrap">
           {blocks[0]?.kind === "text" ? blocks[0].text.trim() : ""}
         </p>
       </li>
@@ -195,7 +195,7 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
             Planungsassistent
           </h2>
           <p role="note" className="text-xs text-muted" data-testid="ai-disclosure">
-            KI-Assistent · Maße, Mengen, Kosten und Zeichnungen rechnet Homeworking regelbasiert.
+            KI-Assistent. Maße, Mengen, Kosten und Zeichnungen rechnet Homeworking regelbasiert.
           </p>
         </div>
       </div>
@@ -222,7 +222,7 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
         {error && (
           <div
             role="alert"
-            className="mb-2 flex items-center gap-2 rounded-xl border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning"
+            className="mb-2 flex items-center gap-2 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning"
           >
             <Icon name="warning" className="h-4 w-4" />
             <span className="flex-1" title={error.message}>
@@ -248,7 +248,7 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
                 <button
                   type="button"
                   onClick={() => send(action)}
-                  className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium whitespace-nowrap text-muted transition hover:border-accent/50 hover:text-text"
+                  className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium whitespace-nowrap text-muted transition hover:border-text/40 hover:text-text"
                 >
                   {action}
                 </button>
@@ -263,7 +263,7 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
           </label>
           <div
             className={clsx(
-              "flex items-end gap-2 rounded-3xl border border-border bg-surface py-1.5 pr-1.5 pl-4 shadow-sm transition focus-within:border-accent/60",
+              "flex items-end gap-2 rounded-xl border border-border bg-surface py-1.5 pr-1.5 pl-4 shadow-sm transition focus-within:border-text focus-within:ring-1 focus-within:ring-text",
             )}
           >
             <AutoTextarea

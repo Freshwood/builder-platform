@@ -85,7 +85,7 @@ export const TRUST: Record<string, { label: string; hint: string; className: str
   template: {
     label: "Vorlage",
     hint: "Konstruktion aus der Homeworking-Vorlagensammlung",
-    className: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
+    className: "bg-surface-muted text-text",
   },
   ai_draft: {
     label: "KI-Entwurf",
@@ -121,9 +121,9 @@ export function Pill({
 
 export const buttonClass = {
   primary:
-    "inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2 font-semibold text-on-accent shadow-sm transition hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40",
+    "inline-flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2 font-semibold text-on-accent transition hover:brightness-105 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40",
   secondary:
-    "inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium transition hover:bg-surface-muted active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40",
+    "inline-flex items-center justify-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium transition hover:bg-surface-muted active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40",
   ghost:
     "inline-flex items-center justify-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-muted transition hover:bg-surface-muted hover:text-text disabled:pointer-events-none disabled:opacity-40",
 };
@@ -147,7 +147,7 @@ export function Segmented<T extends string>({
       role="group"
       aria-label={label}
       className={clsx(
-        "inline-flex rounded-xl border border-border bg-surface/85 p-0.5 shadow-sm backdrop-blur",
+        "inline-flex rounded-md border border-border bg-surface/85 p-0.5 shadow-sm backdrop-blur",
         className,
       )}
     >
@@ -158,7 +158,7 @@ export function Segmented<T extends string>({
           aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
           className={clsx(
-            "inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium transition",
+            "inline-flex items-center gap-1.5 rounded-[4px] px-3 py-1.5 text-sm font-medium transition",
             option.value === value ? "bg-text text-bg shadow-sm" : "text-muted hover:text-text",
           )}
         >

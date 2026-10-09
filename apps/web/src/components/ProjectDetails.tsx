@@ -133,7 +133,7 @@ export function ParamEditor({ project }: { project: ProjectModel }) {
                     }}
                     className={clsx(
                       "w-28 rounded-lg border bg-surface py-1 pr-9 pl-2 text-right font-medium tabular-nums",
-                      dirty ? "border-accent" : "border-border",
+                      dirty ? "border-accent-strong" : "border-border",
                     )}
                   />
                   {unit && (
@@ -183,7 +183,7 @@ export function ParamEditor({ project }: { project: ProjectModel }) {
                   className={clsx(
                     "rounded-full border px-3 py-1.5 text-sm transition",
                     active
-                      ? "border-accent bg-accent-soft font-medium text-accent-strong"
+                      ? "border-text bg-accent-soft font-medium"
                       : "border-border hover:bg-surface-muted",
                   )}
                 >
@@ -206,19 +206,19 @@ export function ParamEditor({ project }: { project: ProjectModel }) {
                 role="switch"
                 aria-checked={on}
                 onClick={() => set(spec.name, !on, true)}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5 text-left text-sm hover:bg-surface-muted"
+                className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2.5 text-left text-sm hover:bg-surface-muted"
               >
                 {spec.label}
                 <span
                   aria-hidden="true"
                   className={clsx(
                     "relative h-6 w-10 shrink-0 rounded-full transition",
-                    on ? "bg-accent" : "bg-border",
+                    on ? "bg-text" : "bg-border",
                   )}
                 >
                   <span
                     className={clsx(
-                      "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
+                      "absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition-all",
                       on ? "left-[18px]" : "left-0.5",
                     )}
                   />
@@ -286,7 +286,7 @@ export function CutList({ result }: { result: Result }) {
       <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Zuschnittliste">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-border text-xs tracking-wide text-muted uppercase">
+            <tr className="border-b border-border text-xs font-medium text-muted">
               <th scope="col" className="py-2">
                 Pos.
               </th>
@@ -379,7 +379,7 @@ export function BuildSteps({ result, projectId }: { result: Result; projectId: s
   const next = steps.find((s) => !done.has(s.number));
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-surface-muted/70 p-4">
+      <div className="flex flex-wrap items-center gap-4 rounded-lg bg-surface-muted/70 p-4">
         <div className="min-w-48 flex-1">
           <p className="text-sm font-semibold">
             {count === steps.length && steps.length > 0
@@ -422,8 +422,8 @@ export function BuildSteps({ result, projectId }: { result: Result; projectId: s
             <li
               key={step.number}
               className={clsx(
-                "flex gap-3 rounded-2xl border p-4 transition",
-                current ? "border-accent/50 bg-accent-soft/40 shadow-sm" : "border-border",
+                "flex gap-3 rounded-lg border p-4 transition",
+                current ? "border-text/40 bg-accent-soft/50" : "border-border",
                 checked && "opacity-60",
               )}
             >
@@ -438,7 +438,7 @@ export function BuildSteps({ result, projectId }: { result: Result; projectId: s
                   checked
                     ? "border-success bg-success text-white dark:text-black"
                     : current
-                      ? "border-accent text-accent-strong"
+                      ? "border-text text-text"
                       : "border-border text-muted hover:border-muted",
                 )}
               >
@@ -481,7 +481,7 @@ export function Notes({ notes }: { notes: NonNullable<ProjectModel["inputs"]["no
   return (
     <div className="space-y-3">
       {notes.map((note) => (
-        <figure key={note.id} className="rounded-2xl border border-ai/25 bg-ai-soft/50 p-4 text-sm">
+        <figure key={note.id} className="rounded-lg border border-ai/25 bg-ai-soft/50 p-4 text-sm">
           {note.origin === "ai" && (
             <figcaption className="mb-1.5 inline-flex items-center gap-1 text-xs font-bold text-ai">
               <Icon name="sparkles" className="h-3.5 w-3.5" /> KI-generiert

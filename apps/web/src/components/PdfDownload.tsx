@@ -72,13 +72,13 @@ export function PdfDownload({ projectId, version }: { projectId: string; version
         onClick={onClick}
         aria-busy={state === "loading"}
         aria-describedby={state === "error" ? "pdf-error" : undefined}
-        className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white aria-busy:opacity-80 dark:text-black"
+        className="inline-flex items-center gap-2 rounded-md bg-text px-3 py-1.5 text-sm font-medium text-bg transition hover:opacity-90 aria-busy:opacity-80"
         data-testid="pdf-download"
       >
         {state === "loading" && (
           <span
             aria-hidden="true"
-            className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-black/30 dark:border-t-black"
+            className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
           />
         )}
         PDF herunterladen
