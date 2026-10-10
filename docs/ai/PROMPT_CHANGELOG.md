@@ -10,6 +10,35 @@ Each entry names the version, the fingerprint, what changed and why, and the eff
 offline token benchmark (`task bench`). Every stored agent run carries `prompt_version` and
 `prompt_fingerprint`, so a result can be traced back to exactly one entry.
 
+## 2026-10-10.1 (fingerprint `302126348b5f7ffc`)
+
+Bug report "Could not create a simple project" (`docs/problems/bug.md`): the user wanted a
+podium whose top is either boards or a panel. The model used a `choice` parameter
+`surface_type` in `when` and got `Unbekannter Name 'surface_type'`. It then rephrased the same
+call eight times ("Vielleicht muss ich die when-Bedingung als if(...) schreiben?") without ever
+changing the approach, and the turn ended unresolved.
+
+The engine could not do what the prompt implied. `_number_env` put only numeric parameters into
+the expression environment, and the evaluator accepted only bool/number constants, so a
+`choice` parameter was invisible to `when` no matter how it was written. The prompt mentioned
+`when` but never said which parameters were legal there, so the model could only guess.
+
+- Rule 10: expressions compute with numbers only; a `choice` parameter is text and may be
+  compared with `==`/`!=` in `when`, never computed with and never ordered with `<`/`>`. A
+  choice value as a measurement is rejected – use a `count` parameter.
+- Not visible to the model, but the actual fix: `assembly/expr.py` evaluates to `float | str`,
+  `assembly/resolve.py` builds the environment from all parameters. Text may only be compared
+  for equality, mixed text/number comparisons and arithmetic on text raise a message that names
+  the mistake. Both cases from the bug report are regression tests in
+  `packages/calc-engine/tests/test_assembly.py`.
+
+Offline benchmark (`2026-10-09-prompt-2026-10-09-1.md` → `2026-10-10-prompt-2026-10-10-1.md`):
+static prefix 9,082 → 9,163 tokens per request (+81, +0.9 %, instructions only; tool
+definitions unchanged at 5,632), input over all five scenarios 140,662 → 141,707 (+0.7 %).
+Accepted: the reported turn spent eight repair rounds on an error that no phrasing could fix,
+so the prefix increase pays for itself within a handful of such turns. All scenarios stay
+within the existing `test_token_budget.py` limits (unchanged).
+
 ## 2026-10-09.1 (fingerprint `95953ba37c29e83d`)
 
 Bug report "Construction not working" (Tonie cloud shelf, no progress in a whole turn): the

@@ -3,6 +3,10 @@
 Only a tiny, side-effect free subset of Python syntax is accepted (numbers, names, arithmetic,
 comparisons, boolean logic and a few functions). Anything else is rejected with a message that
 the LLM can act on.
+
+Expressions evaluate to a number or, for ``choice`` parameters, to text. Text exists only so that
+conditions can ask which option is set ("surface_type == 'boards'"); it can never be used as a
+measurement, ``evaluate_number`` rejects that.
 """
 
 from __future__ import annotations
@@ -15,6 +19,8 @@ from collections.abc import Callable, Mapping
 from functools import cache
 
 Number = float
+#: What an expression may evaluate to: a measurement, or the text of a ``choice`` parameter.
+Scalar = float | str
 
 MAX_LENGTH = 300
 
@@ -26,7 +32,7 @@ _BINARY: dict[type[ast.operator], Callable[[float, float], float]] = {
     ast.FloorDiv: operator.floordiv,
     ast.Mod: operator.mod,
 }
-_COMPARE: dict[type[ast.cmpop], Callable[[float, float], bool]] = {
+_COMPARE: dict[type[ast.cmpop], Callable[[Scalar, Scalar], bool]] = {
     ast.Lt: operator.lt,
     ast.LtE: operator.le,
     ast.Gt: operator.gt,
@@ -69,7 +75,7 @@ def _parse(source: str) -> ast.expr:
         raise ExprError(f"Ungültiger Ausdruck '{source}'{hint}") from None
 
 
-def evaluate(value: float | int | str, env: Mapping[str, float]) -> float:
+def evaluate(value: float | int | str, env: Mapping[str, Scalar]) -> Scalar:
     """Evaluate a number or expression string against ``env`` (parameter values)."""
     if isinstance(value, bool):
         return float(value)
@@ -78,12 +84,30 @@ def evaluate(value: float | int | str, env: Mapping[str, float]) -> float:
     return _eval(_parse(value.strip()), env, value)
 
 
-def _eval(node: ast.expr, env: Mapping[str, float], source: str) -> float:
+def evaluate_number(value: float | int | str, env: Mapping[str, Scalar]) -> float:
+    """Like :func:`evaluate`, but for places that need a measurement (sizes, counts, angles)."""
+    result = evaluate(value, env)
+    if not isinstance(result, float):
+        raise ExprError(
+            f"'{result}' ist eine Auswahl, keine Zahl – für Maße einen anderen Parameter "
+            f"oder den Auswahlwert als Material-Platzhalter {{...}} verwenden"
+        )
+    return result
+
+
+def is_truthy(value: Scalar) -> bool:
+    """Truthiness of an expression result: numbers as usual, any non-empty text is true."""
+    return bool(value)
+
+
+def _eval(node: ast.expr, env: Mapping[str, Scalar], source: str) -> Scalar:
     match node:
         case ast.Constant(value=bool() as v):
             return float(v)
         case ast.Constant(value=int() | float() as v):
             return float(v)
+        case ast.Constant(value=str() as s):
+            return s
         case ast.Name(id="true" | "True"):
             return 1.0
         case ast.Name(id="false" | "False"):
@@ -91,40 +115,62 @@ def _eval(node: ast.expr, env: Mapping[str, float], source: str) -> float:
         case ast.Name(id=name):
             if name not in env:
                 raise ExprError(f"Unbekannter Name '{name}' in '{source}'")
-            return env[name]
+            known = env[name]
+            return known if isinstance(known, str) else float(known)
         case ast.UnaryOp(op=ast.USub(), operand=operand):
-            return -_eval(operand, env, source)
+            return -_number(_eval(operand, env, source), source)
         case ast.UnaryOp(op=ast.UAdd(), operand=operand):
-            return _eval(operand, env, source)
+            return _number(_eval(operand, env, source), source)
         case ast.UnaryOp(op=ast.Not(), operand=operand):
-            return float(not _eval(operand, env, source))
+            return float(not is_truthy(_eval(operand, env, source)))
         case ast.BinOp(left=left, op=op, right=right) if type(op) in _BINARY:
-            a, b = _eval(left, env, source), _eval(right, env, source)
+            a = _number(_eval(left, env, source), source)
+            b = _number(_eval(right, env, source), source)
             if isinstance(op, ast.Div | ast.FloorDiv | ast.Mod) and b == 0:
                 raise ExprError(f"Division durch 0 in '{source}'")
             return float(_BINARY[type(op)](a, b))
         case ast.BoolOp(op=ast.And(), values=values):
-            return float(all(_eval(v, env, source) for v in values))
+            return float(all(is_truthy(_eval(v, env, source)) for v in values))
         case ast.BoolOp(op=ast.Or(), values=values):
-            return float(any(_eval(v, env, source) for v in values))
+            return float(any(is_truthy(_eval(v, env, source)) for v in values))
         case ast.Compare(left=left, ops=ops, comparators=comparators):
             current = _eval(left, env, source)
             for cmp, comparator in zip(ops, comparators, strict=True):
                 if type(cmp) not in _COMPARE:
                     break
                 nxt = _eval(comparator, env, source)
+                # Comparing text with a number is a modelling mistake, not a false condition.
+                if isinstance(current, str) != isinstance(nxt, str):
+                    raise ExprError(
+                        f"'{current if isinstance(current, str) else nxt}' ist eine Auswahl – "
+                        f"in '{source}' nicht mit einer Zahl vergleichbar"
+                    )
+                # Text is only meaningful for equality; "a" < "b" is never what was meant.
+                if isinstance(current, str) and type(cmp) not in (ast.Eq, ast.NotEq):
+                    raise ExprError(
+                        f"Auswahlwerte lassen sich nur mit == oder != vergleichen, nicht in "
+                        f"'{source}'"
+                    )
                 if not _COMPARE[type(cmp)](current, nxt):
                     return 0.0
                 current = nxt
             else:
                 return 1.0
         case ast.IfExp(test=test, body=body, orelse=orelse):
-            return _eval(body if _eval(test, env, source) else orelse, env, source)
+            return _eval(body if is_truthy(_eval(test, env, source)) else orelse, env, source)
         case ast.Call(func=ast.Name(id="_if"), args=[cond, a, b], keywords=[]):
-            return _eval(a if _eval(cond, env, source) else b, env, source)
+            return _eval(a if is_truthy(_eval(cond, env, source)) else b, env, source)
         case ast.Call(func=ast.Name(id=name), args=args, keywords=[]) if name in _FUNCTIONS:
             try:
-                return float(_FUNCTIONS[name](*(_eval(a, env, source) for a in args)))
+                return float(
+                    _FUNCTIONS[name](*(_number(_eval(a, env, source), source) for a in args))
+                )
             except (TypeError, ValueError):
                 raise ExprError(f"Ungültiger Aufruf von {name}() in '{source}'") from None
     raise ExprError(f"Nicht erlaubter Ausdruck in '{source}'")
+
+
+def _number(value: Scalar, source: str) -> float:
+    if not isinstance(value, float):
+        raise ExprError(f"'{value}' ist eine Auswahl, keine Zahl – in '{source}' nicht rechenbar")
+    return value

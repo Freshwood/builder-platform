@@ -7,7 +7,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from calc_engine.assembly.expr import ExprError, evaluate
+from calc_engine.assembly.expr import ExprError, Scalar, evaluate, evaluate_number, is_truthy
 from construction_model.assembly import AssemblyDesign, Cutout, DesignParam, PartSpec, Shape
 from construction_model.model import ParamValue
 
@@ -73,11 +73,11 @@ class ResolvedPart:
         return self.start is not None
 
 
-def _number_env(params: Mapping[str, ParamValue]) -> dict[str, float]:
-    env: dict[str, float] = {}
+def _param_env(params: Mapping[str, ParamValue]) -> dict[str, Scalar]:
+    """Parameter values as expression environment: numbers as floats, ``choice`` values as text."""
+    env: dict[str, Scalar] = {}
     for name, value in params.items():
-        if isinstance(value, int | float):
-            env[name] = float(value)
+        env[name] = value if isinstance(value, str) else float(value)
     return env
 
 
@@ -132,32 +132,32 @@ def substitute(template: str, params: Mapping[str, ParamValue]) -> str:
 
 
 def _vec(
-    values: tuple[float | str, float | str, float | str], env: Mapping[str, float]
-) -> tuple[float, float, float]:
-    x, y, z = (evaluate(v, env) for v in values)
+    values: tuple[float | str, float | str, float | str], env: Mapping[str, Scalar]
+) -> Vec3:
+    x, y, z = (evaluate_number(v, env) for v in values)
     if not all(math.isfinite(v) for v in (x, y, z)):
         raise ExprError("Maß ist keine endliche Zahl")
     return (round(x, 1), round(y, 1), round(z, 1))
 
 
-def _pt(values: tuple[float | str, float | str], env: Mapping[str, float]) -> Pt:
-    u, v = (evaluate(x, env) for x in values)
+def _pt(values: tuple[float | str, float | str], env: Mapping[str, Scalar]) -> Pt:
+    u, v = (evaluate_number(x, env) for x in values)
     if not all(math.isfinite(x) for x in (u, v)):
         raise ExprError("Maß ist keine endliche Zahl")
     return (round(u, 1), round(v, 1))
 
 
-def _shape(shape: Shape, env: Mapping[str, float]) -> ResolvedShape:
+def _shape(shape: Shape, env: Mapping[str, Scalar]) -> ResolvedShape:
     return ResolvedShape(
         kind=shape.kind,
-        radius=None if shape.radius is None else evaluate(shape.radius, env),
-        apex=None if shape.apex is None else evaluate(shape.apex, env),
+        radius=None if shape.radius is None else evaluate_number(shape.radius, env),
+        apex=None if shape.apex is None else evaluate_number(shape.apex, env),
         bumps=shape.bumps,
         points=tuple(_pt(p, env) for p in shape.points),
     )
 
 
-def _cutout(cutout: Cutout, env: Mapping[str, float]) -> ResolvedCutout:
+def _cutout(cutout: Cutout, env: Mapping[str, Scalar]) -> ResolvedCutout:
     return ResolvedCutout(
         kind=cutout.kind,
         at=_pt(cutout.at, env),
@@ -167,7 +167,7 @@ def _cutout(cutout: Cutout, env: Mapping[str, float]) -> ResolvedCutout:
 
 
 def resolve_parts(design: AssemblyDesign, params: Mapping[str, ParamValue]) -> list[ResolvedPart]:
-    env = _number_env(params)
+    env = _param_env(params)
     errors: list[str] = []
     parts: list[ResolvedPart] = []
     limit = MAX_PARTS_BUILDING if design.category == "building" else MAX_PARTS
@@ -184,11 +184,11 @@ def resolve_parts(design: AssemblyDesign, params: Mapping[str, ParamValue]) -> l
 
 
 def _expand(
-    spec: PartSpec, env: Mapping[str, float], params: Mapping[str, ParamValue]
+    spec: PartSpec, env: Mapping[str, Scalar], params: Mapping[str, ParamValue]
 ) -> list[ResolvedPart]:
     count = 1
     if spec.repeat is not None:
-        raw = evaluate(spec.repeat.count, env)
+        raw = evaluate_number(spec.repeat.count, env)
         if not math.isfinite(raw) or raw < 0:
             raise ExprError(f"Anzahl {raw:g} ist ungültig")
         count = round(raw)
@@ -200,11 +200,11 @@ def _expand(
         if spec.repeat is not None:
             local[spec.repeat.var] = float(index)
             local["n"] = float(count)
-        if spec.when is not None and not evaluate(spec.when, local):
+        if spec.when is not None and not is_truthy(evaluate(spec.when, local)):
             continue
         rotation = None
         if spec.rotate is not None:
-            deg = evaluate(spec.rotate.deg, local)
+            deg = evaluate_number(spec.rotate.deg, local)
             if abs(deg) > 1e-9:
                 rotation = (spec.rotate.axis, deg)
         start: Vec3 | None = None
@@ -241,8 +241,8 @@ def _expand(
 
 
 def resolve_quantity(expr: float | str, params: Mapping[str, ParamValue]) -> float:
-    return evaluate(expr, _number_env(params))
+    return evaluate_number(expr, _param_env(params))
 
 
 def is_included(expr: float | str | None, params: Mapping[str, ParamValue]) -> bool:
-    return expr is None or bool(evaluate(expr, _number_env(params)))
+    return expr is None or is_truthy(evaluate(expr, _param_env(params)))

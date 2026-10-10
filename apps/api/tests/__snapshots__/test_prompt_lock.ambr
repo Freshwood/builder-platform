@@ -75,12 +75,15 @@
            tenon (Zapfen, part endet auf into), half_lap (Blatt, Teile überlappen), notch (Kerve,
            Sparren auf Balken); nur dort ist Überlappung erlaubt, Zapfen und Holznägel ergänzt die
            Engine.
-         - Parametrisch: Parameter mit Grenzen (width_mm, depth_mm, height_mm, Anzahl …), Ausdrücke
-           wie "width_mm - 2 * 18", repeat (Index i, Anzahl n), optionale Teile mit when, Holzart als
-           choice-Parameter mit Material-Platzhalter "frame_{wood}_45x70". Klammern {} nur im
-           Material; Bedingungen als if(bedingung, a, b), nie "a ? b : c". Brettbreite im Material
-           ist eine Zahl passend zum Bauteilmaß. Jeder Ausdruck ist ein String in Anführungszeichen
-           ("at": [0, 0, "18 + i * 116"]), nur reine Zahlen ohne. design als JSON-Objekt.
+          - Parametrisch: Parameter mit Grenzen (width_mm, depth_mm, height_mm, Anzahl …), Ausdrücke
+            wie "width_mm - 2 * 18", repeat (Index i, Anzahl n), optionale Teile mit when, Holzart als
+            choice-Parameter mit Material-Platzhalter "frame_{wood}_45x70". Klammern {} nur im
+            Material; Bedingungen als if(bedingung, a, b), nie "a ? b : c". Brettbreite im Material
+            ist eine Zahl passend zum Bauteilmaß. Jeder Ausdruck ist ein String in Anführungszeichen
+            ("at": [0, 0, "18 + i * 116"]), nur reine Zahlen ohne. design als JSON-Objekt.
+          - Ausdrücke rechnen nur mit Zahlen. choice-Parameter sind Text: nur == oder !=, nie rechnen
+            (when="surface_type == 'boards'"), nie < oder >. Als Maß oder in einer Rechnung lehnt die
+            Engine sie ab – dafür einen count-Parameter anlegen.
          - use="outdoor" für draußen (outdoor-taugliche Materialien). Schrauben, Leim, Oberfläche und
            Kippsicherung ergänzt die Engine. Was sich öffnet, braucht mind. 2 Bänder je Flügel/Tür,
            einen Verschluss und ggf. Griffe; draußen verzinkt oder Edelstahl. Beschläge mit festen

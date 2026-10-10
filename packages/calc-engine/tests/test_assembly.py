@@ -283,6 +283,136 @@ def test_expressions() -> None:
         evaluate("n == 1 ? 2 : 0", env)
 
 
+def test_choice_parameter_expressions() -> None:
+    """A ``choice`` parameter is text and may be compared with ``==``/``!=`` in conditions."""
+    env = {"w": 800.0, "surface_type": "boards"}
+    assert evaluate("surface_type == 'boards'", env) == 1
+    assert evaluate("surface_type != 'boards'", env) == 0
+    assert evaluate("surface_type == 'panel'", env) == 0
+    assert evaluate("if(surface_type == 'boards', 18, 25)", env) == 18
+    assert evaluate("surface_type == 'boards' and w > 500", env) == 1
+    assert evaluate("not (surface_type == 'panel')", env) == 1
+    # Braces as used in material placeholders resolve to the same name.
+    assert evaluate("{surface_type} == 'boards'", env) == 1
+    for bad, message in (
+        ("surface_type - 1", "keine Zahl"),
+        ("surface_type * 2", "keine Zahl"),
+        ("w == surface_type", "nicht mit einer Zahl vergleichbar"),
+        ("surface_type > 1", "nicht mit einer Zahl vergleichbar"),
+        ("'a' < 'b'", "== oder !="),
+    ):
+        with pytest.raises(ExprError, match=message):
+            evaluate(bad, env)
+
+
+SURFACE_PARAM: dict[str, Any] = {
+    "name": "surface_type",
+    "label": "Oberfläche",
+    "kind": "choice",
+    "default": "boards",
+    "options": [
+        {"value": "boards", "label": "Bretter"},
+        {"value": "panel", "label": "Platte"},
+    ],
+}
+
+
+SURFACE_DESIGN: dict[str, Any] = {
+    "object_type": "Podest",
+    "summary": "Podest mit wählbarer Oberfläche",
+    "params": [
+        {
+            "name": "length_mm",
+            "label": "Länge",
+            "kind": "length",
+            "default": 1000,
+            "min": 500,
+            "max": 3000,
+        },
+        {
+            "name": "depth_mm",
+            "label": "Tiefe",
+            "kind": "length",
+            "default": 384,
+            "min": 384,
+            "max": 384,
+        },
+        {
+            "name": "height_mm",
+            "label": "Höhe",
+            "kind": "length",
+            "default": 350,
+            "min": 100,
+            "max": 800,
+        },
+        SURFACE_PARAM,
+    ],
+    "parts": [
+        {
+            "id": "leg",
+            "name": "Bein",
+            "material": "frame_spruce_44x44",
+            "size": [44, 44, "height_mm - 18"],
+            "at": ["i % 2 * (length_mm - 44)", "i // 2 * (depth_mm - 44)", 0],
+            "repeat": {"count": 4},
+        },
+        {
+            "id": "top_slat",
+            "name": "Deckbrett",
+            "material": "lumber_spruce_18x96",
+            "size": ["length_mm", 96, 18],
+            "at": [0, "i * 96", "height_mm - 18"],
+            "repeat": {"count": 4},
+            "when": "surface_type == 'boards'",
+        },
+        {
+            "id": "top_panel",
+            "name": "Multiplexplatte",
+            "material": "plywood_birch_18",
+            "size": ["length_mm", "depth_mm", 18],
+            "at": [0, 0, "height_mm - 18"],
+            "when": "surface_type == 'panel'",
+        },
+    ],
+}
+
+
+def test_choice_parameter_drives_optional_parts() -> None:
+    """The case from docs/problems/bug.md: `when` on a choice parameter builds one variant."""
+    boards = build(SURFACE_DESIGN, surface_type="boards")
+    assert {c.role for c in boards.components} == {"leg", "top_slat"}
+    assert sum(c.quantity for c in boards.components if c.role == "top_slat") == 4
+    panel = build(SURFACE_DESIGN, surface_type="panel")
+    assert {c.role for c in panel.components} == {"leg", "top_panel"}
+    # The choice really changes the cut list, not only the part names.
+    slats = [c for c in boards.cut_list if c.part == "Deckbrett"]
+    assert len(slats) == 1
+    assert (slats[0].length_mm, slats[0].count) == (1000, 4)
+    panel_line = [c for c in panel.cut_list if c.part == "Multiplexplatte"]
+    assert len(panel_line) == 1
+    assert (panel_line[0].length_mm, panel_line[0].width_mm) == (1000, 384)
+    # Four 96 mm slats and one panel cover the same 384 mm depth.
+    assert sum(c.length_mm * c.count for c in slats) == 4 * 1000
+
+
+def test_choice_parameter_is_not_a_measurement() -> None:
+    design = {
+        **SURFACE_DESIGN,
+        "parts": [
+            *SURFACE_DESIGN["parts"][:1],
+            {
+                "id": "top_panel",
+                "name": "Multiplexplatte",
+                "material": "plywood_birch_18",
+                "size": ["length_mm", "surface_type", 18],
+                "at": [0, 0, "height_mm - 18"],
+            },
+        ],
+    }
+    with pytest.raises(DesignRejectedError, match="keine Zahl"):
+        build(design, surface_type="boards")
+
+
 def test_sheet_planning() -> None:
     sheets = plan_sheets([(1800, 297), (1800, 297), (764, 297)], (2000, 600))
     assert len(sheets) == 2
