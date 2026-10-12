@@ -1,0 +1,86 @@
+{
+  "id": "podest_kinder_modenschau_es_so_art",
+  "title": "Kinder-Podest 30–50 cm: Teileliste mit '}}' statt '}]' geschlossen, danach Engine-Schleife bis zum Token-Limit",
+  "origin": {
+    "kind": "agent_run",
+    "ref": "25d31e31-fd50-4060-bdd2-cbab1d5e04c8",
+    "date": "2026-10-12"
+  },
+  "failure_class": "engine_loop",
+  "brief": "Erstelle mir ein Podest für Kinder für eine Modenschau. Es soll so eine Art Tribüne für ein Catwalk sein. Es soll maximal 2 Meter lang sein und 1 Meter breit. Es wird drinnen aufgestellt. Die Oberfläche kann aus einzelnen Bretter oder als Platte erstellt werden.\nDie höhe kann zwischen 30 und 50cm sein",
+  "expect": {
+    "envelope": {
+      "max_length_mm": 2000,
+      "max_width_mm": 1000,
+      "min_height_mm": 300,
+      "max_height_mm": 500
+    },
+    "use": "indoor",
+    "support": "floor",
+    "features": [
+      {
+        "walkable_top": {
+          "min_coverage": 0.9
+        }
+      },
+      "standing_stable",
+      "choice_param:surface=boards|panel"
+    ],
+    "note": "maximal 2 m x 1 m, Höhe 30–50 cm, drinnen, begehbare Oberfläche aus Brettern oder Platte"
+  },
+  "attempts": [
+    {
+      "file": "attempts/01.json",
+      "expect_outcome": "invalid_args",
+      "errors_contain": [
+        "parts.16.item",
+        "extra_forbidden"
+      ]
+    },
+    {
+      "file": "attempts/02.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "Bauteile 'post_fl[0]' (Eckenpfosten vorne links) und"
+      ]
+    },
+    {
+      "file": "attempts/03.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "Nicht alle Bauteile sind verbunden (keine Kontaktfläche)"
+      ]
+    },
+    {
+      "file": "attempts/04.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "Bauteile 'post_fl[0]' (Eckenpfosten vorne links) und"
+      ]
+    },
+    {
+      "file": "attempts/05.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "Bauteile 'post_fr[0]' (Eckenpfosten vorne rechts) und"
+      ]
+    },
+    {
+      "file": "attempts/06.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "Bauteile 'post_fr[0]' (Eckenpfosten vorne rechts) und"
+      ]
+    }
+  ],
+  "golden": {
+    "design": "golden.json",
+    "params": {
+      "length_mm": 2000,
+      "deck_boards": 8,
+      "height_mm": 350,
+      "surface": "boards"
+    }
+  },
+  "notes": "Echter Lauf (Modell upstage/solar-pro4, Prompt 2026-10-10.1, Rolle designer, trace c1ee3d8ab1b7482fb6b80cf94fe491e9). Versuch 01: die Teileliste endete mit '}}' statt '}]' (dazu ein Hardware-Eintrag in parts); balance_brackets verwarf die Klammer, statt sie zu ']' zu tauschen, das Modell sah 'Kein gültiges JSON'. Seit der Reparatur in modules/agent/args.py (Fixture tests/fixtures/tool_args/podest_kinder_wrong_closer.txt) wird das JSON gelesen und der Aufruf nur noch am falschen Teil abgelehnt. Versuche 02–06 sind berechtigte Engine-Ablehnungen (Pfosten durchdringen Platte bzw. Streben, Oberrahmen nur mit Kantenkontakt, half_lap zwischen Teilen ohne Berührung); das Modell konnte die Geometrie nicht reparieren, nach 6 Versuchen brach der Lauf am total_tokens_limit 200000 ab (235954). Kein Engine-Fehler; offen bleibt eine Podest-Vorlage, damit der Brief ohne freie Geometrie auskommt. Golden und expect wie podium_kids_catwalk, ergänzt um die Höhe 30–50 cm."
+}

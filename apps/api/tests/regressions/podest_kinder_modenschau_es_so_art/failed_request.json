@@ -1,0 +1,383 @@
+{
+  "messages": [
+    {
+      "i": 0,
+      "kind": "request",
+      "parts": [
+        {
+          "kind": "user-prompt",
+          "chars": 302
+        }
+      ]
+    },
+    {
+      "i": 1,
+      "kind": "response",
+      "parts": [
+        {
+          "kind": "thinking",
+          "chars": 1992
+        },
+        {
+          "kind": "text",
+          "chars": 113
+        },
+        {
+          "id": "…af4fc280",
+          "kind": "tool-call",
+          "tool": "list_materials",
+          "chars": 2
+        }
+      ]
+    },
+    {
+      "i": 2,
+      "kind": "request",
+      "parts": [
+        {
+          "id": "…af4fc280",
+          "kind": "tool-return",
+          "tool": "list_materials",
+          "chars": 4985
+        }
+      ]
+    },
+    {
+      "i": 3,
+      "kind": "response",
+      "parts": [
+        {
+          "kind": "thinking",
+          "chars": 9498
+        },
+        {
+          "kind": "text",
+          "chars": 143
+        },
+        {
+          "id": "…be745743",
+          "kind": "tool-call",
+          "tool": "save_design",
+          "chars": 99
+        }
+      ]
+    },
+    {
+      "i": 4,
+      "kind": "request",
+      "parts": [
+        {
+          "id": "…be745743",
+          "kind": "retry-prompt",
+          "tool": "save_design",
+          "chars": 7527
+        }
+      ]
+    },
+    {
+      "i": 5,
+      "kind": "response",
+      "parts": [
+        {
+          "kind": "thinking",
+          "chars": 584
+        },
+        {
+          "kind": "text",
+          "chars": 93
+        },
+        {
+          "id": "…a5156184",
+          "kind": "tool-call",
+          "tool": "save_design",
+          "chars": 99
+        }
+      ]
+    },
+    {
+      "i": 6,
+      "kind": "request",
+      "parts": [
+        {
+          "id": "…a5156184",
+          "kind": "tool-return",
+          "tool": "save_design",
+          "chars": 1745
+        }
+      ]
+    },
+    {
+      "i": 7,
+      "kind": "response",
+      "parts": [
+        {
+          "kind": "thinking",
+          "chars": 10417
+        },
+        {
+          "kind": "text",
+          "chars": 217
+        },
+        {
+          "id": "…ad52d6dd",
+          "kind": "tool-call",
+          "tool": "save_design",
+          "chars": 99
+        }
+      ]
+    },
+    {
+      "i": 8,
+      "kind": "request",
+      "parts": [
+        {
+          "id": "…ad52d6dd",
+          "kind": "tool-return",
+          "tool": "save_design",
+          "chars": 487
+        }
+      ]
+    },
+    {
+      "i": 9,
+      "kind": "response",
+      "parts": [
+        {
+          "kind": "thinking",
+          "chars": 5555
+        },
+        {
+          "kind": "text",
+          "chars": 140
+        },
+        {
+          "id": "…88d42a97",
+          "kind": "tool-call",
+          "tool": "save_design",
+          "chars": 99
+        }
+      ]
+    },
+    {
+      "i": 10,
+      "kind": "request",
+      "parts": [
+        {
+          "id": "…88d42a97",
+          "kind": "tool-return",
+          "tool": "save_design",
+          "chars": 1539
+        }
+      ]
+    },
+    {
+      "i": 11,
+      "kind": "response",
+      "parts": [
+        {
+          "kind": "thinking",
+          "chars": 6261
+        },
+        {
+          "kind": "text",
+          "chars": 135
+        },
+        {
+          "id": "…9adf3fe1",
+          "kind": "tool-call",
+          "tool": "save_design",
+          "chars": 99
+        }
+      ]
+    },
+    {
+      "i": 12,
+      "kind": "request",
+      "parts": [
+        {
+          "id": "…9adf3fe1",
+          "kind": "tool-return",
+          "tool": "save_design",
+          "chars": 793
+        }
+      ]
+    },
+    {
+      "i": 13,
+      "kind": "response",
+      "parts": [
+        {
+          "kind": "thinking",
+          "chars": 10294
+        },
+        {
+          "kind": "text",
+          "chars": 189
+        },
+        {
+          "id": "…a5d8fb22",
+          "kind": "tool-call",
+          "tool": "save_design",
+          "chars": 10037
+        }
+      ]
+    },
+    {
+      "i": 14,
+      "kind": "request",
+      "parts": [
+        {
+          "id": "…a5d8fb22",
+          "kind": "tool-return",
+          "tool": "save_design",
+          "chars": 1576
+        }
+      ]
+    }
+  ],
+  "provider": {
+    "total": 16,
+    "omitted": 0,
+    "messages": [
+      {
+        "i": 0,
+        "role": "system",
+        "chars": 11298,
+        "tool_calls": 0,
+        "has_content": true,
+        "tool_call_id": false
+      },
+      {
+        "i": 1,
+        "role": "user",
+        "chars": 302,
+        "tool_calls": 0,
+        "has_content": true,
+        "tool_call_id": false
+      },
+      {
+        "i": 2,
+        "role": "assistant",
+        "chars": 113,
+        "tool_calls": 1,
+        "has_content": true,
+        "tool_call_id": false
+      },
+      {
+        "i": 3,
+        "role": "tool",
+        "chars": 4985,
+        "tool_calls": 0,
+        "has_content": true,
+        "tool_call_id": true
+      },
+      {
+        "i": 4,
+        "role": "assistant",
+        "chars": 143,
+        "tool_calls": 1,
+        "has_content": true,
+        "tool_call_id": false
+      },
+      {
+        "i": 5,
+        "role": "tool",
+        "chars": 7527,
+        "tool_calls": 0,
+        "has_content": true,
+        "tool_call_id": true
+      },
+      {
+        "i": 6,
+        "role": "assistant",
+        "chars": 93,
+        "tool_calls": 1,
+        "has_content": true,
+        "tool_call_id": false
+      },
+      {
+        "i": 7,
+        "role": "tool",
+        "chars": 1745,
+        "tool_calls": 0,
+        "has_content": true,
+        "tool_call_id": true
+      },
+      {
+        "i": 8,
+        "role": "assistant",
+        "chars": 217,
+        "tool_calls": 1,
+        "has_content": true,
+        "tool_call_id": false
+      },
+      {
+        "i": 9,
+        "role": "tool",
+        "chars": 487,
+        "tool_calls": 0,
+        "has_content": true,
+        "tool_call_id": true
+      },
+      {
+        "i": 10,
+        "role": "assistant",
+        "chars": 140,
+        "tool_calls": 1,
+        "has_content": true,
+        "tool_call_id": false
+      },
+      {
+        "i": 11,
+        "role": "tool",
+        "chars": 1539,
+        "tool_calls": 0,
+        "has_content": true,
+        "tool_call_id": true
+      },
+      {
+        "i": 12,
+        "role": "assistant",
+        "chars": 135,
+        "tool_calls": 1,
+        "has_content": true,
+        "tool_call_id": false
+      },
+      {
+        "i": 13,
+        "role": "tool",
+        "chars": 793,
+        "tool_calls": 0,
+        "has_content": true,
+        "tool_call_id": true
+      },
+      {
+        "i": 14,
+        "role": "assistant",
+        "chars": 189,
+        "tool_calls": 1,
+        "has_content": true,
+        "tool_call_id": false
+      },
+      {
+        "i": 15,
+        "role": "tool",
+        "chars": 1576,
+        "tool_calls": 0,
+        "has_content": true,
+        "tool_call_id": true
+      }
+    ],
+    "available": true,
+    "suspicious": [],
+    "mapped_with": "OpenRouterModel(upstage/solar-pro4)"
+  },
+  "error_class": "UsageLimitExceeded",
+  "pydantic_ai": "2.49.0",
+  "status_code": null,
+  "shape_version": 1,
+  "messages_total": 15,
+  "request_number": 8,
+  "messages_omitted": 0,
+  "model_call_failed": true
+}

@@ -43,6 +43,20 @@ def test_design_from_the_bug_report_is_parsed() -> None:
     assert shelf["at"] == [150, 0, "18 + (i + 1) * (height_mm - 36) / (shelves + 1)"]
 
 
+def test_brace_instead_of_bracket_closes_the_list() -> None:
+    """Kids' podium run: the parts list ended with ``}}`` instead of ``}]`` before "steps"."""
+    design = parse_json((FIXTURES / "podest_kinder_wrong_closer.txt").read_text())
+    assert design["parts"][-1]["item"] == "foot_rubber_40"
+    assert design["steps"][0]["title"] == "Eckenpfosten aufstellen"
+    assert design["finish"] == "finish_hardwax_750"
+
+
+def test_surplus_brace_inside_a_list_is_still_dropped() -> None:
+    assert parse_json('{"parts": [{"id": "a"}}, {"id": "b"}]}') == {
+        "parts": [{"id": "a"}, {"id": "b"}]
+    }
+
+
 def test_unrepairable_json_names_position_and_cause() -> None:
     with pytest.raises(ValueError, match=r"bei Zeichen 8.*Anführungszeichen"):
         parse_json('{"a": 1 "b": 2}')

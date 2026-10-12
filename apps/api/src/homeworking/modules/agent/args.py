@@ -5,7 +5,8 @@ because the model reads the error as "pass an object, not a string" and repeats 
 
 - arithmetic written as a bare value, e.g. ``"at": [0, 0, 18 + i * 116]`` instead of
   ``"18 + i * 116"`` (the design schema takes such expressions as strings anyway),
-- one closing brace too many or too few at the end of a long design.
+- one closing brace too many or too few at the end of a long design, or ``}`` where a list
+  needs ``]``.
 
 Both are repaired in one place, for the raw arguments of every tool call (``RepairToolArgs``)
 and for object arguments that arrive as a JSON-encoded string (``JsonTolerant``). Anything else
@@ -109,8 +110,13 @@ def quote_bare_expressions(text: str) -> str:
     return "".join(out)
 
 
-def balance_brackets(text: str) -> str:
-    """Drop closing brackets without a matching opener and close brackets left open."""
+def balance_brackets(text: str, *, swap_mismatched: bool = False) -> str:
+    """Fix closing brackets that do not match the open one and close brackets left open.
+
+    A mismatched closer is dropped (one brace too many), or with ``swap_mismatched`` replaced by
+    the closer the open bracket needs (``}`` written for ``]``, e.g. ``…}}, "steps"`` after the
+    last part instead of ``…}], "steps"``).
+    """
     out: list[str] = []
     stack: list[str] = []
     in_string = escaped = False
@@ -127,8 +133,12 @@ def balance_brackets(text: str) -> str:
         elif char in _OPENERS:
             stack.append(char)
         elif char in _CLOSERS:
-            if not stack or stack[-1] != _CLOSERS[char]:
+            if not stack:
                 continue
+            if stack[-1] != _CLOSERS[char]:
+                if not swap_mismatched:
+                    continue
+                char = _OPENERS[stack[-1]]
             stack.pop()
         out.append(char)
     out.extend(_OPENERS[opener] for opener in reversed(stack))
@@ -144,13 +154,14 @@ def parse_json(text: str) -> Any:
         return json.loads(text)
     except json.JSONDecodeError as exc:
         error = exc
-    for repair in (balance_brackets, quote_bare_expressions):
-        text = repair(text)
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            pass
     original = error.doc
+    for swap in (False, True):
+        balanced = balance_brackets(original, swap_mismatched=swap)
+        for candidate in (balanced, quote_bare_expressions(balanced)):
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                pass
     context = original[max(0, error.pos - 40) : error.pos + 20]
     raise ValueError(
         f"Kein gültiges JSON ({error.msg} bei Zeichen {error.pos}: …{context}…). {HINT}"

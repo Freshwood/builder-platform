@@ -1,0 +1,808 @@
+{
+  "tool": "save_design",
+  "tool_call_id": "call_06a7c4494d1a49e9a5d8fb22",
+  "outcome": "engine_rejected",
+  "accepted": false,
+  "errors": [
+    "Bauteile 'post_fr[0]' (Eckenpfosten vorne rechts) und 'beam_long_bot_front[0]' (Längsstrebe unten vorne) durchdringen sich (45 × 45 × 45 mm) – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben",
+    "Bauteile 'post_br[0]' (Eckenpfosten hinten rechts) und 'beam_long_bot_back[0]' (Längsstrebe unten hinten) durchdringen sich (45 × 45 × 45 mm) – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben",
+    "Bauteile 'beam_long_top_front[0]' (Längsstrebe oben vorne) und 'beam_short_top_left[0]' (Querstrebe oben vorne) durchdringen sich (45 × 45 × 45 mm) – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben",
+    "Bauteile 'beam_long_top_front[0]' (Längsstrebe oben vorne) und 'beam_short_top_right[0]' (Querstrebe oben vorne rechts) durchdringen sich (45 × 45 × 45 mm) – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben",
+    "Bauteile 'beam_long_top_back[0]' (Längsstrebe oben hinten) und 'beam_short_top_back_left[0]' (Querstrebe oben hinten) durchdringen sich (45 × 45 × 45 mm) – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben",
+    "Bauteile 'beam_long_top_back[0]' (Längsstrebe oben hinten) und 'beam_short_top_back_right[0]' (Querstrebe oben hinten rechts) durchdringen sich (45 × 45 × 45 mm) – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben"
+  ],
+  "raw_args": "{\"design\": \"{\\\"auto_screws\\\": true, \\\"category\\\": \\\"object\\\", \\\"hardware\\\": [{\\\"item\\\": \\\"finish_hardwax_750\\\", \\\"quantity\\\": 1}, {\\\"item\\\": \\\"foot_rubber_40\\\", \\\"quantity\\\": 4, \\\"note\\\": \\\"Gummifuß unter jedem Eckenpfosten\\\"}], \\\"joints\\\": [{\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_long_bot_front\\\", \\\"into\\\": \\\"post_fl\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_long_bot_back\\\", \\\"into\\\": \\\"post_bl\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_long_top_front\\\", \\\"into\\\": \\\"post_fl\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_long_top_back\\\", \\\"into\\\": \\\"post_bl\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_short_top_left\\\", \\\"into\\\": \\\"post_fl\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_short_top_right\\\", \\\"into\\\": \\\"post_fr\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_short_bot_left\\\", \\\"into\\\": \\\"post_fl\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_short_bot_right\\\", \\\"into\\\": \\\"post_fr\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_short_top_back_left\\\", \\\"into\\\": \\\"post_bl\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_short_top_back_right\\\", \\\"into\\\": \\\"post_br\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_short_bot_back_left\\\", \\\"into\\\": \\\"post_bl\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"beam_short_bot_back_right\\\", \\\"into\\\": \\\"post_br\\\"}], \\\"object_type\\\": \\\"Kinder-Podest für Modenschau\\\", \\\"params\\\": [{\\\"default\\\": \\\"spruce\\\", \\\"kind\\\": \\\"choice\\\", \\\"label\\\": \\\"Holzart\\\", \\\"name\\\": \\\"wood\\\", \\\"options\\\": [{\\\"label\\\": \\\"Fichte\\\", \\\"value\\\": \\\"spruce\\\"}, {\\\"label\\\": \\\"Douglasie\\\", \\\"value\\\": \\\"douglas\\\"}, {\\\"label\\\": \\\"Lärche\\\", \\\"value\\\": \\\"larch\\\"}]}, {\\\"default\\\": 2000, \\\"kind\\\": \\\"length\\\", \\\"label\\\": \\\"Länge (mm)\\\", \\\"max\\\": 2000, \\\"min\\\": 500, \\\"name\\\": \\\"width_mm\\\"}, {\\\"default\\\": 1000, \\\"kind\\\": \\\"length\\\", \\\"label\\\": \\\"Breite (mm)\\\", \\\"max\\\": 1200, \\\"min\\\": 500, \\\"name\\\": \\\"depth_mm\\\"}, {\\\"default\\\": 400, \\\"kind\\\": \\\"length\\\", \\\"label\\\": \\\"Höhe (mm)\\\", \\\"max\\\": 500, \\\"min\\\": 300, \\\"name\\\": \\\"height_mm\\\"}, {\\\"default\\\": \\\"plate\\\", \\\"kind\\\": \\\"choice\\\", \\\"label\\\": \\\"Oberfläche\\\", \\\"name\\\": \\\"surface_type\\\", \\\"options\\\": [{\\\"label\\\": \\\"Platte (einfach)\\\", \\\"value\\\": \\\"plate\\\"}, {\\\"label\\\": \\\"Bretter (optisch)\\\", \\\"value\\\": \\\"boards\\\"}]}], \\\"parts\\\": [{\\\"at\\\": [45, 0, 0], \\\"id\\\": \\\"post_fl\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Eckenpfosten vorne links\\\", \\\"size\\\": [45, 45, \\\"height_mm - 63\\\"]}, {\\\"at\\\": [\\\"width_mm - 90\\\", 0, 0], \\\"id\\\": \\\"post_fr\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Eckenpfosten vorne rechts\\\", \\\"size\\\": [45, 45, \\\"height_mm - 63\\\"]}, {\\\"at\\\": [45, \\\"depth_mm - 45\\\", 0], \\\"id\\\": \\\"post_bl\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Eckenpfosten hinten links\\\", \\\"size\\\": [45, 45, \\\"height_mm - 63\\\"]}, {\\\"at\\\": [\\\"width_mm - 90\\\", \\\"depth_mm - 45\\\", 0], \\\"id\\\": \\\"post_br\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Eckenpfosten hinten rechts\\\", \\\"size\\\": [45, 45, \\\"height_mm - 63\\\"]}, {\\\"at\\\": [45, 0, \\\"height_mm - 63\\\"], \\\"id\\\": \\\"beam_long_top_front\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Längsstrebe oben vorne\\\", \\\"size\\\": [\\\"width_mm - 90\\\", 45, 45]}, {\\\"at\\\": [45, \\\"depth_mm - 45\\\", \\\"height_mm - 63\\\"], \\\"id\\\": \\\"beam_long_top_back\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Längsstrebe oben hinten\\\", \\\"size\\\": [\\\"width_mm - 90\\\", 45, 45]}, {\\\"at\\\": [45, 0, 0], \\\"id\\\": \\\"beam_long_bot_front\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Längsstrebe unten vorne\\\", \\\"size\\\": [\\\"width_mm - 90\\\", 45, 45]}, {\\\"at\\\": [45, \\\"depth_mm - 45\\\", 0], \\\"id\\\": \\\"beam_long_bot_back\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Längsstrebe unten hinten\\\", \\\"size\\\": [\\\"width_mm - 90\\\", 45, 45]}, {\\\"at\\\": [45, 0, \\\"height_mm - 63\\\"], \\\"id\\\": \\\"beam_short_top_left\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Querstrebe oben vorne\\\", \\\"size\\\": [45, \\\"depth_mm - 45\\\", 45]}, {\\\"at\\\": [\\\"width_mm - 90\\\", 0, \\\"height_mm - 63\\\"], \\\"id\\\": \\\"beam_short_top_right\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Querstrebe oben vorne rechts\\\", \\\"size\\\": [45, \\\"depth_mm - 45\\\", 45]}, {\\\"at\\\": [45, 0, 0], \\\"id\\\": \\\"beam_short_bot_left\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Querstrebe unten vorne\\\", \\\"size\\\": [45, \\\"depth_mm - 45\\\", 45]}, {\\\"at\\\": [\\\"width_mm - 90\\\", 0, 0], \\\"id\\\": \\\"beam_short_bot_right\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Querstrebe unten vorne rechts\\\", \\\"size\\\": [45, \\\"depth_mm - 45\\\", 45]}, {\\\"at\\\": [45, \\\"depth_mm - 45\\\", \\\"height_mm - 63\\\"], \\\"id\\\": \\\"beam_short_top_back_left\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Querstrebe oben hinten\\\", \\\"size\\\": [45, \\\"depth_mm - 45\\\", 45]}, {\\\"at\\\": [\\\"width_mm - 90\\\", \\\"depth_mm - 45\\\", \\\"height_mm - 63\\\"], \\\"id\\\": \\\"beam_short_top_back_right\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Querstrebe oben hinten rechts\\\", \\\"size\\\": [45, \\\"depth_mm - 45\\\", 45]}, {\\\"at\\\": [45, \\\"depth_mm - 45\\\", 0], \\\"id\\\": \\\"beam_short_bot_back_left\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Querstrebe unten hinten\\\", \\\"size\\\": [45, \\\"depth_mm - 45\\\", 45]}, {\\\"at\\\": [\\\"width_mm - 90\\\", \\\"depth_mm - 45\\\", 0], \\\"id\\\": \\\"beam_short_bot_back_right\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Querstrebe unten hinten rechts\\\", \\\"size\\\": [45, \\\"depth_mm - 45\\\", 45]}, {\\\"at\\\": [45, 45, \\\"height_mm * 0.33\\\"], \\\"id\\\": \\\"cross_brace_1\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Mittelquerstrebe unten\\\", \\\"size\\\": [45, \\\"depth_mm - 90\\\", 45], \\\"when\\\": \\\"surface_type == 'plate'\\\"}, {\\\"at\\\": [45, 45, \\\"height_mm * 0.67\\\"], \\\"id\\\": \\\"cross_brace_2\\\", \\\"material\\\": \\\"lumber_{wood}_45x45\\\", \\\"name\\\": \\\"Mittelquerstrebe oben\\\", \\\"size\\\": [45, \\\"depth_mm - 90\\\", 45], \\\"when\\\": \\\"surface_type == 'plate'\\\"}, {\\\"at\\\": [45, 45, \\\"height_mm - 18\\\"], \\\"id\\\": \\\"surface_plate\\\", \\\"material\\\": \\\"plywood_birch_18\\\", \\\"name\\\": \\\"Oberflächenplatte\\\", \\\"size\\\": [\\\"width_mm - 90\\\", \\\"depth_mm - 90\\\", 18], \\\"when\\\": \\\"surface_type == 'plate'\\\"}, {\\\"at\\\": [45, 45, \\\"height_mm - 18\\\"], \\\"id\\\": \\\"board_0\\\", \\\"material\\\": \\\"lumber_{wood}_18x28\\\", \\\"name\\\": \\\"Brett\\\", \\\"repeat\\\": {\\\"count\\\": 33, \\\"var\\\": \\\"i\\\"}, \\\"size\\\": [\\\"width_mm - 90\\\", 28, 18], \\\"when\\\": \\\"surface_type == 'boards'\\\"}], \\\"steps\\\": [{\\\"parts\\\": [\\\"post_fl\\\", \\\"post_fr\\\", \\\"post_bl\\\", \\\"post_br\\\"], \\\"text\\\": \\\"4 Eckenpfosten (45x45 mm) aufrecht auf dem Boden positionieren. Abstand zwischen den Pfosten: Länge minus 90 mm, Breite minus 90 mm. Mit Winkel prüfen, dass alle Pfosten senkrecht stehen.\\\", \\\"title\\\": \\\"Eckenpfosten aufstellen\\\"}, {\\\"parts\\\": [\\\"beam_long_bot_front\\\", \\\"beam_long_bot_back\\\", \\\"beam_short_bot_left\\\", \\\"beam_short_bot_right\\\", \\\"beam_short_bot_back_left\\\", \\\"beam_short_bot_back_right\\\"], \\\"text\\\": \\\"Unterste Längs- und Querstreben zwischen die Pfosten schieben und von der Vorderseite durch Schrauben (45 mm Schrauben) verbinden. Bündig mit den Pfostenkanten abschließen.\\\", \\\"title\\\": \\\"Unterrahmen montieren\\\"}, {\\\"parts\\\": [\\\"beam_long_top_front\\\", \\\"beam_long_top_back\\\", \\\"beam_short_top_left\\\", \\\"beam_short_top_right\\\", \\\"beam_short_top_back_left\\\", \\\"beam_short_top_back_right\\\"], \\\"text\\\": \\\"Obere Längs- und Querstreben auf die Pfosten setzen und von außen verschrauben. Die Streben bilden den Rahmen für die Oberfläche.\\\", \\\"title\\\": \\\"Oberrahmen montieren\\\"}, {\\\"parts\\\": [\\\"cross_brace_1\\\", \\\"cross_brace_2\\\"], \\\"text\\\": \\\"Bei Plattendesign: Zwei Mittelquerstreben in der Höhe von 1/3 und 2/3 einsetzen und von der Vorderseite verschrauben. Sie verhindern ein Durchbrechen der Platte.\\\", \\\"title\\\": \\\"Mittelquerstreben einbauen\\\"}, {\\\"parts\\\": [\\\"surface_plate\\\"], \\\"text\\\": \\\"Platte auf den Rahmen setzen, flach und bündig mit den Streben abschließen. Von unten durch die Strebenlöcher mit Schrauben (40 mm) in die Platte schrauben, damit sie nicht verrutscht.\\\", \\\"title\\\": \\\"Platte aufsetzen\\\"}, {\\\"parts\\\": [\\\"board_0\\\"], \\\"text\\\": \\\"Bei Bretterdesign: 33 Bretter (je 28 mm breit, 18 mm dick, 1910 mm lang) nebeneinander auf den Rahmen legen. Je 3 mm Abstand zueinander. Von unten mit 40 mm Schrauben fixieren, so dass die Kopfmitte knapp unter der Oberfläche liegt.\\\", \\\"title\\\": \\\"Bretter verlegen\\\"}, {\\\"text\\\": \\\"Oberfläche mit Hartwachsöl (innen) behandeln: 2-3 dünne Schichten auftragen, zwischen den Schichten trocknen lassen. Das schützt das Holz vor Verschmutzung und macht es leicht reinigbar.\\\", \\\"title\\\": \\\"Oberfläche ölen\\\"}], \\\"summary\\\": \\\"Ein rechteckiges Podest {width_mm} x {depth_mm} x {height_mm} mm mit 45x45 mm-Rahmen aus {wood} und {surface_type}-Oberfläche für Kinder-Modenschau\\\", \\\"support\\\": \\\"floor\\\", \\\"use\\\": \\\"indoor\\\", \\\"variants\\\": [{\\\"description\\\": \\\"Günstigere Variante mit OSB-Platte statt Birkenplywood\\\", \\\"key\\\": \\\"osb\\\", \\\"name\\\": \\\"OSB-Platte\\\", \\\"overrides\\\": {\\\"surface_type\\\": \\\"plate\\\"}}], \\\"finish\\\": \\\"finish_hardwax_750\\\"}\", \"explanation\": \"Das Podest ist ein einfacher, stabiler Rahmen aus 45x45 mm Holz mit 4 Eckenpfosten und Längs- sowie Querstreben oben und unten. Diese Z-Verstrebung (Streben in beiden Ebenen) verhindert, dass sich das Podest seitlich verzieht – wichtig, weil Kinder darauf laufen und tanzen.\\n\\nDie Höhe von 400 mm liegt mitten im gewünschten Bereich (30–50 cm) und ist für Kinder gut erreichbar, ohne dass sie stolpern. Bei Bedarf kannst du die Höhe über die Parameter anpassen.\\n\\nDie Oberfläche kann als Platte (Birkenplywood 18 mm) oder als Bretter (je 28 mm breit, 18 mm dick) gewählt werden. Die Platte ist einfacher zu montieren und leicht zu reinigen – ideal für eine Modenschau. Die Bretter sehen optisch ansprechender aus, sind aber etwas aufwändiger zu verlegen.\\n\\nDas Podest steht auf 4 Gummifüßen, die den Boden schützen und ein Verrutschen verhindern. Die Oberfläche wird mit Hartwachsöl behandelt, das ist für den Innenbereich ausreichend und leicht pflegbar.\\n\\nFür die Montage brauchst du eine Bohrschrauber, Holzschrauben (45 mm für den Rahmen, 40 mm für die Oberfläche) und ggf. eine Wasserwaage. Die Schrauben werden von außen in die Pfosten und Streben geschraubt.\", \"title\": \"Kinder-Podest für Modenschau\"}",
+  "design": {
+    "use": "indoor",
+    "parts": [
+      {
+        "at": [
+          45.0,
+          0.0,
+          0.0
+        ],
+        "id": "post_fl",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Eckenpfosten vorne links",
+        "size": [
+          45.0,
+          45.0,
+          "height_mm - 63"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          "width_mm - 90",
+          0.0,
+          0.0
+        ],
+        "id": "post_fr",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Eckenpfosten vorne rechts",
+        "size": [
+          45.0,
+          45.0,
+          "height_mm - 63"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          "depth_mm - 45",
+          0.0
+        ],
+        "id": "post_bl",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Eckenpfosten hinten links",
+        "size": [
+          45.0,
+          45.0,
+          "height_mm - 63"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          "width_mm - 90",
+          "depth_mm - 45",
+          0.0
+        ],
+        "id": "post_br",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Eckenpfosten hinten rechts",
+        "size": [
+          45.0,
+          45.0,
+          "height_mm - 63"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          0.0,
+          "height_mm - 63"
+        ],
+        "id": "beam_long_top_front",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Längsstrebe oben vorne",
+        "size": [
+          "width_mm - 90",
+          45.0,
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          "depth_mm - 45",
+          "height_mm - 63"
+        ],
+        "id": "beam_long_top_back",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Längsstrebe oben hinten",
+        "size": [
+          "width_mm - 90",
+          45.0,
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          0.0,
+          0.0
+        ],
+        "id": "beam_long_bot_front",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Längsstrebe unten vorne",
+        "size": [
+          "width_mm - 90",
+          45.0,
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          "depth_mm - 45",
+          0.0
+        ],
+        "id": "beam_long_bot_back",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Längsstrebe unten hinten",
+        "size": [
+          "width_mm - 90",
+          45.0,
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          0.0,
+          "height_mm - 63"
+        ],
+        "id": "beam_short_top_left",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Querstrebe oben vorne",
+        "size": [
+          45.0,
+          "depth_mm - 45",
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          "width_mm - 90",
+          0.0,
+          "height_mm - 63"
+        ],
+        "id": "beam_short_top_right",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Querstrebe oben vorne rechts",
+        "size": [
+          45.0,
+          "depth_mm - 45",
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          0.0,
+          0.0
+        ],
+        "id": "beam_short_bot_left",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Querstrebe unten vorne",
+        "size": [
+          45.0,
+          "depth_mm - 45",
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          "width_mm - 90",
+          0.0,
+          0.0
+        ],
+        "id": "beam_short_bot_right",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Querstrebe unten vorne rechts",
+        "size": [
+          45.0,
+          "depth_mm - 45",
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          "depth_mm - 45",
+          "height_mm - 63"
+        ],
+        "id": "beam_short_top_back_left",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Querstrebe oben hinten",
+        "size": [
+          45.0,
+          "depth_mm - 45",
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          "width_mm - 90",
+          "depth_mm - 45",
+          "height_mm - 63"
+        ],
+        "id": "beam_short_top_back_right",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Querstrebe oben hinten rechts",
+        "size": [
+          45.0,
+          "depth_mm - 45",
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          "depth_mm - 45",
+          0.0
+        ],
+        "id": "beam_short_bot_back_left",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Querstrebe unten hinten",
+        "size": [
+          45.0,
+          "depth_mm - 45",
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          "width_mm - 90",
+          "depth_mm - 45",
+          0.0
+        ],
+        "id": "beam_short_bot_back_right",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Querstrebe unten hinten rechts",
+        "size": [
+          45.0,
+          "depth_mm - 45",
+          45.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          45.0,
+          "height_mm * 0.33"
+        ],
+        "id": "cross_brace_1",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Mittelquerstrebe unten",
+        "size": [
+          45.0,
+          "depth_mm - 90",
+          45.0
+        ],
+        "when": "surface_type == 'plate'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          45.0,
+          "height_mm * 0.67"
+        ],
+        "id": "cross_brace_2",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Mittelquerstrebe oben",
+        "size": [
+          45.0,
+          "depth_mm - 90",
+          45.0
+        ],
+        "when": "surface_type == 'plate'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_45x45"
+      },
+      {
+        "at": [
+          45.0,
+          45.0,
+          "height_mm - 18"
+        ],
+        "id": "surface_plate",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenplatte",
+        "size": [
+          "width_mm - 90",
+          "depth_mm - 90",
+          18.0
+        ],
+        "when": "surface_type == 'plate'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "plywood_birch_18"
+      },
+      {
+        "at": [
+          45.0,
+          45.0,
+          "height_mm - 18"
+        ],
+        "id": "board_0",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Brett",
+        "size": [
+          "width_mm - 90",
+          28.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": {
+          "var": "i",
+          "count": 33.0
+        },
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x28"
+      }
+    ],
+    "steps": [
+      {
+        "text": "4 Eckenpfosten (45x45 mm) aufrecht auf dem Boden positionieren. Abstand zwischen den Pfosten: Länge minus 90 mm, Breite minus 90 mm. Mit Winkel prüfen, dass alle Pfosten senkrecht stehen.",
+        "parts": [
+          "post_fl",
+          "post_fr",
+          "post_bl",
+          "post_br"
+        ],
+        "title": "Eckenpfosten aufstellen"
+      },
+      {
+        "text": "Unterste Längs- und Querstreben zwischen die Pfosten schieben und von der Vorderseite durch Schrauben (45 mm Schrauben) verbinden. Bündig mit den Pfostenkanten abschließen.",
+        "parts": [
+          "beam_long_bot_front",
+          "beam_long_bot_back",
+          "beam_short_bot_left",
+          "beam_short_bot_right",
+          "beam_short_bot_back_left",
+          "beam_short_bot_back_right"
+        ],
+        "title": "Unterrahmen montieren"
+      },
+      {
+        "text": "Obere Längs- und Querstreben auf die Pfosten setzen und von außen verschrauben. Die Streben bilden den Rahmen für die Oberfläche.",
+        "parts": [
+          "beam_long_top_front",
+          "beam_long_top_back",
+          "beam_short_top_left",
+          "beam_short_top_right",
+          "beam_short_top_back_left",
+          "beam_short_top_back_right"
+        ],
+        "title": "Oberrahmen montieren"
+      },
+      {
+        "text": "Bei Plattendesign: Zwei Mittelquerstreben in der Höhe von 1/3 und 2/3 einsetzen und von der Vorderseite verschrauben. Sie verhindern ein Durchbrechen der Platte.",
+        "parts": [
+          "cross_brace_1",
+          "cross_brace_2"
+        ],
+        "title": "Mittelquerstreben einbauen"
+      },
+      {
+        "text": "Platte auf den Rahmen setzen, flach und bündig mit den Streben abschließen. Von unten durch die Strebenlöcher mit Schrauben (40 mm) in die Platte schrauben, damit sie nicht verrutscht.",
+        "parts": [
+          "surface_plate"
+        ],
+        "title": "Platte aufsetzen"
+      },
+      {
+        "text": "Bei Bretterdesign: 33 Bretter (je 28 mm breit, 18 mm dick, 1910 mm lang) nebeneinander auf den Rahmen legen. Je 3 mm Abstand zueinander. Von unten mit 40 mm Schrauben fixieren, so dass die Kopfmitte knapp unter der Oberfläche liegt.",
+        "parts": [
+          "board_0"
+        ],
+        "title": "Bretter verlegen"
+      },
+      {
+        "text": "Oberfläche mit Hartwachsöl (innen) behandeln: 2-3 dünne Schichten auftragen, zwischen den Schichten trocknen lassen. Das schützt das Holz vor Verschmutzung und macht es leicht reinigbar.",
+        "parts": [],
+        "title": "Oberfläche ölen"
+      }
+    ],
+    "finish": "finish_hardwax_750",
+    "joints": [
+      {
+        "into": "post_fl",
+        "kind": "half_lap",
+        "part": "beam_long_bot_front"
+      },
+      {
+        "into": "post_bl",
+        "kind": "half_lap",
+        "part": "beam_long_bot_back"
+      },
+      {
+        "into": "post_fl",
+        "kind": "half_lap",
+        "part": "beam_long_top_front"
+      },
+      {
+        "into": "post_bl",
+        "kind": "half_lap",
+        "part": "beam_long_top_back"
+      },
+      {
+        "into": "post_fl",
+        "kind": "half_lap",
+        "part": "beam_short_top_left"
+      },
+      {
+        "into": "post_fr",
+        "kind": "half_lap",
+        "part": "beam_short_top_right"
+      },
+      {
+        "into": "post_fl",
+        "kind": "half_lap",
+        "part": "beam_short_bot_left"
+      },
+      {
+        "into": "post_fr",
+        "kind": "half_lap",
+        "part": "beam_short_bot_right"
+      },
+      {
+        "into": "post_bl",
+        "kind": "half_lap",
+        "part": "beam_short_top_back_left"
+      },
+      {
+        "into": "post_br",
+        "kind": "half_lap",
+        "part": "beam_short_top_back_right"
+      },
+      {
+        "into": "post_bl",
+        "kind": "half_lap",
+        "part": "beam_short_bot_back_left"
+      },
+      {
+        "into": "post_br",
+        "kind": "half_lap",
+        "part": "beam_short_bot_back_right"
+      }
+    ],
+    "origin": "ai",
+    "params": [
+      {
+        "max": null,
+        "min": null,
+        "kind": "choice",
+        "name": "wood",
+        "label": "Holzart",
+        "default": "spruce",
+        "options": [
+          {
+            "label": "Fichte",
+            "value": "spruce"
+          },
+          {
+            "label": "Douglasie",
+            "value": "douglas"
+          },
+          {
+            "label": "Lärche",
+            "value": "larch"
+          }
+        ]
+      },
+      {
+        "max": 2000.0,
+        "min": 500.0,
+        "kind": "length",
+        "name": "width_mm",
+        "label": "Länge (mm)",
+        "default": 2000,
+        "options": []
+      },
+      {
+        "max": 1200.0,
+        "min": 500.0,
+        "kind": "length",
+        "name": "depth_mm",
+        "label": "Breite (mm)",
+        "default": 1000,
+        "options": []
+      },
+      {
+        "max": 500.0,
+        "min": 300.0,
+        "kind": "length",
+        "name": "height_mm",
+        "label": "Höhe (mm)",
+        "default": 400,
+        "options": []
+      },
+      {
+        "max": null,
+        "min": null,
+        "kind": "choice",
+        "name": "surface_type",
+        "label": "Oberfläche",
+        "default": "plate",
+        "options": [
+          {
+            "label": "Platte (einfach)",
+            "value": "plate"
+          },
+          {
+            "label": "Bretter (optisch)",
+            "value": "boards"
+          }
+        ]
+      }
+    ],
+    "summary": "Ein rechteckiges Podest {width_mm} x {depth_mm} x {height_mm} mm mit 45x45 mm-Rahmen aus {wood} und {surface_type}-Oberfläche für Kinder-Modenschau",
+    "support": "floor",
+    "category": "object",
+    "hardware": [
+      {
+        "item": "finish_hardwax_750",
+        "note": null,
+        "when": null,
+        "quantity": 1.0
+      },
+      {
+        "item": "foot_rubber_40",
+        "note": "Gummifuß unter jedem Eckenpfosten",
+        "when": null,
+        "quantity": 4.0
+      }
+    ],
+    "variants": [
+      {
+        "key": "osb",
+        "name": "OSB-Platte",
+        "overrides": {
+          "surface_type": "plate"
+        },
+        "description": "Günstigere Variante mit OSB-Platte statt Birkenplywood"
+      }
+    ],
+    "auto_screws": true,
+    "object_type": "Kinder-Podest für Modenschau"
+  }
+}
