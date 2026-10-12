@@ -9,7 +9,9 @@ from pydantic import ValidationError
 
 from calc_engine.assembly.expr import ExprError, evaluate
 from calc_engine.assembly.resolve import DesignError, resolve_parts
+from calc_engine.engine import DesignRejectedError, default_engine
 from construction_model.assembly import AssemblyDesign
+from construction_model.model import ProjectInputs
 
 
 def _param(name: str, kind: str = "length", **extra: Any) -> dict[str, Any]:
@@ -150,3 +152,109 @@ def test_placement_error_lists_what_was_given() -> None:
     message = str(exc.value)
     assert "Bauteil 'top': entweder size und at (Box) oder start und end (Stab)" in message
     assert "angegeben: size" in message
+
+
+# --- Engine checks (check.py): the message must say which dimension is off and the way out -------
+
+
+def _build_errors(*parts: dict[str, Any], support: str = "floor") -> str:
+    design = AssemblyDesign.model_validate(
+        {
+            "object_type": "Podest",
+            "summary": "Podest",
+            "support": support,
+            "params": [],
+            "parts": list(parts),
+        }
+    )
+    inputs = ProjectInputs(title="t", pack_id="design", params={}, design=design)
+    with pytest.raises(DesignRejectedError) as exc:
+        default_engine().build(inputs)
+    return " | ".join(exc.value.errors)
+
+
+def _part(pid: str, material: str, size: list[Any], at: list[Any]) -> dict[str, Any]:
+    return {"id": pid, "name": pid, "material": material, "size": size, "at": at}
+
+
+def test_section_mismatch_names_dimension_and_made_to_order_id() -> None:
+    """The production case (run 615963ad): 70 mm strips on a 44 x 69 mm section."""
+    message = _build_errors(_part("rahmen", "lumber_spruce_44x69", [2000, 70, 69], [0, 0, 0]))
+    # The old leading words stay intact (pinned by the regression case).
+    assert "passen nicht zum Querschnitt 44 × 69 mm von 'lumber_spruce_44x69'" in message
+    assert "Länge 2000 mm angenommen" in message
+    assert "70 → 44 mm (Stärke)" in message  # 69 already fits the width, 70 is the odd one out
+    assert "Breite" not in message
+    assert "Material 'lumber_spruce_69x70'" in message  # fits the written size
+
+
+def test_section_mismatch_on_both_dimensions_lists_both() -> None:
+    message = _build_errors(_part("rahmen", "frame_spruce_44x69", [2000, 50, 80], [0, 0, 0]))
+    assert "Länge 2000 mm angenommen" in message
+    assert "50 → 44 mm (Stärke)" in message
+    assert "80 → 69 mm (Breite)" in message
+    assert "Material 'lumber_spruce_50x80'" in message  # catalog profile: species from the item
+
+
+def test_section_mismatch_never_invents_an_unavailable_id() -> None:
+    # 250 mm thick is beyond the lumber rules (max 200 mm), so no id may be named.
+    message = _build_errors(_part("balken", "lumber_spruce_44x69", [2000, 250, 300], [0, 0, 0]))
+    assert "passen nicht zum Querschnitt 44 × 69 mm" in message
+    assert "250 → 44 mm" in message
+    assert "oder Material" not in message
+    assert "lumber_spruce_250" not in message
+
+
+def test_section_mismatch_of_non_wood_gives_no_id() -> None:
+    message = _build_errors(_part("pfosten", "frame_spruce_44x44", [2000, 44, 50], [0, 0, 0]))
+    assert "50 → 44 mm" in message
+    assert "Material 'lumber_spruce_44x50'" in message  # a valid species cut, verified
+
+
+def test_sheet_mismatch_names_nearest_thickness_and_other_board() -> None:
+    message = _build_errors(_part("deck", "plywood_birch_18", [600, 400, 24], [0, 0, 0]))
+    assert "kein Maß von 600 × 400 × 24 mm entspricht der Plattenstärke 18 mm" in message
+    assert "weicht um 6 mm ab" in message
+    assert "auf 18 mm ändern" in message
+    assert "Platte 'plywood_birch_24' (24 mm) wählen" in message
+
+
+def test_sheet_mismatch_without_fitting_board_lists_thicknesses() -> None:
+    message = _build_errors(_part("deck", "plywood_birch_18", [600, 400, 20], [0, 0, 0]))
+    assert "weicht um 2 mm ab" in message
+    assert "oder Platte" not in message
+    assert "lieferbare Stärken: 12, 18, 24 mm" in message
+
+
+def test_piece_mismatch_names_the_deviation() -> None:
+    message = _build_errors(
+        _part("fuss", "foot_rubber_40", [40, 40, 12], [0, 0, 0]),
+        _part("platte", "glulam_spruce_18", [40, 40, 18], [0, 0, 10]),
+    )
+    assert "'foot_rubber_40' hat die feste Größe 40 × 40 × 10 mm" in message
+    assert "geschrieben 40 × 40 × 12 mm, Abweichung: 12 → 10 mm" in message
+
+
+def test_floating_design_names_lowest_part_and_fix() -> None:
+    message = _build_errors(_part("platte", "glulam_spruce_18", [400, 400, 18], [0, 0, 120]))
+    assert "Kein Bauteil steht auf dem Boden (z = 0)" in message
+    assert "tiefstes Teil 'platte[0]' liegt bei z = 120 mm" in message
+    assert 'support="wall"' in message
+
+
+def test_disconnected_group_names_gap_to_main_group() -> None:
+    message = _build_errors(
+        _part("a", "glulam_spruce_18", [400, 400, 18], [0, 0, 0]),
+        _part("b", "glulam_spruce_18", [400, 400, 18], [0, 0, 38]),
+    )
+    assert "Nicht alle Bauteile sind verbunden (keine Kontaktfläche): " in message
+    assert "Nächster Abstand 'b[0]' ↔ 'a[0]': Lücke z 20 mm" in message
+    assert "flächig berühren" in message
+
+
+def test_disconnected_group_touching_only_at_an_edge() -> None:
+    message = _build_errors(
+        _part("a", "glulam_spruce_18", [400, 400, 18], [0, 0, 0]),
+        _part("b", "glulam_spruce_18", [400, 400, 18], [400, 400, 0]),
+    )
+    assert "kein flächiger Kontakt (nur Kante oder Ecke)" in message

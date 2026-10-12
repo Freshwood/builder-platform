@@ -77,6 +77,28 @@ arguments by `tool_call_id`, `on_tool_validate_error` and `on_tool_execute_error
 failures that never reach a tool body; the bodies call `_attempt` / `_fail`. Add the `raw_args`
 of a bad run as a fixture under `apps/api/tests/fixtures/tool_args/` (see `test_failure_capture.py`).
 
+**`failed_request`.** A failed run keeps no `model_messages`, so a provider error such as HTTP 400
+`Missing required parameter: 'messages[6].content'` could not be traced to a request. The
+capability `RecordRequestShape` (`tools.py`, helpers in `modules/agent/request_shape.py`) keeps the
+*shape* of the latest model request in `AgentDeps` (overwritten per request) and `api/chat.py`
+stores it for runs with status `failed` as `agent_runs.usage["failed_request"]` (successful runs
+store nothing; no migration). It holds structure only, never text: per message its index, kind and
+parts (`kind`, `tool`, shortened `id`, `chars`, `empty`), plus `request_number`, `error_class`,
+`status_code` and `model_call_failed` (false if the run died elsewhere, e.g. usage limit). The
+newest 40 messages are kept (`messages_total` / `messages_omitted` count the rest). Under
+`provider` is the OpenAI-style array as the provider received it (role, `has_content`, `chars`,
+`tool_calls`, `tool_call_id`), obtained from the model's private `_map_messages` (pydantic-ai
+version in `pydantic_ai`; `{"available": false}` if that changes, a run never breaks), and
+`suspicious`: indices without content and without tool calls, or `tool` messages without content;
+`suspicious_source` maps them to the pydantic-ai message index. Provider and pydantic-ai indices
+differ (instructions become `messages[0]`, an empty response vanishes, one request with several
+tool returns becomes several `tool` messages), so use `provider.messages[i]` for the number in the
+error text. Hooks: `wrap_model_request` (final messages), `on_model_request_error` and
+`on_run_error` (a streamed request fails while its events are read, not inside the model-request
+hooks). `task regress:capture` writes it as `failed_request.json` into the draft and summarises it
+in `notes`. Example: `suspicious: [5]`, `suspicious_source: [{"provider": 5, "message": 4}]` means
+the tool return in message 4 was empty. Test: `test_failed_request_capture.py`.
+
 ## Regression cases
 
 Every reported failed project or drawing becomes a regression case that is replayed offline in CI

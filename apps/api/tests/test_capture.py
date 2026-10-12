@@ -139,6 +139,59 @@ def test_an_engine_loop_becomes_a_draft(tmp_path: Path) -> None:
     assert _read(draft / "attempts" / "02.json") == _engine_loop_row()["design_attempts"][1]
 
 
+FAILED_REQUEST = {
+    "shape_version": 1,
+    "pydantic_ai": "2.49.0",
+    "request_number": 4,
+    "messages_total": 7,
+    "messages": [{"i": 0, "kind": "request", "parts": [{"kind": "user-prompt", "chars": 37}]}],
+    "provider": {"available": True, "total": 8, "messages": [], "suspicious": [5]},
+    "model_call_failed": True,
+    "error_class": "ModelHTTPError",
+    "status_code": 400,
+}
+
+
+def test_a_failed_request_is_summarised_and_kept_beside_the_case(tmp_path: Path) -> None:
+    usage = {"requests": 3, "per_request": [], "failed_request": FAILED_REQUEST}
+    draft = _capture(_engine_loop_row(usage=usage), tmp_path)
+
+    # The shape is written as stored, in its own file; the case does not reference it.
+    assert _read(draft / "failed_request.json") == FAILED_REQUEST
+    case = _read(draft / "case.json")
+    assert all(a["file"].startswith("attempts/") for a in case["attempts"])
+    notes = case["notes"]
+    assert "Abgelehnte Anfrage Nr. 4: ModelHTTPError, HTTP 400" in notes
+    assert "messages[5]" in notes
+    assert "7 Nachrichten" in notes
+
+    # The extra file neither breaks the loader nor the promotion (it moves with the directory).
+    _complete(draft)
+    target = capture.promote(draft.name, tmp_path, run_checks=False)
+    assert _read(target / "failed_request.json") == FAILED_REQUEST
+    assert [c.slug for c in capture.load_loader().load_all(tmp_path)] == [target.name]
+
+
+def test_a_run_without_a_failed_request_writes_no_file(tmp_path: Path) -> None:
+    draft = _capture(_engine_loop_row(usage={"requests": 3}), tmp_path)
+    assert not (draft / "failed_request.json").exists()
+    assert "Abgelehnte Anfrage" not in _read(draft / "case.json")["notes"]
+
+
+def test_the_failed_request_note_copies_numbers_and_a_class_name_only(tmp_path: Path) -> None:
+    hostile = {
+        **FAILED_REQUEST,
+        "error_class": "Boom hunter2 kind.eltern@example.com",
+        "status_code": "400 secret",
+        "provider": {"available": True, "suspicious": [5, "geheim"]},
+    }
+    note = capture.describe_failed_request(hostile)
+    assert "hunter2" not in note
+    assert "geheim" not in note
+    assert "secret" not in note
+    assert "messages[5]" in note
+
+
 def test_two_engine_rejections_without_invalid_args_are_an_engine_loop(tmp_path: Path) -> None:
     attempts = [_attempt("engine_rejected", ["a"]), _attempt("engine_rejected", ["b"])]
     case = _read(_capture(_row(attempts), tmp_path) / "case.json")
@@ -388,6 +441,7 @@ async def test_a_run_is_read_from_the_database(settings: Settings) -> None:
                     prompt_version="v",
                     ui_messages=[{"role": "user", "parts": [{"type": "text", "text": text}]}],
                     design_attempts=attempts,
+                    usage={"requests": 1, "failed_request": FAILED_REQUEST} if attempts else None,
                     error="boom",
                 )
             )
@@ -406,6 +460,7 @@ async def test_a_run_is_read_from_the_database(settings: Settings) -> None:
     assert run.run_id == run_id
     assert capture.user_text(run.conversation_ui_messages) == "Erste Frage"
     assert run.design_attempts[0]["outcome"] == "engine_rejected"
+    assert run.failed_request == FAILED_REQUEST
     assert not hasattr(run, "owner_id")
     with pytest.raises(CaptureError, match="nicht in agent_runs"):
         await capture.fetch_run(str(uuid4()), settings.database_url)

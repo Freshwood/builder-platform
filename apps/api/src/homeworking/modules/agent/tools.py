@@ -9,8 +9,8 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import Field, ValidationError
-from pydantic_ai import Agent, ModelRetry, RunContext
-from pydantic_ai.capabilities import AbstractCapability, ProcessHistory
+from pydantic_ai import Agent, AgentRunResult, ModelRetry, RunContext
+from pydantic_ai.capabilities import AbstractCapability, ProcessHistory, WrapModelRequestHandler
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models import Model, ModelRequestContext
 from pydantic_ai.tools import ToolDefinition
@@ -36,6 +36,7 @@ from construction_model.model import Origin, ParamValue, ProjectModel
 from homeworking.modules.agent.args import JsonTolerant, RepairToolArgs
 from homeworking.modules.agent.history import process_history
 from homeworking.modules.agent.prompts import INSTRUCTIONS
+from homeworking.modules.agent.request_shape import error_info, request_shape
 from homeworking.modules.projects.service import (
     CommandOutcome,
     ProjectNotFoundError,
@@ -71,6 +72,14 @@ class AgentDeps:
     raw_tool_args: dict[str, str | dict[str, Any] | None] = field(default_factory=dict)
     # Usage of every model request, also of runs that fail later (they cost money, too).
     requests: list[dict[str, Any]] = field(default_factory=list)
+    # Shape (no text) of the latest model request as sent, and of the latest model call error;
+    # overwritten per request (no growth), stored only if the run fails (``request_shape.py``).
+    request_count: int = 0
+    last_request_shape: dict[str, Any] | None = None
+    last_request_error: dict[str, Any] | None = None
+    # Number of the model request in flight, ``None`` once it returned (a streamed request fails
+    # while its events are read, outside the model-request hooks).
+    request_open: int | None = None
     # The model may call several tools in parallel; project writes must run one after another,
     # otherwise they race for the next command sequence number.
     write_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -452,6 +461,74 @@ class RecordUsage(AbstractCapability[AgentDeps]):
         return None
 
 
+@dataclass
+class RecordRequestShape(AbstractCapability[AgentDeps]):
+    """Keep the structure of every model request as sent, and of the error if the call fails.
+
+    ``wrap_model_request`` sees the final messages (after history processing and the framework's
+    clean-up), i.e. what the model class maps to the provider array. Observing only: the request
+    is passed on unchanged, and a failure while recording never breaks the run.
+    """
+
+    async def wrap_model_request(
+        self,
+        ctx: RunContext[AgentDeps],
+        *,
+        request_context: ModelRequestContext,
+        handler: WrapModelRequestHandler,
+    ) -> ModelResponse:
+        deps = ctx.deps
+        deps.request_count += 1
+        number = deps.request_count
+        try:
+            deps.last_request_shape = await request_shape(request_context, number)
+        except Exception:  # pragma: no cover - diagnostics must never break a run
+            deps.last_request_shape = None
+        deps.request_open = number
+        try:
+            response = await handler(request_context)
+        except Exception as error:
+            self._remember(deps, number, error)
+            raise
+        deps.request_open = None
+        return response
+
+    async def on_model_request_error(
+        self,
+        ctx: RunContext[AgentDeps],
+        *,
+        request_context: ModelRequestContext,
+        error: Exception,
+    ) -> ModelResponse:
+        self._remember(ctx.deps, ctx.deps.request_count, error)
+        raise error
+
+    async def on_run_error(
+        self, ctx: RunContext[AgentDeps], *, error: BaseException
+    ) -> AgentRunResult[Any]:
+        """A streamed request opens lazily: its provider error surfaces here, not in the hooks above.
+
+        (``wrap_run_event_stream`` would see it too, but defining it makes ``agent.run`` stream.)
+        Only a run that died while a request was in flight counts as a failed model call.
+        """
+        deps = ctx.deps
+        known = (deps.last_request_error or {}).get("request_number")
+        if deps.request_open is not None and known != deps.request_open:
+            self._remember(deps, deps.request_open, error)
+        raise error
+
+    @staticmethod
+    def _remember(deps: AgentDeps, number: int, error: BaseException) -> None:
+        # ModelRetry is a retry request of the framework, not a failure of the call.
+        if isinstance(error, ModelRetry):
+            return
+        deps.last_request_error = {"request_number": number, **error_info(error)}
+
+    @classmethod
+    def get_serialization_name(cls) -> str | None:
+        return None
+
+
 def _validation_messages(error: ValidationError | ModelRetry) -> list[str]:
     """Compact texts of an argument error (location, message, type); no input echo."""
     if isinstance(error, ModelRetry):
@@ -538,6 +615,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             RepairToolArgs(),
             RecordToolAttempts(),
             RecordUsage(),
+            RecordRequestShape(),
         ],
     )
 

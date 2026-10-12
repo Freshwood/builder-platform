@@ -11,12 +11,13 @@ from calc_engine.assembly.geometry import (
     GeometryError,
     Overlap,
     analyse,
+    axis_name,
     bounds_of,
     components,
 )
 from calc_engine.assembly.resolve import DesignError, ResolvedPart
 from calc_engine.assembly.shapes import ShapeError
-from calc_engine.catalog import LUMBER_PREFIX, Catalog, CatalogItem
+from calc_engine.catalog import LUMBER_PREFIX, Catalog, CatalogItem, lumber_id
 from construction_model.assembly import AssemblyDesign
 
 MAX_EDGE_MM = 4000
@@ -129,7 +130,7 @@ def classify(part: ResolvedPart, catalog: Catalog, box: Box | None = None) -> Pa
         return f"{label}: unbekanntes Material '{part.material}' (siehe list_materials)"
     if min(dims) <= 0:
         return f"{label}: Maße {_fmt(dims)} mm müssen alle größer 0 sein"
-    info = _classify_item(part, item, dims, box, label)
+    info = _classify_item(part, item, dims, box, label, catalog)
     if isinstance(info, PartInfo):
         if part.shape is not None and part.shape.kind != "rect" and info.kind == "piece":
             return f"{label}: Fertigteile haben feste Form – keine shape angeben"
@@ -146,12 +147,88 @@ def classify(part: ResolvedPart, catalog: Catalog, box: Box | None = None) -> Pa
     return info
 
 
+def _nearest_section(
+    dims: tuple[float, float, float], t: float, w: float
+) -> tuple[float, tuple[float, float]]:
+    """Best reading of ``dims`` as length + section: (length, (written to t, written to w)).
+
+    Prefers the reading where most dimensions already match the catalog section, then the one
+    with the smallest total deviation, then the longest length.
+    """
+    best: tuple[tuple[int, float, float], float, tuple[float, float]] | None = None
+    for k in range(3):
+        rest = sorted(dims[j] for j in range(3) if j != k)
+        for first, second in ((rest[0], rest[1]), (rest[1], rest[0])):
+            misses = int(not _close(first, t)) + int(not _close(second, w))
+            deviation = abs(first - t) + abs(second - w)
+            key = (misses, deviation, -dims[k])
+            if best is None or key < best[0]:
+                best = (key, dims[k], (first, second))
+    assert best is not None
+    return best[1], best[2]
+
+
+def _section_hint(
+    dims: tuple[float, float, float], item: CatalogItem, t: int, w: int, catalog: Catalog
+) -> str:
+    """Where a linear member's dimensions miss the section, and the concrete ways out."""
+    length, (first, second) = _nearest_section(dims, t, w)
+    changes = [
+        f"{written:g} → {wanted:g} mm ({name})"
+        for written, wanted, name in ((first, t, "Stärke"), (second, w, "Breite"))
+        if not _close(written, wanted)
+    ]
+    hint = f"Länge {length:g} mm angenommen; Maß anpassen: {', '.join(changes)}"
+    # The same species cut to the written section, offered only if the lumber rules accept it.
+    if item.material in catalog.lumber_species():
+        written = sorted((round(first), round(second)))
+        candidate = catalog.resolve_lumber(lumber_id(str(item.material), *written))
+        if isinstance(candidate, CatalogItem) and candidate.section_mm != item.section_mm:
+            hint += f", oder Material '{candidate.id}' für das geschriebene Maß wählen"
+    return hint + "."
+
+
+def _sheet_hint(dims: tuple[float, float, float], item: CatalogItem, catalog: Catalog) -> str:
+    """Nearest sheet thickness; the same board type in another thickness if one fits a dimension."""
+    thickness = item.thickness_mm or 0
+    nearest = min(dims, key=lambda d: abs(d - thickness))
+    hint = (
+        f"Das nächste Maß {nearest:g} mm weicht um {abs(nearest - thickness):g} mm ab: "
+        f"auf {thickness} mm ändern"
+    )
+    siblings = sorted(
+        (i for i in catalog.items if i.kind == "sheet" and i.material == item.material),
+        key=lambda i: i.thickness_mm or 0,
+    )
+    fitting = [
+        i
+        for i in siblings
+        if i.designable and i.id != item.id and any(_close(d, i.thickness_mm or 0) for d in dims)
+    ]
+    if fitting:
+        hint += f", oder Platte '{fitting[0].id}' ({fitting[0].thickness_mm} mm) wählen"
+    elif len(siblings) > 1:
+        hint += f"; lieferbare Stärken: {', '.join(str(i.thickness_mm) for i in siblings)} mm"
+    return hint + "."
+
+
+def _piece_hint(dims: tuple[float, float, float], size: tuple[int, int, int]) -> str:
+    """Deviation of a placed prefab from its fixed size (the order of the dimensions is free)."""
+    off = [
+        f"{written:g} → {fixed:g}"
+        for written, fixed in zip(sorted(dims), sorted(size), strict=True)
+        if not _close(written, fixed, 1.0)
+    ]
+    return f"geschrieben {_fmt(dims)} mm, Abweichung: {', '.join(off)} mm (Reihenfolge egal)"
+
+
 def _classify_item(
     part: ResolvedPart,
     item: CatalogItem,
     dims: tuple[float, float, float],
     box: Box,
     label: str,
+    catalog: Catalog,
 ) -> PartInfo | str:
     if item.kind == "bulk":
         t = box.lw
@@ -189,7 +266,8 @@ def _classify_item(
                 return PartInfo(part, item, "linear", length, w, t)
         return (
             f"{label}: Maße {_fmt(dims)} mm passen nicht zum Querschnitt "
-            f"{t} × {w} mm von '{item.id}' (zwei Maße müssen dem Querschnitt entsprechen)"
+            f"{t} × {w} mm von '{item.id}' (zwei Maße müssen dem Querschnitt entsprechen). "
+            f"{_section_hint(dims, item, t, w, catalog)}"
         )
     if item.kind == "sheet" and item.thickness_mm and item.sheet_mm:
         for k in range(3):
@@ -206,12 +284,16 @@ def _classify_item(
                 )
         return (
             f"{label}: kein Maß von {_fmt(dims)} mm entspricht der Plattenstärke "
-            f"{item.thickness_mm} mm von '{item.id}'"
+            f"{item.thickness_mm} mm von '{item.id}'. {_sheet_hint(dims, item, catalog)}"
         )
     if item.kind == "piece" and item.size_mm:
         if all(_close(a, b, 1.0) for a, b in zip(sorted(dims), sorted(item.size_mm), strict=True)):
             return PartInfo(part, item, "piece", 0, 0, 0)
-        return f"{label}: '{item.id}' hat die feste Größe {_fmt(tuple(float(s) for s in item.size_mm))} mm"
+        return (
+            f"{label}: '{item.id}' hat die feste Größe "
+            f"{_fmt(tuple(float(s) for s in item.size_mm))} mm; "
+            f"{_piece_hint(dims, item.size_mm)}"
+        )
     return f"{label}: '{item.id}' ist kein platzierbares Bauteil – unter hardware angeben"
 
 
@@ -274,29 +356,57 @@ def check_design(
     groups = components(len(boxes), contacts)
     main = max(groups, key=len)
     wall_y = hi[1] - TOUCH_TOL
-    loose = [
-        boxes[i].part.key
+    loose_idx = [
+        i
         for g in groups
         if g is not main
         # Separate groups are fine on a wall (e.g. two shutter wings) if each is fixed to it.
         and not (design.support == "wall" and any(boxes[j].bounds()[1][1] >= wall_y for j in g))
         for i in g
     ]
-    if loose:
+    if loose_idx:
+        loose = [boxes[i].part.key for i in loose_idx]
         errors.append(
             "Nicht alle Bauteile sind verbunden (keine Kontaktfläche): "
-            f"{', '.join(loose[:8])}{' …' if len(loose) > 8 else ''}"
+            f"{', '.join(loose[:8])}{' …' if len(loose) > 8 else ''}. "
+            f"{_gap_hint(boxes, loose_idx, main)}"
         )
 
     if design.support == "floor":
         if not any(b.bounds()[0][2] <= TOUCH_TOL for b in boxes):
-            errors.append("Kein Bauteil steht auf dem Boden (z = 0)")
+            lowest = min(boxes, key=lambda b: b.bounds()[0][2])
+            errors.append(
+                "Kein Bauteil steht auf dem Boden (z = 0): tiefstes Teil "
+                f"'{lowest.part.key}' liegt bei z = {lowest.bounds()[0][2]:g} mm – das unterste "
+                'Teil auf z = 0 setzen (bei Wandmontage support="wall")'
+            )
     elif not any(b.bounds()[1][1] >= hi[1] - TOUCH_TOL for b in boxes):
         errors.append("Kein Bauteil liegt an der Wand (größtes y) an")
 
     if errors:
         raise DesignError(errors[:MAX_ERRORS])
     return CheckedDesign(infos=infos, boxes=boxes, contacts=contacts, overlaps=overlaps)
+
+
+def _gap_hint(boxes: list[Box], loose: list[int], main: list[int]) -> str:
+    """Nearest gap between the loose parts and the main group (bounding boxes), per axis."""
+    best: tuple[float, int, int, tuple[float, float, float]] | None = None
+    for i in loose:
+        lo_i, hi_i = boxes[i].bounds()
+        for j in main:
+            lo_j, hi_j = boxes[j].bounds()
+            gaps = tuple(max(0.0, lo_j[k] - hi_i[k], lo_i[k] - hi_j[k]) for k in range(3))
+            dist = sum(g * g for g in gaps) ** 0.5
+            if best is None or dist < best[0]:
+                best = (dist, i, j, (gaps[0], gaps[1], gaps[2]))
+    assert best is not None
+    _, i, j, gaps = best
+    where = ", ".join(f"{axis_name(k)} {g:.0f} mm" for k, g in enumerate(gaps) if g > TOUCH_TOL)
+    gap = f"Lücke {where}" if where else "kein flächiger Kontakt (nur Kante oder Ecke)"
+    return (
+        f"Nächster Abstand '{boxes[i].part.key}' ↔ '{boxes[j].part.key}': {gap}. "
+        "Teile müssen sich flächig berühren – Position oder Maß anpassen"
+    )
 
 
 def _pair(boxes: list[Box], i: int, j: int) -> frozenset[str]:

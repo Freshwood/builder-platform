@@ -1,0 +1,741 @@
+{
+  "tool": "save_design",
+  "tool_call_id": "call_f03ed2c1273f4916af5a7575",
+  "outcome": "engine_rejected",
+  "accepted": false,
+  "errors": [
+    "Bauteil 'rahmen_vorne[0]' (Vorderer Rahmenstreifen): Maße 2000 × 70 × 69 mm passen nicht zum Querschnitt 44 × 69 mm von 'lumber_spruce_44x69' (zwei Maße müssen dem Querschnitt entsprechen)",
+    "Bauteil 'rahmen_hinten[0]' (Hinterer Rahmenstreifen): Maße 2000 × 70 × 69 mm passen nicht zum Querschnitt 44 × 69 mm von 'lumber_spruce_44x69' (zwei Maße müssen dem Querschnitt entsprechen)",
+    "Bauteil 'rahmen_links[0]' (Linker Rahmenstreifen): Maße 70 × 860 × 69 mm passen nicht zum Querschnitt 44 × 69 mm von 'lumber_spruce_44x69' (zwei Maße müssen dem Querschnitt entsprechen)",
+    "Bauteil 'rahmen_rechts[0]' (Rechter Rahmenstreifen): Maße 70 × 860 × 69 mm passen nicht zum Querschnitt 44 × 69 mm von 'lumber_spruce_44x69' (zwei Maße müssen dem Querschnitt entsprechen)"
+  ],
+  "raw_args": "{\"design\": \"{\\\"object_type\\\": \\\"Kinder-Podest für Modenschau\\\", \\\"summary\\\": \\\"Ein 2000×1000 mm Podest mit 400 mm Höhe aus Fichtenrahmen, vier 70×70 mm Beinen und einer BrettOberfläche (11× Fichtenbretter 18×96 mm) – für drinnen-Einsatz.\\\", \\\"params\\\": [{\\\"name\\\": \\\"length_mm\\\", \\\"label\\\": \\\"Länge in mm\\\", \\\"kind\\\": \\\"length\\\", \\\"default\\\": 2000, \\\"min\\\": 500, \\\"max\\\": 2000}, {\\\"name\\\": \\\"width_mm\\\", \\\"label\\\": \\\"Breite in mm\\\", \\\"kind\\\": \\\"length\\\", \\\"default\\\": 1000, \\\"min\\\": 400, \\\"max\\\": 1000}, {\\\"name\\\": \\\"height_mm\\\", \\\"label\\\": \\\"Höhe in mm\\\", \\\"kind\\\": \\\"length\\\", \\\"default\\\": 400, \\\"min\\\": 200, \\\"max\\\": 600}, {\\\"name\\\": \\\"surface_type\\\", \\\"label\\\": \\\"Oberflächenart\\\", \\\"kind\\\": \\\"choice\\\", \\\"default\\\": \\\"boards\\\", \\\"options\\\": [{\\\"value\\\": \\\"boards\\\", \\\"label\\\": \\\"Bretter (18×96 mm)\\\"}, {\\\"value\\\": \\\"plate\\\", \\\"label\\\": \\\"Platte (18 mm Multiplex)\\\"}]}, {\\\"name\\\": \\\"wood\\\", \\\"label\\\": \\\"Holzart\\\", \\\"kind\\\": \\\"choice\\\", \\\"default\\\": \\\"spruce\\\", \\\"options\\\": [{\\\"value\\\": \\\"spruce\\\", \\\"label\\\": \\\"Fichte\\\"}, {\\\"value\\\": \\\"douglas\\\", \\\"label\\\": \\\"Douglasie\\\"}, {\\\"value\\\": \\\"larch\\\", \\\"label\\\": \\\"Lärche\\\"}]}], \\\"parts\\\": [{\\\"id\\\": \\\"bein_1\\\", \\\"name\\\": \\\"Vorderlinkes Bein\\\", \\\"material\\\": \\\"lumber_{wood}_70x70\\\", \\\"size\\\": [70, 70, \\\"height_mm\\\"], \\\"at\\\": [0, 0, 0], \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"bein_2\\\", \\\"name\\\": \\\"Vorderrechtes Bein\\\", \\\"material\\\": \\\"lumber_{wood}_70x70\\\", \\\"size\\\": [70, 70, \\\"height_mm\\\"], \\\"at\\\": [\\\"length_mm - 70\\\", 0, 0], \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"bein_3\\\", \\\"name\\\": \\\"Hinterlinkes Bein\\\", \\\"material\\\": \\\"lumber_{wood}_70x70\\\", \\\"size\\\": [70, 70, \\\"height_mm\\\"], \\\"at\\\": [0, \\\"width_mm - 70\\\", 0], \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"bein_4\\\", \\\"name\\\": \\\"Hinterrechtes Bein\\\", \\\"material\\\": \\\"lumber_{wood}_70x70\\\", \\\"size\\\": [70, 70, \\\"height_mm\\\"], \\\"at\\\": [\\\"length_mm - 70\\\", \\\"width_mm - 70\\\", 0], \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"rahmen_vorne\\\", \\\"name\\\": \\\"Vorderer Rahmenstreifen\\\", \\\"material\\\": \\\"lumber_{wood}_44x69\\\", \\\"size\\\": [\\\"length_mm\\\", 70, 69], \\\"at\\\": [0, 0, \\\"height_mm - 69\\\"], \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"rahmen_hinten\\\", \\\"name\\\": \\\"Hinterer Rahmenstreifen\\\", \\\"material\\\": \\\"lumber_{wood}_44x69\\\", \\\"size\\\": [\\\"length_mm\\\", 70, 69], \\\"at\\\": [0, \\\"width_mm - 70\\\", \\\"height_mm - 69\\\"], \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"rahmen_links\\\", \\\"name\\\": \\\"Linker Rahmenstreifen\\\", \\\"material\\\": \\\"lumber_{wood}_44x69\\\", \\\"size\\\": [70, \\\"width_mm - 2 * 70\\\", 69], \\\"at\\\": [0, 70, \\\"height_mm - 69\\\"], \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"rahmen_rechts\\\", \\\"name\\\": \\\"Rechter Rahmenstreifen\\\", \\\"material\\\": \\\"lumber_{wood}_44x69\\\", \\\"size\\\": [70, \\\"width_mm - 2 * 70\\\", 69], \\\"at\\\": [\\\"length_mm - 70\\\", 70, \\\"height_mm - 69\\\"], \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_1\\\", \\\"name\\\": \\\"Oberflächenbrett 1\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 0, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_2\\\", \\\"name\\\": \\\"Oberflächenbrett 2\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 96, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_3\\\", \\\"name\\\": \\\"Oberflächenbrett 3\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 192, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_4\\\", \\\"name\\\": \\\"Oberflächenbrett 4\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 288, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_5\\\", \\\"name\\\": \\\"Oberflächenbrett 5\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 384, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_6\\\", \\\"name\\\": \\\"Oberflächenbrett 6\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 480, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_7\\\", \\\"name\\\": \\\"Oberflächenbrett 7\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 576, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_8\\\", \\\"name\\\": \\\"Oberflächenbrett 8\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 672, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_9\\\", \\\"name\\\": \\\"Oberflächenbrett 9\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 768, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_10\\\", \\\"name\\\": \\\"Oberflächenbrett 10\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 864, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"oberflaeche_11\\\", \\\"name\\\": \\\"Oberflächenbrett 11\\\", \\\"material\\\": \\\"lumber_{wood}_18x96\\\", \\\"size\\\": [\\\"length_mm\\\", 96, 18], \\\"at\\\": [0, 960, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'boards'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}, {\\\"id\\\": \\\"platte\\\", \\\"name\\\": \\\"Oberflächenplatte\\\", \\\"material\\\": \\\"plywood_birch_18\\\", \\\"size\\\": [\\\"length_mm\\\", \\\"width_mm\\\", 18], \\\"at\\\": [0, 0, \\\"height_mm - 18\\\"], \\\"when\\\": \\\"surface_type == 'plate'\\\", \\\"cuts\\\": [\\\"square\\\", \\\"square\\\"]}], \\\"steps\\\": [{\\\"title\\\": \\\"Beine und Rahmen\\\", \\\"text\\\": \\\"Vier 70×70 mm Beine an den Ecken aufstellen und mit dem 44×69 mm Rahmen aus Fichtenrahmenholz verbinden. Die Rahmenstreifen liegen fluchtdurch auf den Beinen und werden von der Seite mit Schrauben (mind. 2 pro Streifen pro Bein) verschraubt. Danach prüfen: alle vier Beine stehen senkrecht, der Rahmen ist bündig.\\\", \\\"parts\\\": [\\\"bein_1\\\", \\\"bein_2\\\", \\\"bein_3\\\", \\\"bein_4\\\", \\\"rahmen_vorne\\\", \\\"rahmen_hinten\\\", \\\"rahmen_links\\\", \\\"rahmen_rechts\\\"]}, {\\\"title\\\": \\\"Oberfläche aufsetzen\\\", \\\"text\\\": \\\"Bei Brettern: 11 Fichtenbretter 18×96 mm nebeneinander auf den Rahmen legen, leicht überstehen (ca. 28 mm auf jeder Seite) und von unten mit Schrauben in die Rahmenstreifen schrauben (je Brett mind. 2 Schrauben pro lange Seite). Bei Platte: eine 18 mm Multiplexplatte Birke auflegen und von unten in den Rahmen schrauben. Danach prüfen: Oberfläche ist glatt, keine durchhängenden Bretter.\\\", \\\"parts\\\": [\\\"oberflaeche_1\\\", \\\"oberflaeche_2\\\", \\\"oberflaeche_3\\\", \\\"oberflaeche_4\\\", \\\"oberflaeche_5\\\", \\\"oberflaeche_6\\\", \\\"oberflaeche_7\\\", \\\"oberflaeche_8\\\", \\\"oberflaeche_9\\\", \\\"oberflaeche_10\\\", \\\"oberflaeche_11\\\", \\\"platte\\\"]}], \\\"variants\\\": [{\\\"key\\\": \\\"plate\\\", \\\"name\\\": \\\"Mit Platte\\\", \\\"description\\\": \\\"Statt 11 einzelnen Brettern eine 18 mm Multiplexplatte Birke als Oberfläche – schneller zusammenzubauen, aber schwerer.\\\", \\\"overrides\\\": {\\\"surface_type\\\": \\\"plate\\\"}}, {\\\"key\\\": \\\"douglas\\\", \\\"name\\\": \\\"Douglasie\\\", \\\"description\\\": \\\"Douglasie statt Fichte – schöneres Maserung, etwas teurer, aber auch für drinnen gut geeignet.\\\", \\\"overrides\\\": {\\\"wood\\\": \\\"douglas\\\"}}, {\\\"key\\\": \\\"larch\\\", \\\"name\\\": \\\"Lärche\\\", \\\"description\\\": \\\"Lärche statt Fichte – sehr robust, leicht feuchtigkeitsbeständig, auch für drinnen geeignet.\\\", \\\"overrides\\\": {\\\"wood\\\": \\\"larch\\\"}}], \\\"use\\\": \\\"indoor\\\", \\\"support\\\": \\\"floor\\\", \\\"joints\\\": [], \\\"hardware\\\": [{\\\"item\\\": \\\"schraube_fz_4x40\\\", \\\"quantity\\\": 32, \\\"note\\\": \\\"Verzinkte Schrauben 4×40 mm für Rahmen-Bein-Verbindung (je Bein 2, 4 Beine + 8 Rahmenverbindungen)\\\"}, {\\\"item\\\": \\\"schraube_fz_4x50\\\", \\\"quantity\\\": 44, \\\"note\\\": \\\"Verzinkte Schrauben 4×50 mm für Oberflächenbretter in den Rahmen (je Brett 4, 11 Bretter)\\\"}, {\\\"item\\\": \\\"schraube_fz_4x50\\\", \\\"quantity\\\": 12, \\\"note\\\": \\\"Verzinkte Schrauben 4×50 mm für Platte in den Rahmen (4 Kanten × 3)\\\"}, {\\\"item\\\": \\\"glue_d3_750\\\", \\\"quantity\\\": 1, \\\"note\\\": \\\"Holzleim D3 wasserfest für zusätzliche Rahmen-Bein-Verbindung\\\"}], \\\"finish\\\": \\\"finish_hardwax_750\\\"}\", \"explanation\": \"**Bauweise:** Das Podest ist ein einfacher Rahmen aus Fichtenrahmenholz (44×69 mm), der auf vier 70×70 mm Beinen steht. Der Rahmen wird von unten auf die Beine gesetzt und von der Seite verschraubt – das ist stabil genug für ein Kinder-Podest und einfach zu bauen. Die Bretter (oder Platte) liegen auf dem Rahmen und werden von unten verschraubt, sodass oben keine Schrauben sichtbar sind.\\n\\n**Material und Holzart:** Standardmäßig Fichte – preiswert, gut für drinnen, leicht zu bearbeiten. Douglasie oder Lärche sind schöner und robuster, kosten aber mehr. Die 70×70 mm Beine geben genug Stabilität bei 400 mm Höhe; bei höherem Podest müsste man dickere Beine nehmen.\\n\\n**Verbindungen:** Rahmen und Beine werden mit Schrauben von der Seite verschraubt, plus Leim für zusätzliche Stabilität. Die Oberflächenbretter werden von unten in den Rahmen geschraubt, damit oben keine Köpfe zu sehen sind. Bei der Plattenvariante wird die Platte ebenfalls von unten verschraubt.\\n\\n**Oberfläche:** Hartwachsöl (finish_hardwax_750) für einen schönen, pflegeleichten Finish – geeignet für drinnen. Die Bretter überstehen je 28 mm über die 1000 mm Breite, damit das Podest eine saubere Kante hat. Wer eine glatte Oberfläche ohne Bretterzwischenräume möchte, nimmt die Plattenvariante.\\n\\n**Annahmen:** 400 mm Höhe ist gut für Kinder (niedrig genug für Sicherheit, hoch genug für Catwalk-Effekt). Die Länge von 2000 mm ist das Maximum; kürzer geht auch. Das Podest steht auf dem Boden (nicht an der Wand). Für einen Catwalk auf einer Bühne könnte man es auf Rollen setzen – das wäre eine Anpassung.\", \"title\": \"Kinder-Podest für Modenschau\"}",
+  "design": {
+    "use": "indoor",
+    "parts": [
+      {
+        "at": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "id": "bein_1",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Vorderlinkes Bein",
+        "size": [
+          70.0,
+          70.0,
+          "height_mm"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_70x70"
+      },
+      {
+        "at": [
+          "length_mm - 70",
+          0.0,
+          0.0
+        ],
+        "id": "bein_2",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Vorderrechtes Bein",
+        "size": [
+          70.0,
+          70.0,
+          "height_mm"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_70x70"
+      },
+      {
+        "at": [
+          0.0,
+          "width_mm - 70",
+          0.0
+        ],
+        "id": "bein_3",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Hinterlinkes Bein",
+        "size": [
+          70.0,
+          70.0,
+          "height_mm"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_70x70"
+      },
+      {
+        "at": [
+          "length_mm - 70",
+          "width_mm - 70",
+          0.0
+        ],
+        "id": "bein_4",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Hinterrechtes Bein",
+        "size": [
+          70.0,
+          70.0,
+          "height_mm"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_70x70"
+      },
+      {
+        "at": [
+          0.0,
+          0.0,
+          "height_mm - 69"
+        ],
+        "id": "rahmen_vorne",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Vorderer Rahmenstreifen",
+        "size": [
+          "length_mm",
+          70.0,
+          69.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_44x69"
+      },
+      {
+        "at": [
+          0.0,
+          "width_mm - 70",
+          "height_mm - 69"
+        ],
+        "id": "rahmen_hinten",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Hinterer Rahmenstreifen",
+        "size": [
+          "length_mm",
+          70.0,
+          69.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_44x69"
+      },
+      {
+        "at": [
+          0.0,
+          70.0,
+          "height_mm - 69"
+        ],
+        "id": "rahmen_links",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Linker Rahmenstreifen",
+        "size": [
+          70.0,
+          "width_mm - 2 * 70",
+          69.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_44x69"
+      },
+      {
+        "at": [
+          "length_mm - 70",
+          70.0,
+          "height_mm - 69"
+        ],
+        "id": "rahmen_rechts",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Rechter Rahmenstreifen",
+        "size": [
+          70.0,
+          "width_mm - 2 * 70",
+          69.0
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_44x69"
+      },
+      {
+        "at": [
+          0.0,
+          0.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_1",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 1",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          96.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_2",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 2",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          192.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_3",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 3",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          288.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_4",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 4",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          384.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_5",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 5",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          480.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_6",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 6",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          576.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_7",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 7",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          672.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_8",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 8",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          768.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_9",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 9",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          864.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_10",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 10",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          960.0,
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche_11",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenbrett 11",
+        "size": [
+          "length_mm",
+          96.0,
+          18.0
+        ],
+        "when": "surface_type == 'boards'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "lumber_{wood}_18x96"
+      },
+      {
+        "at": [
+          0.0,
+          0.0,
+          "height_mm - 18"
+        ],
+        "id": "platte",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberflächenplatte",
+        "size": [
+          "length_mm",
+          "width_mm",
+          18.0
+        ],
+        "when": "surface_type == 'plate'",
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "plywood_birch_18"
+      }
+    ],
+    "steps": [
+      {
+        "text": "Vier 70×70 mm Beine an den Ecken aufstellen und mit dem 44×69 mm Rahmen aus Fichtenrahmenholz verbinden. Die Rahmenstreifen liegen fluchtdurch auf den Beinen und werden von der Seite mit Schrauben (mind. 2 pro Streifen pro Bein) verschraubt. Danach prüfen: alle vier Beine stehen senkrecht, der Rahmen ist bündig.",
+        "parts": [
+          "bein_1",
+          "bein_2",
+          "bein_3",
+          "bein_4",
+          "rahmen_vorne",
+          "rahmen_hinten",
+          "rahmen_links",
+          "rahmen_rechts"
+        ],
+        "title": "Beine und Rahmen"
+      },
+      {
+        "text": "Bei Brettern: 11 Fichtenbretter 18×96 mm nebeneinander auf den Rahmen legen, leicht überstehen (ca. 28 mm auf jeder Seite) und von unten mit Schrauben in die Rahmenstreifen schrauben (je Brett mind. 2 Schrauben pro lange Seite). Bei Platte: eine 18 mm Multiplexplatte Birke auflegen und von unten in den Rahmen schrauben. Danach prüfen: Oberfläche ist glatt, keine durchhängenden Bretter.",
+        "parts": [
+          "oberflaeche_1",
+          "oberflaeche_2",
+          "oberflaeche_3",
+          "oberflaeche_4",
+          "oberflaeche_5",
+          "oberflaeche_6",
+          "oberflaeche_7",
+          "oberflaeche_8",
+          "oberflaeche_9",
+          "oberflaeche_10",
+          "oberflaeche_11",
+          "platte"
+        ],
+        "title": "Oberfläche aufsetzen"
+      }
+    ],
+    "finish": "finish_hardwax_750",
+    "joints": [],
+    "origin": "ai",
+    "params": [
+      {
+        "max": 2000.0,
+        "min": 500.0,
+        "kind": "length",
+        "name": "length_mm",
+        "label": "Länge in mm",
+        "default": 2000,
+        "options": []
+      },
+      {
+        "max": 1000.0,
+        "min": 400.0,
+        "kind": "length",
+        "name": "width_mm",
+        "label": "Breite in mm",
+        "default": 1000,
+        "options": []
+      },
+      {
+        "max": 600.0,
+        "min": 200.0,
+        "kind": "length",
+        "name": "height_mm",
+        "label": "Höhe in mm",
+        "default": 400,
+        "options": []
+      },
+      {
+        "max": null,
+        "min": null,
+        "kind": "choice",
+        "name": "surface_type",
+        "label": "Oberflächenart",
+        "default": "boards",
+        "options": [
+          {
+            "label": "Bretter (18×96 mm)",
+            "value": "boards"
+          },
+          {
+            "label": "Platte (18 mm Multiplex)",
+            "value": "plate"
+          }
+        ]
+      },
+      {
+        "max": null,
+        "min": null,
+        "kind": "choice",
+        "name": "wood",
+        "label": "Holzart",
+        "default": "spruce",
+        "options": [
+          {
+            "label": "Fichte",
+            "value": "spruce"
+          },
+          {
+            "label": "Douglasie",
+            "value": "douglas"
+          },
+          {
+            "label": "Lärche",
+            "value": "larch"
+          }
+        ]
+      }
+    ],
+    "summary": "Ein 2000×1000 mm Podest mit 400 mm Höhe aus Fichtenrahmen, vier 70×70 mm Beinen und einer BrettOberfläche (11× Fichtenbretter 18×96 mm) – für drinnen-Einsatz.",
+    "support": "floor",
+    "category": "object",
+    "hardware": [
+      {
+        "item": "schraube_fz_4x40",
+        "note": "Verzinkte Schrauben 4×40 mm für Rahmen-Bein-Verbindung (je Bein 2, 4 Beine + 8 Rahmenverbindungen)",
+        "when": null,
+        "quantity": 32.0
+      },
+      {
+        "item": "schraube_fz_4x50",
+        "note": "Verzinkte Schrauben 4×50 mm für Oberflächenbretter in den Rahmen (je Brett 4, 11 Bretter)",
+        "when": null,
+        "quantity": 44.0
+      },
+      {
+        "item": "schraube_fz_4x50",
+        "note": "Verzinkte Schrauben 4×50 mm für Platte in den Rahmen (4 Kanten × 3)",
+        "when": null,
+        "quantity": 12.0
+      },
+      {
+        "item": "glue_d3_750",
+        "note": "Holzleim D3 wasserfest für zusätzliche Rahmen-Bein-Verbindung",
+        "when": null,
+        "quantity": 1.0
+      }
+    ],
+    "variants": [
+      {
+        "key": "plate",
+        "name": "Mit Platte",
+        "overrides": {
+          "surface_type": "plate"
+        },
+        "description": "Statt 11 einzelnen Brettern eine 18 mm Multiplexplatte Birke als Oberfläche – schneller zusammenzubauen, aber schwerer."
+      },
+      {
+        "key": "douglas",
+        "name": "Douglasie",
+        "overrides": {
+          "wood": "douglas"
+        },
+        "description": "Douglasie statt Fichte – schöneres Maserung, etwas teurer, aber auch für drinnen gut geeignet."
+      },
+      {
+        "key": "larch",
+        "name": "Lärche",
+        "overrides": {
+          "wood": "larch"
+        },
+        "description": "Lärche statt Fichte – sehr robust, leicht feuchtigkeitsbeständig, auch für drinnen geeignet."
+      }
+    ],
+    "auto_screws": true,
+    "object_type": "Kinder-Podest für Modenschau"
+  }
+}

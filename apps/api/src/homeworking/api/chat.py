@@ -23,6 +23,7 @@ from homeworking.api.deps import ContainerDep, UserDep
 from homeworking.modules.agent.offline import fixed_text_model
 from homeworking.modules.agent.prompts import PROMPT_VERSION
 from homeworking.modules.agent.provenance import prompt_fingerprint
+from homeworking.modules.agent.request_shape import failed_request
 from homeworking.modules.agent.routing import route
 from homeworking.modules.agent.tools import AgentDeps
 from homeworking.modules.compliance.redaction import redact
@@ -185,6 +186,12 @@ async def chat(request: Request, container: ContainerDep, user: UserDep) -> Resp
                 "completed" if result else "failed" if error is not None else "cancelled"
             )
             usage = _usage(result, deps.requests)
+            if status == "failed":
+                # Structure (no text) of the request the provider saw last: a failed run keeps
+                # no model messages, so this is all that is left to diagnose a provider error.
+                record = failed_request(deps.last_request_shape, deps.last_request_error)
+                if record is not None:
+                    usage["failed_request"] = record
             duration_ms = round((time.perf_counter() - started) * 1000)
             run = AgentRun(
                 trace_id=trace_id,

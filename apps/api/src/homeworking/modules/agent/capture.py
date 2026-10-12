@@ -17,7 +17,9 @@ from ``_drafts/`` to ``regressions/<slug>/``.
 
 Format of an exported row (``--from-json``): the columns ``id``, ``created_at``, ``status``,
 ``model``, ``prompt_version``, ``error``, ``ui_messages``, ``design_attempts``, and optionally
-``conversation_ui_messages`` (UI messages of the earlier turns of the chat, oldest first).
+``conversation_ui_messages`` (UI messages of the earlier turns of the chat, oldest first) and
+``usage`` (only its ``failed_request`` is read: the shape of the request the provider rejected,
+see ``request_shape.py``; it becomes a line in ``notes`` and the file ``failed_request.json``).
 """
 
 from __future__ import annotations
@@ -106,6 +108,14 @@ class RunData:
     ui_messages: list[Any]
     design_attempts: list[Any]
     conversation_ui_messages: list[Any] = field(default_factory=list)
+    # ``usage["failed_request"]`` of the row: structure of the rejected request, never text.
+    failed_request: dict[str, Any] | None = None
+
+
+def failed_request_of(usage: Any) -> dict[str, Any] | None:
+    """The stored shape of a failed model request out of ``agent_runs.usage``, if any."""
+    record = usage.get("failed_request") if isinstance(usage, dict) else None
+    return record if isinstance(record, dict) else None
 
 
 def _as_date(value: Any) -> date | None:
@@ -139,6 +149,7 @@ def run_from_json(data: Any, run_id: str | None = None) -> RunData:
         ui_messages=list(data.get("ui_messages") or []),
         design_attempts=attempts,
         conversation_ui_messages=list(data.get("conversation_ui_messages") or []),
+        failed_request=failed_request_of(data.get("usage")),
     )
 
 
@@ -193,6 +204,7 @@ async def fetch_run(run_id: str, database_url: str | None = None) -> RunData:
                 ui_messages=list(row.ui_messages or []),
                 design_attempts=list(row.design_attempts or []),
                 conversation_ui_messages=first_turn,
+                failed_request=failed_request_of(row.usage),
             )
     except CaptureError:
         raise
@@ -303,6 +315,39 @@ def guess_failure_class(attempts: list[dict[str, Any]]) -> str:
     return "intent_mismatch"
 
 
+def _small_int(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _number(value: Any) -> str:
+    return "?" if (number := _small_int(value)) is None else str(number)
+
+
+def describe_failed_request(record: dict[str, Any]) -> str:
+    """One German line about the rejected request (class, status, number, suspicious indices).
+
+    Reads only numbers and a class name from the record; it never copies free text.
+    """
+    error = record.get("error_class")
+    error_class = error if isinstance(error, str) and re.fullmatch(r"\w{1,80}", error) else None
+    provider = record.get("provider")
+    provider = provider if isinstance(provider, dict) else {}
+    suspicious = [i for i in provider.get("suspicious") or [] if _small_int(i) is not None]
+    where = (
+        f"auffällige Provider-Nachrichten messages{suspicious}"
+        if suspicious
+        else "keine auffällige Provider-Nachricht erkannt"
+        if provider.get("available")
+        else "Provider-Array nicht ermittelbar"
+    )
+    return (
+        f"Abgelehnte Anfrage Nr. {_number(record.get('request_number'))}: "
+        f"{error_class or 'Fehlerklasse unbekannt'}, HTTP {_number(record.get('status_code'))}, "
+        f"{_number(record.get('messages_total'))} Nachrichten, {where}; "
+        "Aufbau in failed_request.json."
+    )
+
+
 def _scrub(text: str) -> str:
     text = _URL_CREDENTIALS.sub("://***@", text)
     return redact_email(text)[0]
@@ -401,6 +446,8 @@ def build_draft(
     ]
     if run.error:
         header.append(f"Fehler des Laufs: {_scrub(run.error)[:300]}")
+    if run.failed_request is not None:
+        header.append(describe_failed_request(run.failed_request))
     notes = "\n".join([*header, *remarks])
 
     case = {
@@ -448,6 +495,9 @@ def write_draft(run: RunData, slug: str | None = None, root: Path = REGRESSIONS_
     for index, record in enumerate(attempts, start=1):
         _dump(directory / "attempts" / f"{index:02d}.json", record)
     _dump(directory / "golden.json", golden)
+    if run.failed_request is not None:
+        # Beside the case, not part of it: the case loader reads only the files it names.
+        _dump(directory / "failed_request.json", run.failed_request)
     _dump(directory / "case.json", case)
     return directory
 

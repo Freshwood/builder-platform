@@ -1,0 +1,49 @@
+{
+  "id": "kinderpodest_run_615963ad",
+  "title": "Kinder-Podest: Rahmenleisten 70 mm auf Querschnitt 44 × 69 mm abgelehnt, danach Provider-Fehler 400",
+  "origin": {
+    "kind": "agent_run",
+    "ref": "cee9c5e5-01ee-44d3-acbb-716098364bec",
+    "date": "2026-10-12"
+  },
+  "failure_class": "engine_loop",
+  "brief": "Erstelle mir ein Podest für Kinder für eine Modenschau. Es soll so eine Art Tribüne für ein Catwalk sein. Es soll maximal 2 Meter lang sein und 1 Meter breit. Es wird drinnen aufgestellt. Die Oberfläche kann aus einzelnen Bretter oder als Platte erstellt werden",
+  "expect": {
+    "envelope": {
+      "max_length_mm": 2000,
+      "max_width_mm": 1000
+    },
+    "use": "indoor",
+    "support": "floor",
+    "features": [
+      {
+        "walkable_top": {
+          "min_coverage": 0.9
+        }
+      },
+      "standing_stable",
+      "choice_param:surface=boards|panel"
+    ],
+    "note": "maximal 2 m x 1 m, drinnen, begehbare Oberfläche aus Brettern oder Platte"
+  },
+  "attempts": [
+    {
+      "file": "attempts/01.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "passen nicht zum Querschnitt 44 × 69 mm von 'lumber_spruce_44x69'"
+      ],
+      "synthetic": false
+    }
+  ],
+  "golden": {
+    "design": "golden.json",
+    "params": {
+      "length_mm": 2000,
+      "deck_boards": 8,
+      "height_mm": 350,
+      "surface": "boards"
+    }
+  },
+  "notes": "Echter Lauf (Modell upstage/solar-pro4, Prompt 2026-10-10.1, Rolle designer). Der erste save_design wurde von der Engine abgelehnt: die Rahmenleisten sind 70 mm breit, 'lumber_spruce_44x69' hat aber den Querschnitt 44 x 69 mm. Danach schlugen zwei weitere Modellanfragen an, die vierte wurde vom Provider mit HTTP 400 abgelehnt (Missing required parameter 'messages[6].content'). Der Lauf endete als failed ohne Projekt. Der Provider-Fehler ist NICHT als Fall abgedeckt: die gesendeten Nachrichten wurden bei fehlgeschlagenen Läufen nicht gespeichert (model_messages ist leer), die Ursache ist ungeklärt. Golden und expect sind die des Falls podium_kids_catwalk (derselbe Brief)."
+}
