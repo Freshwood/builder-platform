@@ -12,6 +12,7 @@ measurement, ``evaluate_number`` rejects that.
 from __future__ import annotations
 
 import ast
+import difflib
 import math
 import operator
 import re
@@ -114,7 +115,7 @@ def _eval(node: ast.expr, env: Mapping[str, Scalar], source: str) -> Scalar:
             return 0.0
         case ast.Name(id=name):
             if name not in env:
-                raise ExprError(f"Unbekannter Name '{name}' in '{source}'")
+                raise ExprError(_unknown_name(name, source, env))
             known = env[name]
             return known if isinstance(known, str) else float(known)
         case ast.UnaryOp(op=ast.USub(), operand=operand):
@@ -167,7 +168,51 @@ def _eval(node: ast.expr, env: Mapping[str, Scalar], source: str) -> Scalar:
                 )
             except (TypeError, ValueError):
                 raise ExprError(f"Ungültiger Aufruf von {name}() in '{source}'") from None
-    raise ExprError(f"Nicht erlaubter Ausdruck in '{source}'")
+    raise ExprError(_not_allowed(node, source))
+
+
+_MAX_LISTED_NAMES = 15
+_ALLOWED = "+ - * / // %, Vergleiche, and/or/not, if(a, b, c), " + ", ".join(_FUNCTIONS)
+
+
+def _unknown_name(name: str, source: str, env: Mapping[str, Scalar]) -> str:
+    """Name the cause, the nearest declared name and the names that do exist."""
+    message = f"Unbekannter Name '{name}' in '{source}'"
+    if name in env.values():
+        # A choice value written without quotes, e.g. "surface == boards".
+        return f"{message} – Auswahlwerte in Anführungszeichen schreiben: '{name}'"
+    names = list(env)
+    close = difflib.get_close_matches(name, names, n=1)
+    if not close:
+        # Substring matches ("surface_type" vs "surface") that difflib scores too low.
+        close = [n for n in names if len(n) > 2 and (n in name or name in n)][:1]
+    if close:
+        message += f" – meintest du '{close[0]}'?"
+    elif name in _FUNCTIONS:
+        message += f" – {name} ist eine Funktion und braucht Klammern: {name}(...)"
+    listed = ", ".join(names[:_MAX_LISTED_NAMES]) + (" …" if len(names) > _MAX_LISTED_NAMES else "")
+    return f"{message}. Bekannte Namen: {listed}"
+
+
+def _not_allowed(node: ast.expr, source: str) -> str:
+    """Say which construct is rejected and what to write instead."""
+    base = f"Nicht erlaubter Ausdruck in '{source}'"
+    match node:
+        case ast.BinOp(op=ast.Pow()):
+            return f"{base}: Potenzen (**) gibt es nicht – als Produkt ausschreiben (x * x)"
+        case ast.BinOp(op=ast.BitAnd() | ast.BitOr()):
+            return f"{base}: statt & und | bitte and bzw. or schreiben"
+        case ast.Call(func=ast.Name(id="_if")):
+            return f"{base}: if braucht genau drei Argumente: if(Bedingung, dann, sonst)"
+        case ast.Call(func=ast.Name(id=name), keywords=[]):
+            close = difflib.get_close_matches(name, _FUNCTIONS, n=1)
+            hint = f" – meintest du {close[0]}()?" if close else ""
+            return f"{base}: unbekannte Funktion {name}(){hint}. Erlaubt: {_ALLOWED}"
+        case ast.Call():
+            return f"{base}: Funktionen nehmen nur Positionsargumente, keine name=wert"
+        case ast.Attribute() | ast.Subscript() | ast.List() | ast.Tuple() | ast.Dict():
+            return f"{base}: Punkt, Index und Listen gibt es nicht. Erlaubt: {_ALLOWED}"
+    return f"{base}. Erlaubt: {_ALLOWED}"
 
 
 def _number(value: Scalar, source: str) -> float:

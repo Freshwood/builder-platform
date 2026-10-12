@@ -38,6 +38,15 @@ class ChoiceOption(_Frozen):
     label: str = Field(min_length=1, max_length=60)
 
 
+# Example bounds quoted in the error for a numeric parameter without min/max.
+_EXAMPLE_RANGE = {"length": (300, 1200), "count": (1, 10), "angle": (0, 90)}
+
+
+def _known_ids(known: list[str]) -> str:
+    """Existing ids for an error message, capped to keep the tool result short."""
+    return ", ".join(known[:15]) + (" …" if len(known) > 15 else "")
+
+
 class DesignParam(_Frozen):
     """A user-adjustable parameter. Lengths are millimetres and should end in ``_mm``."""
 
@@ -55,11 +64,21 @@ class DesignParam(_Frozen):
     def _check(self) -> DesignParam:
         if self.kind in {"length", "count", "angle"}:
             if self.min is None or self.max is None:
-                raise ValueError(f"Parameter '{self.name}' needs min and max")
+                low, high = _EXAMPLE_RANGE[self.kind]
+                raise ValueError(
+                    f"Parameter '{self.name}' (Art {self.kind}) braucht min und max, "
+                    f'z. B. "min": {low}, "max": {high} und einen default dazwischen'
+                )
             if self.min > self.max:
-                raise ValueError(f"Parameter '{self.name}': min > max")
+                raise ValueError(
+                    f"Parameter '{self.name}': min ({self.min:g}) ist größer als max "
+                    f"({self.max:g}) – Werte vertauscht?"
+                )
         if self.kind == "choice" and not self.options:
-            raise ValueError(f"Choice parameter '{self.name}' needs options")
+            raise ValueError(
+                f"Auswahl-Parameter '{self.name}' braucht options, "
+                'z. B. [{"value": "oak", "label": "Eiche"}] und einen default aus den values'
+            )
         return self
 
 
@@ -133,11 +152,17 @@ class PartSpec(_Frozen):
         box = self.size is not None and self.at is not None
         member = self.start is not None and self.end is not None
         if box == member:
+            given = [f for f in ("size", "at", "start", "end") if getattr(self, f) is not None]
             raise ValueError(
-                f"Part '{self.id}' needs either size and at (box) or start and end (member)"
+                f"Bauteil '{self.id}': entweder size und at (Box) oder start und end (Stab) "
+                f"angeben, nicht beides und nicht nur eines davon (angegeben: "
+                f"{', '.join(given) or 'nichts'})"
             )
         if member and self.rotate is not None:
-            raise ValueError(f"Part '{self.id}': rotate is only for boxes")
+            raise ValueError(
+                f"Bauteil '{self.id}': rotate gilt nur für Boxen (size/at), nicht für Stäbe – "
+                "einen Stab über start und end neigen"
+            )
         return self
 
 
@@ -208,15 +233,25 @@ class AssemblyDesign(_Frozen):
     @model_validator(mode="after")
     def _unique_ids(self) -> AssemblyDesign:
         for label, ids in (
-            ("parameter", [p.name for p in self.params]),
-            ("part", [p.id for p in self.parts]),
-            ("variant", [v.key for v in self.variants]),
+            ("Parameter-Namen", [p.name for p in self.params]),
+            ("Bauteil-IDs", [p.id for p in self.parts]),
+            ("Varianten-Keys", [v.key for v in self.variants]),
         ):
             duplicates = sorted({i for i in ids if ids.count(i) > 1})
             if duplicates:
-                raise ValueError(f"Duplicate {label} ids: {', '.join(duplicates)}")
-        known = {p.id for p in self.parts}
-        unknown = sorted({i for j in self.joints for i in (j.part, j.into) if i not in known})
+                raise ValueError(
+                    f"Doppelte {label}: {', '.join(duplicates)} – jede ID nur einmal vergeben"
+                    + (
+                        " (mehrere gleiche Teile: repeat statt Kopien)"
+                        if "Bauteil" in label
+                        else ""
+                    )
+                )
+        part_ids = [p.id for p in self.parts]
+        unknown = sorted({i for j in self.joints for i in (j.part, j.into) if i not in part_ids})
         if unknown:
-            raise ValueError(f"Joints name unknown part ids: {', '.join(unknown)}")
+            raise ValueError(
+                f"joints nennen unbekannte Bauteil-IDs: {', '.join(unknown)} – "
+                f"vorhandene IDs: {_known_ids(part_ids)}"
+            )
         return self

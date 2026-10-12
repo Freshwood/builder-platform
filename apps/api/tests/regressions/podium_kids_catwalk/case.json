@@ -1,0 +1,42 @@
+{
+  "id": "podium_kids_catwalk",
+  "title": "Kinder-Podest für die Modenschau: Oberfläche aus Brettern oder Platte",
+  "origin": {"kind": "bug_report", "ref": "docs/problems/bug.md", "date": "2026-10-12"},
+  "failure_class": "engine_loop",
+  "brief": "Erstelle mir ein Podest für Kinder für eine Modenschau. Es soll so eine Art Tribüne für ein Catwalk sein. Es soll maximal 2 Meter lang sein und 1 Meter breit. Es wird drinnen aufgestellt. Die Oberfläche kann aus einzelnen Bretter oder als Platte erstellt werden",
+  "expect": {
+    "envelope": {"max_length_mm": 2000, "max_width_mm": 1000},
+    "use": "indoor",
+    "support": "floor",
+    "features": [
+      {"walkable_top": {"min_coverage": 0.9}},
+      "standing_stable",
+      "choice_param:surface=boards|panel"
+    ],
+    "note": "maximal 2 m x 1 m, drinnen, begehbare Oberfläche aus Brettern oder Platte"
+  },
+  "attempts": [
+    {
+      "file": "attempts/01.json",
+      "expect_outcome": "invalid_args",
+      "errors_contain": ["design.explanation", "extra_forbidden"],
+      "synthetic": true
+    },
+    {
+      "file": "attempts/02.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": ["Unbekannter Name 'surface_type'", "meintest du 'surface'?", "top_boards", "top_panel"],
+      "synthetic": true
+    },
+    {
+      "file": "attempts/03.json",
+      "expect_outcome": "accepted",
+      "synthetic": true
+    }
+  ],
+  "golden": {
+    "design": "golden.json",
+    "params": {"length_mm": 2000, "deck_boards": 8, "height_mm": 350, "surface": "boards"}
+  },
+  "notes": "bug.md enthält keine Roh-Argumente; alle Versuche sind rekonstruiert (synthetic). 01 gibt den gemeldeten Fehler wieder (zusätzlicher Schlüssel 'explanation' in design). 02 erzeugt die gemeldeten '2 Punkte' (Unbekannter Name 'surface_type' für top_boards und top_panel), indem das when auf einen nicht deklarierten Parameter zeigt. Ob der echte Lauf genau das tat, ist unbekannt. 03 schreibt den Textparameter in when konsistent und wird heute akzeptiert: die im Bericht vermutete Ursache (Textparameter im when) lässt sich mit dem aktuellen Code NICHT reproduzieren, 03 hält fest, dass es funktioniert. Das Golden-Design (golden.json) ist auch das PODIUM des Corpus (packages/calc-engine/tests/corpus_designs.py): die Breite ist eine Anzahl 125-mm-Deckbretter, damit Bretter- und Plattenvariante exakt gleich breit sind."
+}

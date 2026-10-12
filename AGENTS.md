@@ -25,6 +25,11 @@ platform, DB or LLM code, and only `homeworking.api` may use `modules.agent`.
 - `task test`: pytest on SQLite. `task test:pg` adds PostgreSQL.
 - `task e2e`: Playwright with the offline LLM (`LLM_MODE=test`).
 - `task bench`: offline token benchmark of the agent. No API calls, deterministic.
+- `task regress`: replay the regression cases plus corpus and intent checks, offline.
+- `task regress:capture -- <run_id>`: draft a regression case from a failed agent run;
+  `task regress:promote -- <slug>` turns a finished draft into a case.
+- `task eval:live`: live LLM evaluation of the regression briefs. Costs money, needs a key, not
+  in CI.
 - `task prompt:lock`: record the prompt fingerprint after a prompt or tool change.
 - `task openapi`: regenerate `openapi.json` and the TS client after API model changes.
 - `task ci`: what CI runs.
@@ -40,6 +45,8 @@ platform, DB or LLM code, and only `homeworking.api` may use `modules.agent`.
   enforces this. The workflow is in `docs/ai/README.md`.
 - **Token budget.** `tests/test_token_budget.py` fails when requests grow. Do not raise a limit
   without a reason in the changelog. Tighten it when you make requests smaller.
+- **Every reported failed project or drawing becomes a regression case** (`task regress:capture`, skill `regress-capture`, format in
+  `apps/api/tests/regressions/README.md`). A bug fix is not done without one.
 - **Never let the LLM compute numbers.** New figures belong in the engine. The agent only passes
   them on.
 - Tool results are compact text or JSON for the model. Large data (full BOM, designs, catalog)

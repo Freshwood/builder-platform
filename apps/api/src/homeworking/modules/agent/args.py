@@ -21,7 +21,7 @@ from typing import Any
 
 from pydantic import BeforeValidator
 from pydantic_ai import ModelRetry, RunContext
-from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.capabilities import AbstractCapability, WrapToolValidateHandler
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.tools import ToolDefinition
 
@@ -174,21 +174,24 @@ class RepairToolArgs(AbstractCapability[Any]):
     design makes the whole call invalid JSON and pydantic only reports "Invalid JSON".
     """
 
-    async def before_tool_validate(
+    # wrap_tool_validate instead of before_tool_validate: a ModelRetry raised here reaches the
+    # on_tool_validate_error hooks (RecordToolAttempts), one from before_tool_validate would not.
+    async def wrap_tool_validate(
         self,
         ctx: RunContext[Any],
         *,
         call: ToolCallPart,
         tool_def: ToolDefinition,
         args: str | dict[str, Any],
-    ) -> str | dict[str, Any]:
+        handler: WrapToolValidateHandler,
+    ) -> dict[str, Any]:
         if not isinstance(args, str) or not args.strip():
-            return args
+            return await handler(args)
         try:
             parsed = parse_json(args)
         except ValueError as exc:
             raise ModelRetry(str(exc)) from None
-        return parsed if isinstance(parsed, dict) else args
+        return await handler(parsed if isinstance(parsed, dict) else args)
 
     @classmethod
     def get_serialization_name(cls) -> str | None:

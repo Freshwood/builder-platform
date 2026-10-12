@@ -14,6 +14,9 @@ the mistake models make most often; every design below is written to that rule.
 
 from __future__ import annotations
 
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 #: Nistkasten: Boden, Wände, Dach mit Überstand, Einflugloch.
@@ -103,99 +106,23 @@ BIRDHOUSE: dict[str, Any] = {
 
 #: Das Podest aus docs/problems/bug.md: die Oberfläche ist Bretter oder Platte, gewählt per
 #: `choice` Parameter. Genau der Fall, an dem `when` auf einem Textparameter scheiterte.
-PODIUM: dict[str, Any] = {
-    "object_type": "Podest",
-    "summary": "Podest für eine Modenschau, Oberfläche wählbar",
-    "params": [
-        {
-            "name": "length_mm",
-            "label": "Länge",
-            "kind": "length",
-            "default": 2000,
-            "min": 800,
-            "max": 3000,
-        },
-        {
-            "name": "width_mm",
-            "label": "Breite",
-            "kind": "length",
-            "default": 1000,
-            "min": 600,
-            "max": 1500,
-        },
-        {
-            "name": "height_mm",
-            "label": "Höhe",
-            "kind": "length",
-            "default": 350,
-            "min": 200,
-            "max": 600,
-        },
-        {
-            "name": "surface",
-            "label": "Oberfläche",
-            "kind": "choice",
-            "default": "boards",
-            "options": [
-                {"value": "boards", "label": "Einzelne Bretter"},
-                {"value": "panel", "label": "Platte"},
-            ],
-        },
-        {
-            "name": "toe_board",
-            "label": "Verschalung vorne",
-            "kind": "bool",
-            "default": True,
-        },
-    ],
-    "parts": [
-        {
-            "id": "leg",
-            "name": "Bein",
-            "material": "frame_spruce_44x44",
-            "size": [44, 44, "height_mm - 18"],
-            "at": [
-                "i % 2 * (length_mm - 44)",
-                "i // 2 * (width_mm - 44)",
-                0,
-            ],
-            "repeat": {"count": 4},
-        },
-        {
-            "id": "frame_long",
-            "name": "Längszarge",
-            "material": "frame_spruce_44x44",
-            "size": ["length_mm - 88", 44, 44],
-            "at": [44, "i * (width_mm - 44)", "height_mm - 62"],
-            "repeat": {"count": 2},
-        },
-        {
-            "id": "top_boards",
-            "name": "Deckbrett",
-            "material": "board_spruce_18x146",
-            "size": ["length_mm", 146, 18],
-            "at": [0, "i * 146", "height_mm - 18"],
-            "repeat": {"count": "ceil(width_mm / 146)"},
-            "when": "surface == 'boards'",
-        },
-        {
-            "id": "top_panel",
-            "name": "Platte",
-            "material": "plywood_birch_18",
-            "size": ["length_mm", "width_mm", 18],
-            "at": [0, 0, "height_mm - 18"],
-            "when": "surface == 'panel'",
-        },
-        {
-            "id": "toe_board",
-            "name": "Verschalung",
-            "material": "board_spruce_18x146",
-            "size": ["length_mm - 88", 146, 18],
-            "at": [44, 0, "height_mm - 164"],
-            "when": "toe_board",
-        },
-    ],
-}
+#:
+#: The width is a number of deck boards of 125 mm (`deck_boards`), not a free length: boards have
+#: a fixed width and the engine rejects a trimmed board of a different cross-section, so any other
+#: width would leave a gap or overhang (ceil(1000 / 146) boards of 146 mm are 1022 mm). Both
+#: surfaces use the same width, `deck_boards * 125`, so the boards and the panel option are equally
+#: wide for every valid value. The golden design of the regression case `podium_kids_catwalk` is
+#: the JSON file below, so there is one source of truth.
+PODIUM_GOLDEN_FILE = (
+    Path(__file__).resolve().parents[3]
+    / "apps"
+    / "api"
+    / "tests"
+    / "regressions"
+    / "podium_kids_catwalk"
+    / "golden.json"
+)
+PODIUM: dict[str, Any] = json.loads(PODIUM_GOLDEN_FILE.read_text(encoding="utf-8"))
 
 #: Werkbank mit Rahmen und zwei Ebenen.
 WORKBENCH_FREE: dict[str, Any] = {
@@ -377,7 +304,9 @@ GARDEN_BANK_FREE: dict[str, Any] = {
             "name": "Sitzlatte",
             "material": "board_larch_28x145",
             "size": ["length_mm", 145, 28],
-            "at": [0, "i * 145", "height_mm - 28"],
+            # Three slats spread over the seat so the last one always touches the back legs;
+            # at a fixed 145 mm pitch they only touch at the minimum depth.
+            "at": [0, "i * (depth_mm - 215) / 2", "height_mm - 28"],
             "repeat": {"count": 3},
         },
         {
@@ -569,3 +498,54 @@ DESIGNS: tuple[dict[str, Any], ...] = (
     RABBIT_HOUSE,
     FLOWER_BENCH,
 )
+
+#: Free-form designs swept by ``corpus.design_cases``; the name the corpus gives the family.
+EXTRA_DESIGNS: dict[str, dict[str, Any]] = {
+    "birdhouse": BIRDHOUSE,
+    "workbench_free": WORKBENCH_FREE,
+    "cupboard_doors": CUPBOARD_DOORS,
+    "garden_bank_free": GARDEN_BANK_FREE,
+    "shelf_boards": SHELF_BOARDS,
+    "rabbit_house": RABBIT_HOUSE,
+    "flower_bench": FLOWER_BENCH,
+}
+
+
+@dataclass(frozen=True)
+class BugRegression:
+    """A construction that once failed for a user, pinned to the parameters of the report.
+
+    Either ``design`` (a free-form design dict) or ``template`` (the key of a shipped template)
+    names what was built. ``params`` are the values from the report; the corpus builds exactly
+    these first and then sweeps the design like any other, so the regression is never narrower
+    than the family it belongs to.
+    """
+
+    report: str
+    design: dict[str, Any] | None = None
+    template: str | None = None
+    params: dict[str, Any] = field(default_factory=dict)
+
+
+#: Regressions by the bug report they came from. Key = case name (``bug:<name>``).
+DESIGNS_FROM_BUGS: dict[str, BugRegression] = {
+    # docs/problems/bug.md: "Podest für Kinder, 2 m x 1 m, Oberfläche Bretter oder Platte". The
+    # agent could not use a text parameter in `when`, and the assistant looped on it.
+    "podium": BugRegression(
+        report="docs/problems/bug.md",
+        design=PODIUM,
+        params={"length_mm": 2000, "deck_boards": 8, "height_mm": 350, "surface": "boards"},
+    ),
+    "podium_panel": BugRegression(
+        report="docs/problems/bug.md",
+        design=PODIUM,
+        params={"length_mm": 2000, "deck_boards": 8, "height_mm": 350, "surface": "panel"},
+    ),
+    # test_assembly.py::test_window_shutter_template_matches_the_reported_case: 31 x 38 cm,
+    # two wings of boards with hinges and a latch.
+    "window_shutter": BugRegression(
+        report="packages/calc-engine/tests/test_assembly.py (Fensterladen 31 x 38 cm)",
+        template="window_shutter",
+        params={"width_mm": 310, "height_mm": 380, "wings": 2, "board_mm": 18},
+    ),
+}

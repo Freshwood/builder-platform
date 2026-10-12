@@ -178,6 +178,40 @@ tasks:
     cmds:
       - uv run python -m homeworking.modules.agent.provenance
 
+  regress:
+    desc: Replay the regression cases and run the intent/corpus checks (offline)
+    deps: [install:py]
+    cmds:
+      - >-
+        uv run pytest apps/api/tests/test_regressions.py
+        packages/calc-engine/tests/test_corpus.py
+        packages/calc-engine/tests/test_corpus_views.py
+        packages/calc-engine/tests/test_intent.py {{.CLI_ARGS}}
+
+  regress:capture:
+    desc: "Draft a regression case from a failed agent run: task regress:capture -- <run_id>"
+    deps: [install:py]
+    env:
+      PYDANTIC_AI_NO_BANNER: "1"
+    cmds:
+      - uv run python -m homeworking.modules.agent.capture {{.CLI_ARGS}}
+
+  regress:promote:
+    desc: "Check a finished draft and make it a case: task regress:promote -- <slug>"
+    deps: [install:py]
+    env:
+      PYDANTIC_AI_NO_BANNER: "1"
+    cmds:
+      - uv run python -m homeworking.modules.agent.capture promote {{.CLI_ARGS}}
+
+  eval:live:
+    desc: Live LLM evaluation of the regression briefs (needs LLM_MODE=openai and a key; costs money; not part of CI)
+    deps: [install:py]
+    env:
+      PYDANTIC_AI_NO_BANNER: "1"
+    cmds:
+      - uv run python -m homeworking.modules.agent.live_eval {{.CLI_ARGS}}
+
   e2e:
     desc: Browser end-to-end tests with accessibility checks (offline LLM)
     deps: [install:py, install:web]

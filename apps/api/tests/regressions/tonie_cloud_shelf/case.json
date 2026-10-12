@@ -1,0 +1,27 @@
+{
+  "id": "tonie_cloud_shelf",
+  "title": "Tonie-Wolkenregal: handgeschriebenes JSON mit unquotierten Formeln",
+  "origin": {"kind": "bug_report", "ref": "apps/api/tests/fixtures/tool_args/tonie_cloud_shelf_bare_expressions.txt", "date": "2026-10-09"},
+  "failure_class": "args_syntax",
+  "brief": "Tonieregal mit Wolke, Fichte, an der Wand",
+  "expect": {
+    "use": "indoor",
+    "support": "wall",
+    "materials_any": ["glulam_spruce"],
+    "features": [{"levels": {"min": 3}}, "contoured"],
+    "note": "Wandregal mit Wolkenkontur und mindestens drei Fachböden aus Leimholz Fichte"
+  },
+  "attempts": [
+    {
+      "file": "attempts/01.json",
+      "expect_outcome": "invalid_args",
+      "errors_contain": ["Parameter 'width_mm' (Art length) braucht min und max", "design.params.0"],
+      "synthetic": false
+    }
+  ],
+  "golden": {
+    "design": "golden.json",
+    "params": {}
+  },
+  "notes": "Das Design in attempts/01.json ist der echte Text aus dem Fixture (design als String, Formeln wie 18 + (i + 1) * (height_mm - 36) / (shelves + 1) ohne Anführungszeichen). Nur der Umschlag (title) ist rekonstruiert, ebenso der Nutzertext (aus test_tool_args.py und docs abgeleitet). Die JSON-Reparatur (modules/agent/args.py) gelingt heute; der Aufruf scheitert danach trotzdem an der Schema-Prüfung, weil die drei Längenparameter width_mm, height_mm und depth_mm kein min/max haben. golden.json ergänzt min/max und lässt die Bauteilmaße den Parametern folgen (im Original waren 750/150/450 fest verdrahtet, obwohl width_mm und depth_mm existierten)."
+}

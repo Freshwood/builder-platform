@@ -42,6 +42,50 @@ Every agent turn is stored in `agent_runs`, including failed and cancelled runs.
 Each project change links back to its run via `project_commands.llm_trace_id`. The logs carry the
 same data as JSON lines (`agent_turn`, `agent_turn_done`).
 
+### `design_attempts`: turning a failed run into a test
+
+Despite its name, the JSON column `agent_runs.design_attempts` (no extra column) holds one entry
+per submitted design and per failed tool call of any tool, in call order. Successful calls of
+other tools are not recorded. Entries are built by `tool_attempt()` in `modules/agent/tools.py`:
+
+```json
+{
+  "tool": "save_design",
+  "tool_call_id": "call_0",
+  "outcome": "invalid_args",
+  "accepted": false,
+  "errors": ["design.explanation: Extra inputs are not permitted [extra_forbidden]"],
+  "raw_args": {"title": "Regal", "design": {"...": "..."}},
+  "design": null
+}
+```
+
+- `raw_args` is what the model sent: the JSON string or object before `RepairToolArgs` and
+  pydantic validation (cut at 200 000 characters with a `…[truncated, N chars in total]` marker).
+  Feeding it to a `FunctionModel` `ToolCallPart` replays the call.
+- `outcome`: `accepted`, `engine_rejected` (`errors` = engine messages), `invalid_args` (schema
+  violation or unrepairable JSON, `errors` = one `loc: message [type]` line each, or the repair
+  hint), `parameter_error`, `command_error`, `not_found`, `unknown_pack`, `no_project`,
+  `exception` (unexpected error in a tool).
+- `design` is the validated design (origin `ai`) for accepted and engine-rejected `save_design`
+  calls, otherwise `null`. `tool`, `accepted`, `errors` and `design` exist in older runs, too;
+  those lack `tool_call_id`, `outcome` and `raw_args`.
+- Not recorded: calls of unknown tools and `get_template_design` with an unknown key.
+
+Hooks (`RecordToolAttempts`, pydantic-ai capability): `before_tool_validate` keeps the raw
+arguments by `tool_call_id`, `on_tool_validate_error` and `on_tool_execute_error` record the
+failures that never reach a tool body; the bodies call `_attempt` / `_fail`. Add the `raw_args`
+of a bad run as a fixture under `apps/api/tests/fixtures/tool_args/` (see `test_failure_capture.py`).
+
+## Regression cases
+
+Every reported failed project or drawing becomes a regression case that is replayed offline in CI
+(`task regress`). Capture a failed run with `task regress:capture -- <run_id>`, finish the draft
+and promote it with `task regress:promote -- <slug>`. Format and rules:
+[apps/api/tests/regressions/README.md](../../apps/api/tests/regressions/README.md); workflow:
+skill `.claude/skills/regress-capture/SKILL.md`. The briefs of these cases can also be run against
+a real model: [EVALS.md](EVALS.md) (`task eval:live`).
+
 ## Choosing models
 
 `LLM_MODEL` is the designer: free-form designs and structural changes. `LLM_MODEL_FAST` is

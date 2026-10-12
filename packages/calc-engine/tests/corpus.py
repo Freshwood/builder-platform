@@ -21,14 +21,24 @@ from __future__ import annotations
 
 import math
 import random
+import sys
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from calc_engine.engine import Engine, default_engine
 from construction_model.assembly import AssemblyDesign
 from construction_model.model import ConstructionResult, ProjectInputs
+
+# pytest runs with --import-mode=importlib, which does not put this directory on sys.path, so the
+# sibling module is reachable only after adding it here. Importers of `corpus` need the same entry.
+_HERE = str(Path(__file__).resolve().parent)
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
+
+from corpus_designs import DESIGNS_FROM_BUGS, EXTRA_DESIGNS  # noqa: E402
 
 #: Orthographic views must show every part exactly once; other views are derived differently.
 ORTHOGRAPHIC = frozenset({"front", "side", "plan", "back"})
@@ -220,12 +230,20 @@ def _every_part_is_accounted_for(result: ConstructionResult) -> list[Violation]:
     found: list[Violation] = []
     cut_names = {line.part for line in result.cut_list}
     # BOM ids carry the stock length ("rod_m10_a2_2000"), the component carries the bare id.
-    bom_items = [line.item_id for line in result.bom]
     component_names = [component.name for component in result.components]
+    cut_materials = {line.material for line in result.cut_list}
     for component in result.components:
         if any(_names_match(component.name, cut) for cut in cut_names):
             continue
-        if any(item.startswith(component.material_id) for item in bom_items):
+        # A bought-only material (hardware, concrete) is covered by its BOM line. A material that
+        # is cut elsewhere in the list is not: its BOM line exists for the other parts, so it must
+        # not excuse a part that lost its own cut line.
+        bought = [
+            line
+            for line in result.bom
+            if line.item_id.startswith(component.material_id) and line.name not in cut_materials
+        ]
+        if bought:
             continue
         found.append(
             Violation(
@@ -305,9 +323,7 @@ def _every_part_is_drawn(result: ConstructionResult, case: Case) -> list[Violati
             continue
         filled = [p for p in drawing.primitives if p.kind in FILLED]
         if not filled:
-            found.append(
-                Violation("", "drawing_not_blank", f"Ansicht '{drawing.view}' ist leer")
-            )
+            found.append(Violation("", "drawing_not_blank", f"Ansicht '{drawing.view}' ist leer"))
             continue
         if exact and drawing.view in ORTHOGRAPHIC and len(filled) != len(result.solids):
             found.append(
@@ -316,6 +332,22 @@ def _every_part_is_drawn(result: ConstructionResult, case: Case) -> list[Violati
                     "drawing_shows_all_parts",
                     f"Ansicht '{drawing.view}' zeigt {len(filled)} Teile, "
                     f"das Modell hat {len(result.solids)}",
+                )
+            )
+        # A shaped part is triangulated into several polygons, never fewer than one, so a drawing
+        # of a design with shaped parts still has at least one filled shape per part.
+        if (
+            case.design is not None
+            and meshed
+            and drawing.view in ORTHOGRAPHIC
+            and len(filled) < len(result.solids)
+        ):
+            found.append(
+                Violation(
+                    "",
+                    "drawing_shows_all_parts",
+                    f"Ansicht '{drawing.view}' zeigt nur {len(filled)} Flächen für "
+                    f"{len(result.solids)} Bauteile",
                 )
             )
         missing = tones - {p.tone for p in filled if p.kind == "polygon"}
@@ -357,7 +389,9 @@ def _points_of(primitive: Any) -> list[tuple[float, float]]:
     points = payload.get("points")
     if points:
         return [
-            (float(p[0]), float(p[1])) for p in points if isinstance(p, list | tuple) and len(p) >= 2
+            (float(p[0]), float(p[1]))
+            for p in points
+            if isinstance(p, list | tuple) and len(p) >= 2
         ]
     if payload.get("kind") == "rect":
         x, y, w, h = (float(payload[key]) for key in ("x", "y", "w", "h"))
@@ -377,7 +411,9 @@ def _drawings_have_dimensions(result: ConstructionResult) -> list[Violation]:
                 Violation("", "drawing_has_dimensions", f"Ansicht '{drawing.view}' hat keine Maße")
             )
         if not drawing.title.strip():
-            found.append(Violation("", "drawing_has_title", f"Ansicht '{drawing.view}' hat keinen Titel"))
+            found.append(
+                Violation("", "drawing_has_title", f"Ansicht '{drawing.view}' hat keinen Titel")
+            )
     return found
 
 
@@ -435,10 +471,13 @@ def _param_values(design: AssemblyDesign) -> dict[str, list[Any]]:
         options: list[Any] = [spec.default]
         for bound in (spec.min, spec.max):
             if bound is not None:
-                options.append(int(bound) if spec.kind == "length" else bound)
-        # Choice parameters have no bounds; their first and last option are the interesting ones.
-        if spec.kind == "choice" and spec.options:
-            options.extend([spec.options[0].value, spec.options[-1].value])
+                options.append(int(bound) if spec.kind in {"length", "count"} else bound)
+        # Choices have no bounds and a flag only has two states: every state is worth building,
+        # because a `when` on them switches whole parts in and out.
+        if spec.kind == "choice":
+            options.extend(option.value for option in spec.options)
+        if spec.kind == "bool":
+            options.append(not spec.default)
         values[spec.name] = [v for v in dict.fromkeys(options) if v is not None]
     return values
 
@@ -458,8 +497,9 @@ def _combinations(values: Mapping[str, list[Any]], seed: str, extra: int) -> lis
             combos.append({name: value})
     rng = random.Random(seed)
     seen = {tuple(sorted(c.items())) for c in combos}
+    target = len(combos) + extra
     attempts = 0
-    while len(combos) < len(seen) + extra and attempts < extra * 10:
+    while len(combos) < target and attempts < extra * 10:
         attempts += 1
         combo = {name: rng.choice(options) for name, options in values.items()}
         key = tuple(sorted(combo.items()))
@@ -508,3 +548,45 @@ def pack_cases() -> Iterator[Case]:
         for index, params in enumerate(_combinations(bounds, source, extra=10)):
             yield Case(f"{source}#{index}", None, params, source=source, pack_id=descriptor.id)
 
+
+def _bug_design(name: str) -> AssemblyDesign:
+    """The design a bug regression builds: its own dict, or the shipped template it names."""
+    from calc_engine.assembly.templates import templates
+
+    bug = DESIGNS_FROM_BUGS[name]
+    if bug.template is not None:
+        return templates()[bug.template].design
+    assert bug.design is not None, f"bug:{name} names neither a design nor a template"
+    return AssemblyDesign.model_validate(bug.design)
+
+
+def design_cases() -> Iterator[Case]:
+    """Free-form designs and bug regressions, swept over their parameter range.
+
+    A bug regression comes first with the exact parameters of the report (``bug:<name>``), then
+    its design is swept like any other, so the fix is checked for the whole family and not only
+    for the one value that was reported.
+    """
+    for key, raw in sorted(EXTRA_DESIGNS.items()):
+        design = AssemblyDesign.model_validate(raw)
+        source = f"design:{key}"
+        combos = _combinations(_param_values(design), source, extra=_sample_size(design))
+        for index, params in enumerate(combos):
+            yield Case(f"{source}#{index}", design, params, source=source)
+
+    for key, bug in sorted(DESIGNS_FROM_BUGS.items()):
+        design = _bug_design(key)
+        source = f"bug:{key}"
+        yield Case(f"{source}#reported", design, bug.params, source=source, notes=(bug.report,))
+        combos = _combinations(_param_values(design), source, extra=_sample_size(design))
+        for index, params in enumerate(combos):
+            yield Case(f"{source}#{index}", design, params, source=source, notes=(bug.report,))
+
+
+def cases() -> list[Case]:
+    """The whole corpus: templates, packs, free-form designs and bug regressions.
+
+    Deterministic: every random sample is seeded by the name of its design, so the list is the
+    same on every machine and every run.
+    """
+    return [*template_cases(), *pack_cases(), *design_cases()]

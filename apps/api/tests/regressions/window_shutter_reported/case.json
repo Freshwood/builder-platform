@@ -1,0 +1,33 @@
+{
+  "id": "window_shutter_reported",
+  "title": "Kinder-Fensterläden aus Brettern, 31 x 38 cm (kam als Kantholzrahmen)",
+  "origin": {
+    "kind": "bug_report",
+    "ref": "git be34557^:docs/problems/construction-problem.md (Ergebnis-PDF: docs/problems/archiv/homeworking-design-c21f107f.pdf); ADR-0004 'Ergänzung 2026-10-05: Maßholz, Beschläge, Wandmontage'",
+    "date": "2026-10-05"
+  },
+  "failure_class": "intent_mismatch",
+  "brief": "Ich möchte Fensterläden für mein Kinderbaumhaus bauen. Die Fensterrahmen sind schon gebaut. Die Fensterläden hätten die Maße Außenbefestigung Breite 31cm Höhe 38cm. Erstelle mir eine Zeichnung dafür. Ich wollte Kinderfensterläden aus Bretter haben.",
+  "expect": {
+    "envelope": {
+      "min_length_mm": 310,
+      "max_length_mm": 310,
+      "min_height_mm": 380,
+      "max_height_mm": 380
+    },
+    "use": "outdoor",
+    "support": "wall",
+    "materials_none": ["square_", "frame_"],
+    "features": [
+      {"hinged_doors": {"wings": 2, "min_hinges": 2}},
+      "choice_param:wood=douglas|larch|oak|pine|spruce"
+    ],
+    "note": "31 x 38 cm, zwei Flügel aus Brettern (kein Kantholzrahmen), Scharniere in der Stückliste"
+  },
+  "attempts": [],
+  "golden": {
+    "template": "window_shutter",
+    "params": {"width_mm": 310, "height_mm": 380, "wings": 2, "board_mm": 18}
+  },
+  "notes": "Der ursprüngliche Lauf wurde nicht aufgezeichnet (Zeit vor design_attempts), daher keine Versuche. Gemeldet: ein Kantholzrahmen (45 x 70 mm) mit 3 Lamellen statt Brettern, Scharniere und Verschluss nur im Anleitungstext. Das Golden-Design ist die ausgelieferte Vorlage window_shutter; der Fall wird also rot, sobald die Vorlage wieder zum Rahmen oder ohne Scharniere in der Stückliste gebaut wird. Der Nutzertext ist aus dem archivierten Bericht, der zweite Satz stammt aus dessen Kommentar ('Kindefensterläden aus Bretter')."
+}

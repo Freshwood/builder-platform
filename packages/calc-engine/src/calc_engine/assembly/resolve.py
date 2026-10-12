@@ -131,9 +131,7 @@ def substitute(template: str, params: Mapping[str, ParamValue]) -> str:
     return _PLACEHOLDER.sub(repl, template)
 
 
-def _vec(
-    values: tuple[float | str, float | str, float | str], env: Mapping[str, Scalar]
-) -> Vec3:
+def _vec(values: tuple[float | str, float | str, float | str], env: Mapping[str, Scalar]) -> Vec3:
     x, y, z = (evaluate_number(v, env) for v in values)
     if not all(math.isfinite(v) for v in (x, y, z)):
         raise ExprError("Maß ist keine endliche Zahl")

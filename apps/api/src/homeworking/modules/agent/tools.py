@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import dataclass, field
 from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import Field
-from pydantic_ai import Agent, RunContext
+from pydantic import Field, ValidationError
+from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.capabilities import AbstractCapability, ProcessHistory
-from pydantic_ai.messages import ModelResponse
+from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models import Model, ModelRequestContext
+from pydantic_ai.tools import ToolDefinition
 
 from calc_engine.assembly.derive import DESIGN_PACK_ID
 from calc_engine.assembly.templates import template, templates
@@ -60,8 +62,13 @@ class AgentDeps:
     project_id: UUID | None
     trace_id: str
     changed_projects: set[UUID] = field(default_factory=set)
-    # Every design the model submitted, accepted or not; stored with the agent run (it cost money).
+    # Every design the model submitted, accepted or not, and every failed tool call of any tool
+    # (invalid arguments, engine rejection, parameter and command errors); stored with the agent
+    # run (it cost money) so that a failed run can become a regression test. Entry shape:
+    # ``tool_attempt`` below. The name is historical (column ``agent_runs.design_attempts``).
     design_attempts: list[dict[str, Any]] = field(default_factory=list)
+    # Raw arguments of the calls in flight, by tool_call_id (before repair and validation).
+    raw_tool_args: dict[str, str | dict[str, Any] | None] = field(default_factory=dict)
     # Usage of every model request, also of runs that fail later (they cost money, too).
     requests: list[dict[str, Any]] = field(default_factory=list)
     # The model may call several tools in parallel; project writes must run one after another,
@@ -305,15 +312,80 @@ def _action(target: UUID | None) -> str:
     return "created" if target is None else "replanned"
 
 
-def _attempt(ctx: RunContext[AgentDeps], design: AssemblyDesign, errors: list[str]) -> None:
+# Upper bound of the raw tool arguments kept per attempt (a full design is about 20-50 kB).
+RAW_ARGS_MAX_CHARS = 200_000
+
+
+def stored_raw_args(args: str | dict[str, Any] | None) -> str | dict[str, Any] | None:
+    """Raw tool arguments as the model sent them, JSON-safe and bounded in size."""
+    if args is None:
+        return None
+    text = args if isinstance(args, str) else json.dumps(args, ensure_ascii=False, default=str)
+    if len(text) > RAW_ARGS_MAX_CHARS:
+        return f"{text[:RAW_ARGS_MAX_CHARS]}…[truncated, {len(text)} chars in total]"
+    return args if isinstance(args, str) else json.loads(text)
+
+
+def tool_attempt(
+    *,
+    tool: str,
+    tool_call_id: str | None,
+    outcome: str,
+    errors: list[str],
+    raw_args: str | dict[str, Any] | None,
+    design: AssemblyDesign | None = None,
+) -> dict[str, Any]:
+    """One entry of ``design_attempts`` (JSON column ``agent_runs.design_attempts``).
+
+    ``outcome`` is ``accepted``, ``invalid_args`` (validation or JSON repair failed before the tool
+    ran), ``engine_rejected``, ``parameter_error``, ``command_error``, ``not_found``,
+    ``unknown_pack``, ``no_project`` or ``exception``. ``tool``, ``accepted``, ``errors`` and
+    ``design`` (null unless a design was validated) are the keys older runs already have.
+    """
+    return {
+        "tool": tool,
+        "tool_call_id": tool_call_id,
+        "outcome": outcome,
+        "accepted": outcome == "accepted",
+        "errors": errors,
+        "raw_args": stored_raw_args(raw_args),
+        "design": design.model_dump(mode="json") if design is not None else None,
+    }
+
+
+def _attempt(
+    ctx: RunContext[AgentDeps],
+    outcome: str,
+    errors: list[str],
+    design: AssemblyDesign | None = None,
+) -> None:
+    """Record the outcome of the tool call that runs now."""
     ctx.deps.design_attempts.append(
-        {
-            "tool": "save_design",
-            "accepted": not errors,
-            "errors": errors,
-            "design": design.model_dump(mode="json"),
-        }
+        tool_attempt(
+            tool=ctx.tool_name or "",
+            tool_call_id=ctx.tool_call_id,
+            outcome=outcome,
+            errors=errors,
+            raw_args=ctx.deps.raw_tool_args.get(ctx.tool_call_id or ""),
+            design=design,
+        )
     )
+
+
+def _command_outcome(exc: Exception) -> str:
+    return "not_found" if isinstance(exc, ProjectNotFoundError) else "command_error"
+
+
+def _fail(
+    ctx: RunContext[AgentDeps],
+    outcome: str,
+    message: str,
+    errors: list[str] | None = None,
+    design: AssemblyDesign | None = None,
+) -> dict[str, Any]:
+    """Record a failed tool call and return the error message to the model."""
+    _attempt(ctx, outcome, errors if errors is not None else [message], design)
+    return _error(message)
 
 
 async def _save_design(
@@ -380,13 +452,93 @@ class RecordUsage(AbstractCapability[AgentDeps]):
         return None
 
 
+def _validation_messages(error: ValidationError | ModelRetry) -> list[str]:
+    """Compact texts of an argument error (location, message, type); no input echo."""
+    if isinstance(error, ModelRetry):
+        return [str(error.message)]
+    return [
+        f"{'.'.join(str(part) for part in e['loc'])}: {e['msg']} [{e['type']}]"
+        for e in error.errors(include_url=False, include_input=False, include_context=False)
+    ]
+
+
+@dataclass
+class RecordToolAttempts(AbstractCapability[AgentDeps]):
+    """Keep the raw arguments of every tool call and record calls that fail validation.
+
+    Failures inside a tool body are recorded there (``_attempt``, ``_fail``); this capability
+    covers what never reaches the body: schema violations (e.g. an extra key inside ``design``),
+    JSON that cannot be repaired (``RepairToolArgs``) and unexpected exceptions.
+    """
+
+    async def before_tool_validate(
+        self,
+        ctx: RunContext[AgentDeps],
+        *,
+        call: ToolCallPart,
+        tool_def: ToolDefinition,
+        args: str | dict[str, Any],
+    ) -> str | dict[str, Any]:
+        ctx.deps.raw_tool_args[call.tool_call_id] = args
+        return args
+
+    async def on_tool_validate_error(
+        self,
+        ctx: RunContext[AgentDeps],
+        *,
+        call: ToolCallPart,
+        tool_def: ToolDefinition,
+        args: str | dict[str, Any],
+        error: ValidationError | ModelRetry,
+    ) -> dict[str, Any]:
+        ctx.deps.design_attempts.append(
+            tool_attempt(
+                tool=call.tool_name,
+                tool_call_id=call.tool_call_id,
+                outcome="invalid_args",
+                errors=_validation_messages(error),
+                raw_args=args,
+            )
+        )
+        raise error
+
+    async def on_tool_execute_error(
+        self,
+        ctx: RunContext[AgentDeps],
+        *,
+        call: ToolCallPart,
+        tool_def: ToolDefinition,
+        args: dict[str, Any],
+        error: Exception,
+    ) -> Any:
+        ctx.deps.design_attempts.append(
+            tool_attempt(
+                tool=call.tool_name,
+                tool_call_id=call.tool_call_id,
+                outcome="exception",
+                errors=[f"{type(error).__name__}: {error}"[:2000]],
+                raw_args=ctx.deps.raw_tool_args.get(call.tool_call_id),
+            )
+        )
+        raise error
+
+    @classmethod
+    def get_serialization_name(cls) -> str | None:
+        return None
+
+
 def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
     agent: Agent[AgentDeps, str] = Agent(
         model,
         deps_type=AgentDeps,
         instructions=[INSTRUCTIONS, planning_overview(engine)],
         retries=2,
-        capabilities=[ProcessHistory(process_history), RepairToolArgs(), RecordUsage()],
+        capabilities=[
+            ProcessHistory(process_history),
+            RepairToolArgs(),
+            RecordToolAttempts(),
+            RecordUsage(),
+        ],
     )
 
     @agent.tool
@@ -466,9 +618,14 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                     trace_id=ctx.deps.trace_id,
                 )
             except ParameterError as exc:
-                return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+                return _fail(
+                    ctx,
+                    "parameter_error",
+                    "Ungültige Parameter: " + "; ".join(exc.errors),
+                    exc.errors,
+                )
             except UnknownPackError:
-                return _error(f"Unbekannte Vorlage '{template_key}'")
+                return _fail(ctx, "unknown_pack", f"Unbekannte Vorlage '{template_key}'")
             await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
@@ -502,13 +659,16 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             try:
                 outcome = await _save_design(ctx, target, design, title, params)
             except DesignRejectedError as exc:
-                _attempt(ctx, design, exc.errors)
+                _attempt(ctx, "engine_rejected", exc.errors, design)
                 return _design_rejected(exc)
             except ParameterError as exc:
-                return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+                message = "Ungültige Parameter: " + "; ".join(exc.errors)
+                return _fail(ctx, "parameter_error", message, exc.errors, design)
             except (CommandError, ProjectNotFoundError) as exc:
-                return _error(f"Änderung nicht möglich: {exc}")
-            _attempt(ctx, design, [])
+                return _fail(
+                    ctx, _command_outcome(exc), f"Änderung nicht möglich: {exc}", design=design
+                )
+            _attempt(ctx, "accepted", [], design)
             await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
@@ -524,13 +684,17 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
     async def get_current_design(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
         """Return the design of the current free-form project (to change it with save_design)."""
         if ctx.deps.project_id is None:
-            return _error("Es ist kein Projekt aktiv.")
+            return _fail(ctx, "no_project", "Es ist kein Projekt aktiv.")
         try:
             model = await ctx.deps.projects.get(ctx.deps.owner_id, ctx.deps.project_id)
         except ProjectNotFoundError:
-            return _error("Projekt nicht gefunden.")
+            return _fail(ctx, "not_found", "Projekt nicht gefunden.")
         if model.inputs.design is None:
-            return _error("Das Projekt nutzt ein Construction Pack; ändere es mit change_project.")
+            return _fail(
+                ctx,
+                "command_error",
+                "Das Projekt nutzt ein Construction Pack; ändere es mit change_project.",
+            )
         return {"params": model.inputs.params, "design": _design_json(model.inputs.design)}
 
     @agent.tool
@@ -574,9 +738,14 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                         trace_id=ctx.deps.trace_id,
                     )
             except ParameterError as exc:
-                return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+                return _fail(
+                    ctx,
+                    "parameter_error",
+                    "Ungültige Parameter: " + "; ".join(exc.errors),
+                    exc.errors,
+                )
             except UnknownPackError:
-                return _error(f"Unbekanntes Construction Pack '{pack_id}'")
+                return _fail(ctx, "unknown_pack", f"Unbekanntes Construction Pack '{pack_id}'")
             await _store_explanation(ctx, outcome.project.id, explanation)
         ctx.deps.project_id = outcome.project.id
         ctx.deps.changed_projects.add(outcome.project.id)
@@ -587,7 +756,11 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         """Change the current project with a typed command (lengths in millimetres)."""
         async with ctx.deps.write_lock:
             if ctx.deps.project_id is None:
-                return _error("Es ist noch kein Projekt aktiv. Erstelle zuerst ein Projekt.")
+                return _fail(
+                    ctx,
+                    "no_project",
+                    "Es ist noch kein Projekt aktiv. Erstelle zuerst ein Projekt.",
+                )
             try:
                 outcome = await ctx.deps.projects.execute(
                     ctx.deps.owner_id,
@@ -597,9 +770,14 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                     trace_id=ctx.deps.trace_id,
                 )
             except ParameterError as exc:
-                return _error("Ungültige Parameter: " + "; ".join(exc.errors))
+                return _fail(
+                    ctx,
+                    "parameter_error",
+                    "Ungültige Parameter: " + "; ".join(exc.errors),
+                    exc.errors,
+                )
             except (CommandError, ProjectNotFoundError) as exc:
-                return _error(f"Änderung nicht möglich: {exc}")
+                return _fail(ctx, _command_outcome(exc), f"Änderung nicht möglich: {exc}")
         ctx.deps.changed_projects.add(outcome.project.id)
         return {
             "action": "changed",
@@ -612,7 +790,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         """Undo the last change of the current project."""
         async with ctx.deps.write_lock:
             if ctx.deps.project_id is None:
-                return _error("Es ist kein Projekt aktiv.")
+                return _fail(ctx, "no_project", "Es ist kein Projekt aktiv.")
             try:
                 outcome = await ctx.deps.projects.undo(
                     ctx.deps.owner_id,
@@ -621,7 +799,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                     trace_id=ctx.deps.trace_id,
                 )
             except (CommandError, ProjectNotFoundError) as exc:
-                return _error(f"Rückgängig nicht möglich: {exc}")
+                return _fail(ctx, _command_outcome(exc), f"Rückgängig nicht möglich: {exc}")
         ctx.deps.changed_projects.add(outcome.project.id)
         return {
             "action": "undone",
@@ -633,11 +811,11 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
     async def get_project(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
         """Return the current project incl. bill of materials (item_id for set_price)."""
         if ctx.deps.project_id is None:
-            return _error("Es ist kein Projekt aktiv.")
+            return _fail(ctx, "no_project", "Es ist kein Projekt aktiv.")
         try:
             model = await ctx.deps.projects.get(ctx.deps.owner_id, ctx.deps.project_id)
         except ProjectNotFoundError:
-            return _error("Projekt nicht gefunden.")
+            return _fail(ctx, "not_found", "Projekt nicht gefunden.")
         return {"project": project_summary(model, with_bom=True)}
 
     @agent.tool
@@ -645,7 +823,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         """Store an additional explanation of the design for the project document (labelled as AI)."""
         async with ctx.deps.write_lock:
             if ctx.deps.project_id is None:
-                return _error("Es ist kein Projekt aktiv.")
+                return _fail(ctx, "no_project", "Es ist kein Projekt aktiv.")
             try:
                 await ctx.deps.projects.execute(
                     ctx.deps.owner_id,
@@ -655,7 +833,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                     trace_id=ctx.deps.trace_id,
                 )
             except (CommandError, ProjectNotFoundError) as exc:
-                return _error(f"Notiz nicht gespeichert: {exc}")
+                return _fail(ctx, _command_outcome(exc), f"Notiz nicht gespeichert: {exc}")
         return {"action": "note_added"}
 
     return agent

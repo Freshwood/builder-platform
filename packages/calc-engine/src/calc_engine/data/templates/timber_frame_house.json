@@ -205,7 +205,8 @@
     ],
     "repeat": {
      "count": "2 * (bays_x + 1)"
-    }
+    },
+    "when": "not ((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80) and i < bays_x + 1 and i % (bays_x + 1) == bays_x // 2)"
    },
    {
     "id": "post_y",
@@ -286,7 +287,7 @@
     "repeat": {
      "count": "2 * bays_x"
     },
-    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and i % bays_x == bays_x // 2 and (length_mm - 400) / bays_x >= 1260)"
+    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and (i % bays_x == bays_x // 2 or ((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80) and i % bays_x == bays_x // 2 - 1)))"
    },
    {
     "id": "rail_y",
@@ -360,7 +361,7 @@
     "repeat": {
      "count": "2 * bays_x"
     },
-    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and i % bays_x == bays_x // 2 and (length_mm - 400) / bays_x >= 1260)"
+    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and (i % bays_x == bays_x // 2 or ((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80) and i % bays_x == bays_x // 2 - 1)))"
    },
    {
     "id": "fill_x_top",
@@ -379,7 +380,7 @@
     "repeat": {
      "count": "2 * bays_x"
     },
-    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and i % bays_x == bays_x // 2 and (length_mm - 400) / bays_x >= 1260) and not (length_mm - 400) / bays_x >= 1160"
+    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and (i % bays_x == bays_x // 2 or ((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80) and i % bays_x == bays_x // 2 - 1))) and not (length_mm - 400) / bays_x >= 1160"
    },
    {
     "id": "fill_x_win",
@@ -398,7 +399,7 @@
     "repeat": {
      "count": "2 * bays_x"
     },
-    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and i % bays_x == bays_x // 2 and (length_mm - 400) / bays_x >= 1260) and (length_mm - 400) / bays_x >= 1160",
+    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and (i % bays_x == bays_x // 2 or ((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80) and i % bays_x == bays_x // 2 - 1))) and (length_mm - 400) / bays_x >= 1160",
     "cutouts": [
      {
       "kind": "rect",
@@ -430,7 +431,7 @@
     "repeat": {
      "count": "2 * bays_x"
     },
-    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and i % bays_x == bays_x // 2 and (length_mm - 400) / bays_x >= 1260) and (length_mm - 400) / bays_x >= 1160"
+    "when": "i % bays_x > 0 and i % bays_x < bays_x - 1 and not (i < bays_x and (i % bays_x == bays_x // 2 or ((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80) and i % bays_x == bays_x // 2 - 1))) and (length_mm - 400) / bays_x >= 1160"
    },
    {
     "id": "fill_x_up",
@@ -512,46 +513,43 @@
      2100
     ],
     "at": [
-     "280 + (bays_x // 2) * (length_mm - 400) / bays_x + (((length_mm - 400) / bays_x - 160) - 1000) / 2",
+     "280 + (bays_x // 2 - if((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80), 1, 0)) * (length_mm - 400) / bays_x + ((if((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80), 2 * ((length_mm - 400) / bays_x) - 160, ((length_mm - 400) / bays_x) - 160)) - 1000) / 2",
      161,
      460
-    ],
-    "when": "(length_mm - 400) / bays_x >= 1260"
+    ]
    },
    {
     "id": "fill_door_side",
     "name": "Gefach neben Tür",
     "material": "{infill}",
     "size": [
-     "(((length_mm - 400) / bays_x - 160) - 1000) / 2",
+     "((if((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80), 2 * ((length_mm - 400) / bays_x) - 160, ((length_mm - 400) / bays_x) - 160)) - 1000) / 2",
      160,
      2100
     ],
     "at": [
-     "280 + (bays_x // 2) * (length_mm - 400) / bays_x + i * (((length_mm - 400) / bays_x - 160) + 1000) / 2",
+     "280 + (bays_x // 2 - if((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80), 1, 0)) * (length_mm - 400) / bays_x + i * ((if((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80), 2 * ((length_mm - 400) / bays_x) - 160, ((length_mm - 400) / bays_x) - 160)) + 1000) / 2",
      120,
      460
     ],
     "repeat": {
      "count": 2
-    },
-    "when": "(length_mm - 400) / bays_x >= 1260"
+    }
    },
    {
     "id": "fill_door_top",
     "name": "Gefach über Tür",
     "material": "{infill}",
     "size": [
-     "((length_mm - 400) / bays_x - 160)",
+     "(if((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80), 2 * ((length_mm - 400) / bays_x) - 160, ((length_mm - 400) / bays_x) - 160))",
      160,
      "wall_mm - 2420"
     ],
     "at": [
-     "280 + (bays_x // 2) * (length_mm - 400) / bays_x",
+     "280 + (bays_x // 2 - if((length_mm - 400) / bays_x < (1000 + 160 + 2 * 80), 1, 0)) * (length_mm - 400) / bays_x",
      120,
      2560
-    ],
-    "when": "(length_mm - 400) / bays_x >= 1260"
+    ]
    },
    {
     "id": "fill_y_low",

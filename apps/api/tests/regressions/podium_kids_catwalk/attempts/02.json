@@ -1,0 +1,375 @@
+{
+  "tool": "save_design",
+  "tool_call_id": "call_0",
+  "outcome": "engine_rejected",
+  "accepted": false,
+  "errors": [
+    "Bauteil 'top_boards': Unbekannter Name 'surface_type' in 'surface_type == 'boards''",
+    "Bauteil 'top_panel': Unbekannter Name 'surface_type' in 'surface_type == 'panel''"
+  ],
+  "raw_args": {
+    "title": "Podest Modenschau",
+    "design": {
+      "object_type": "Podest",
+      "summary": "Podest für eine Modenschau, Oberfläche wählbar",
+      "params": [
+        {
+          "name": "length_mm",
+          "label": "Länge",
+          "kind": "length",
+          "default": 2000,
+          "min": 800,
+          "max": 2500
+        },
+        {
+          "name": "deck_boards",
+          "label": "Anzahl Deckbretter (je 125 mm breit)",
+          "kind": "count",
+          "default": 8,
+          "min": 5,
+          "max": 10
+        },
+        {
+          "name": "height_mm",
+          "label": "Höhe",
+          "kind": "length",
+          "default": 350,
+          "min": 200,
+          "max": 600
+        },
+        {
+          "name": "surface",
+          "label": "Oberfläche",
+          "kind": "choice",
+          "default": "boards",
+          "options": [
+            {
+              "value": "boards",
+              "label": "Einzelne Bretter"
+            },
+            {
+              "value": "panel",
+              "label": "Platte"
+            }
+          ]
+        },
+        {
+          "name": "toe_board",
+          "label": "Verschalung vorne",
+          "kind": "bool",
+          "default": true
+        }
+      ],
+      "parts": [
+        {
+          "id": "leg",
+          "name": "Bein",
+          "material": "frame_spruce_44x44",
+          "size": [
+            44,
+            44,
+            "height_mm - 18"
+          ],
+          "at": [
+            "i % 2 * (length_mm - 44)",
+            "i // 2 * (deck_boards * 125 - 44)",
+            0
+          ],
+          "repeat": {
+            "count": 4
+          }
+        },
+        {
+          "id": "frame_long",
+          "name": "Längszarge",
+          "material": "frame_spruce_44x44",
+          "size": [
+            "length_mm - 88",
+            44,
+            44
+          ],
+          "at": [
+            44,
+            "i * (deck_boards * 125 - 44)",
+            "height_mm - 62"
+          ],
+          "repeat": {
+            "count": 2
+          }
+        },
+        {
+          "id": "top_boards",
+          "name": "Deckbrett",
+          "material": "lumber_spruce_18x125",
+          "size": [
+            "length_mm",
+            125,
+            18
+          ],
+          "at": [
+            0,
+            "i * 125",
+            "height_mm - 18"
+          ],
+          "repeat": {
+            "count": "deck_boards"
+          },
+          "when": "surface_type == 'boards'"
+        },
+        {
+          "id": "top_panel",
+          "name": "Platte",
+          "material": "plywood_birch_18",
+          "size": [
+            "length_mm",
+            "deck_boards * 125",
+            18
+          ],
+          "at": [
+            0,
+            0,
+            "height_mm - 18"
+          ],
+          "when": "surface_type == 'panel'"
+        },
+        {
+          "id": "toe_board",
+          "name": "Verschalung",
+          "material": "board_spruce_18x146",
+          "size": [
+            "length_mm - 88",
+            146,
+            18
+          ],
+          "at": [
+            44,
+            0,
+            "height_mm - 164"
+          ],
+          "when": "toe_board"
+        }
+      ]
+    }
+  },
+  "design": {
+    "object_type": "Podest",
+    "summary": "Podest für eine Modenschau, Oberfläche wählbar",
+    "category": "object",
+    "use": "indoor",
+    "support": "floor",
+    "origin": "ai",
+    "params": [
+      {
+        "name": "length_mm",
+        "label": "Länge",
+        "kind": "length",
+        "default": 2000,
+        "min": 800.0,
+        "max": 2500.0,
+        "options": []
+      },
+      {
+        "name": "deck_boards",
+        "label": "Anzahl Deckbretter (je 125 mm breit)",
+        "kind": "count",
+        "default": 8,
+        "min": 5.0,
+        "max": 10.0,
+        "options": []
+      },
+      {
+        "name": "height_mm",
+        "label": "Höhe",
+        "kind": "length",
+        "default": 350,
+        "min": 200.0,
+        "max": 600.0,
+        "options": []
+      },
+      {
+        "name": "surface",
+        "label": "Oberfläche",
+        "kind": "choice",
+        "default": "boards",
+        "min": null,
+        "max": null,
+        "options": [
+          {
+            "value": "boards",
+            "label": "Einzelne Bretter"
+          },
+          {
+            "value": "panel",
+            "label": "Platte"
+          }
+        ]
+      },
+      {
+        "name": "toe_board",
+        "label": "Verschalung vorne",
+        "kind": "bool",
+        "default": true,
+        "min": null,
+        "max": null,
+        "options": []
+      }
+    ],
+    "parts": [
+      {
+        "id": "leg",
+        "name": "Bein",
+        "material": "frame_spruce_44x44",
+        "size": [
+          44.0,
+          44.0,
+          "height_mm - 18"
+        ],
+        "at": [
+          "i % 2 * (length_mm - 44)",
+          "i // 2 * (deck_boards * 125 - 44)",
+          0.0
+        ],
+        "rotate": null,
+        "start": null,
+        "end": null,
+        "section": null,
+        "facing": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "shape": null,
+        "cutouts": [],
+        "repeat": {
+          "count": 4.0,
+          "var": "i"
+        },
+        "when": null
+      },
+      {
+        "id": "frame_long",
+        "name": "Längszarge",
+        "material": "frame_spruce_44x44",
+        "size": [
+          "length_mm - 88",
+          44.0,
+          44.0
+        ],
+        "at": [
+          44.0,
+          "i * (deck_boards * 125 - 44)",
+          "height_mm - 62"
+        ],
+        "rotate": null,
+        "start": null,
+        "end": null,
+        "section": null,
+        "facing": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "shape": null,
+        "cutouts": [],
+        "repeat": {
+          "count": 2.0,
+          "var": "i"
+        },
+        "when": null
+      },
+      {
+        "id": "top_boards",
+        "name": "Deckbrett",
+        "material": "lumber_spruce_18x125",
+        "size": [
+          "length_mm",
+          125.0,
+          18.0
+        ],
+        "at": [
+          0.0,
+          "i * 125",
+          "height_mm - 18"
+        ],
+        "rotate": null,
+        "start": null,
+        "end": null,
+        "section": null,
+        "facing": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "shape": null,
+        "cutouts": [],
+        "repeat": {
+          "count": "deck_boards",
+          "var": "i"
+        },
+        "when": "surface_type == 'boards'"
+      },
+      {
+        "id": "top_panel",
+        "name": "Platte",
+        "material": "plywood_birch_18",
+        "size": [
+          "length_mm",
+          "deck_boards * 125",
+          18.0
+        ],
+        "at": [
+          0.0,
+          0.0,
+          "height_mm - 18"
+        ],
+        "rotate": null,
+        "start": null,
+        "end": null,
+        "section": null,
+        "facing": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "shape": null,
+        "cutouts": [],
+        "repeat": null,
+        "when": "surface_type == 'panel'"
+      },
+      {
+        "id": "toe_board",
+        "name": "Verschalung",
+        "material": "board_spruce_18x146",
+        "size": [
+          "length_mm - 88",
+          146.0,
+          18.0
+        ],
+        "at": [
+          44.0,
+          0.0,
+          "height_mm - 164"
+        ],
+        "rotate": null,
+        "start": null,
+        "end": null,
+        "section": null,
+        "facing": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "shape": null,
+        "cutouts": [],
+        "repeat": null,
+        "when": "toe_board"
+      }
+    ],
+    "joints": [],
+    "hardware": [],
+    "auto_screws": true,
+    "finish": null,
+    "steps": [],
+    "variants": []
+  }
+}
