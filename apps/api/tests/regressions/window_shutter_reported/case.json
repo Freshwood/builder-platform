@@ -26,8 +26,8 @@
   },
   "attempts": [],
   "golden": {
-    "template": "window_shutter",
+    "design": "golden.json",
     "params": {"width_mm": 310, "height_mm": 380, "wings": 2, "board_mm": 18}
   },
-  "notes": "Der ursprüngliche Lauf wurde nicht aufgezeichnet (Zeit vor design_attempts), daher keine Versuche. Gemeldet: ein Kantholzrahmen (45 x 70 mm) mit 3 Lamellen statt Brettern, Scharniere und Verschluss nur im Anleitungstext. Das Golden-Design ist die ausgelieferte Vorlage window_shutter; der Fall wird also rot, sobald die Vorlage wieder zum Rahmen oder ohne Scharniere in der Stückliste gebaut wird. Der Nutzertext ist aus dem archivierten Bericht, der zweite Satz stammt aus dessen Kommentar ('Kindefensterläden aus Bretter')."
+  "notes": "Der ursprüngliche Lauf wurde nicht aufgezeichnet (Zeit vor design_attempts), daher keine Versuche. Gemeldet: ein Kantholzrahmen (45 x 70 mm) mit 3 Lamellen statt Brettern, Scharniere und Verschluss nur im Anleitungstext. Das Golden-Design war bis ADR-0008 die Vorlage window_shutter und liegt jetzt als golden.json im Fall; er wird rot, sobald die Engine es wieder zum Rahmen oder ohne Scharniere in der Stückliste baut. Der Nutzertext ist aus dem archivierten Bericht, der zweite Satz stammt aus dessen Kommentar ('Kindefensterläden aus Bretter')."
 }

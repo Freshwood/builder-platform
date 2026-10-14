@@ -14,17 +14,17 @@ from homeworking.modules.agent.bench import run_bench
 
 # scenario -> (max input tokens of the whole turn, max tokens of a single request)
 # Baseline 2026-10-07.2 (docs/ai/benchmarks/2026-10-07-baseline.md) in the comments.
-# Raised in 2026-10-08.1 (shapes, members, joints, buildings: +1.7K prefix tokens), see
-# docs/ai/PROMPT_CHANGELOG.md. Before that: 16_000/8_500, 16_000/8_500, 50_000/11_500,
-# 18_000/9_300, 19_500/10_000 and a 7_500 prefix.
+# Raised in 2026-10-08.1 (shapes, members, joints, buildings: +1.7K prefix tokens), tightened
+# in 2026-10-14.1 (packs and templates removed: -1.6K prefix tokens), see
+# docs/ai/PROMPT_CHANGELOG.md. Before 2026-10-14.1: pack_create 19_500/10_300, template_create
+# 19_500/10_200, 60_000/13_600, 21_500/11_100, 23_000/11_900 and a 9_200 prefix.
 BUDGET = {
-    "pack_create": (19_500, 10_300),
-    "template_create": (19_500, 10_200),
-    "free_design": (60_000, 13_600),
-    "followup_1": (21_500, 11_100),
-    "followup_2": (23_000, 11_900),
+    "design_create": (17_500, 9_600),
+    "free_design": (50_000, 11_400),
+    "followup_1": (18_500, 9_700),
+    "followup_2": (20_000, 10_400),
 }
-MAX_PREFIX_TOKENS = 9_200
+MAX_PREFIX_TOKENS = 7_800
 
 
 @pytest.fixture(scope="module")

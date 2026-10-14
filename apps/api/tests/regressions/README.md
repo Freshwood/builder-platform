@@ -38,11 +38,11 @@ every model forbids unknown keys, so a typo fails at load time.
 |---|---|
 | `id` | Equals the directory name (`[a-z][a-z0-9_]*`). |
 | `origin.kind` | `agent_run` (ref = `agent_runs.id`), `bug_report` (ref = docs path or commit) or `hand_written`. |
-| `failure_class` | `args_syntax`, `schema_validation`, `engine_loop`, `intent_mismatch`, `drawing_defect` or `template_defect`. |
+| `failure_class` | `args_syntax`, `schema_validation`, `engine_loop`, `intent_mismatch`, or `drawing_defect`. |
 | `brief` | The user's text, verbatim. |
 | `expect` | An `Expectation` document, see `calc_engine/assembly/intent.py` (envelope, use, support, materials, features). |
 | `attempts[]` | `file`: record under `attempts/`. `expect_outcome`: outcome the replay must produce now. `errors_contain`: substrings that must occur in the replayed errors (the text the model sees). `synthetic`: reconstructed from a report, not recorded from a real run. |
-| `golden` | The correct construction: exactly one of `design` (file) and `template` (key of a shipped template), plus `params`. Optional only for `args_syntax` and `schema_validation`. |
+| `golden` | The correct construction: `design` (a design file in the case directory) plus `params`. Optional only for `args_syntax` and `schema_validation`. |
 
 ## attempts/NN.json
 

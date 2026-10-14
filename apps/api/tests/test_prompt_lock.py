@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from calc_engine.engine import default_engine
 from homeworking.modules.agent.prompts import PROMPT_VERSION
 from homeworking.modules.agent.provenance import PromptSpec, prompt_spec, read_lock
 
@@ -24,7 +23,7 @@ HOW_TO = (
 
 @pytest.fixture(scope="module")
 def spec() -> PromptSpec:
-    return asyncio.run(prompt_spec(default_engine()))
+    return asyncio.run(prompt_spec())
 
 
 def test_prompt_matches_lock(spec: PromptSpec) -> None:

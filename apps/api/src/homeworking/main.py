@@ -12,7 +12,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
-from calc_engine.engine import ParameterError, UnknownPackError
+from calc_engine.engine import DesignRejectedError
 from construction_model.commands import CommandError
 from homeworking.api import chat, projects
 from homeworking.bootstrap import Container, build_container
@@ -76,12 +76,8 @@ def create_app(
     async def _version_not_found(_: Request, __: VersionNotFoundError) -> JSONResponse:
         return JSONResponse({"detail": "Version nicht gefunden"}, status_code=404)
 
-    @app.exception_handler(UnknownPackError)
-    async def _unknown_pack(_: Request, exc: UnknownPackError) -> JSONResponse:
-        return JSONResponse({"detail": f"Unbekanntes Pack {exc}"}, status_code=404)
-
-    @app.exception_handler(ParameterError)
-    async def _bad_params(_: Request, exc: ParameterError) -> JSONResponse:
+    @app.exception_handler(DesignRejectedError)
+    async def _rejected(_: Request, exc: DesignRejectedError) -> JSONResponse:
         return JSONResponse({"detail": exc.errors}, status_code=422)
 
     @app.exception_handler(CommandError)

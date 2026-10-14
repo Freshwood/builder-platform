@@ -53,6 +53,6 @@ def build_container(settings: Settings, engine: Engine | None = None) -> Contain
         projects=ProjectService(SqlProjectRepository(sessions), calc),
         identity=SqlGuestIdentityProvider(sessions),
         conversations=ConversationService(sessions),
-        agent=build_agent(models.designer, calc),
+        agent=build_agent(models.designer),
         models=models,
     )

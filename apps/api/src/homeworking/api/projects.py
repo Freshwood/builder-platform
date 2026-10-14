@@ -13,8 +13,6 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from calc_engine.assembly.templates import templates
-from calc_engine.pack import PackDescriptor
 from construction_model.assembly import AssemblyDesign
 from construction_model.commands import (
     AddNote,
@@ -50,20 +48,10 @@ log = logging.getLogger("homeworking.documents")
 
 
 class CreateProjectRequest(BaseModel):
-    pack_id: str = Field(
-        description="Construction pack id, 'design' for a free-form design or 'template'"
-    )
     title: str = Field(min_length=1, max_length=200)
+    design: AssemblyDesign = Field(description="The one-off design of this project (ADR-0008)")
     params: dict[str, ParamValue] = Field(default_factory=dict)
     region: Region | None = None
-    design: AssemblyDesign | None = Field(None, description="Required for pack_id 'design'")
-    template_key: str | None = Field(None, description="Required for pack_id 'template'")
-
-
-class TemplateEntry(BaseModel):
-    key: str
-    title: str
-    description: str
 
 
 class CommandRequest(BaseModel):
@@ -87,7 +75,6 @@ class CommandResponse(ProjectView):
 class ProjectListEntry(BaseModel):
     id: UUID
     title: str
-    pack_id: str
     summary: str
     updated_at: datetime | None
 
@@ -143,26 +130,11 @@ async def notices() -> LegalNotices:
     )
 
 
-@router.get("/packs", response_model=list[PackDescriptor])
-async def list_packs(container: ContainerDep) -> list[PackDescriptor]:
-    return container.engine.describe_packs()
-
-
-@router.get("/templates", response_model=list[TemplateEntry])
-async def list_templates() -> list[TemplateEntry]:
-    return [
-        TemplateEntry(key=t.key, title=t.title, description=t.description)
-        for t in templates().values()
-    ]
-
-
 @router.get("/projects", response_model=list[ProjectListEntry])
 async def list_projects(container: ContainerDep, user: UserDep) -> list[ProjectListEntry]:
     items = await container.projects.list_projects(user.id)
     return [
-        ProjectListEntry(
-            id=i.id, title=i.title, pack_id=i.pack_id, summary=i.summary, updated_at=i.updated_at
-        )
+        ProjectListEntry(id=i.id, title=i.title, summary=i.summary, updated_at=i.updated_at)
         for i in items
     ]
 
@@ -176,25 +148,9 @@ async def list_projects(container: ContainerDep, user: UserDep) -> list[ProjectL
 async def create_project(
     body: CreateProjectRequest, container: ContainerDep, user: UserDep
 ) -> CommandResponse:
-    if body.pack_id == "template":
-        if not body.template_key:
-            raise HTTPException(status_code=422, detail="template_key fehlt")
-        outcome = await container.projects.create_from_template(
-            user.id,
-            template_key=body.template_key,
-            title=body.title,
-            params=body.params,
-            region=body.region,
-        )
-    else:
-        outcome = await container.projects.create(
-            user.id,
-            pack_id=body.pack_id,
-            title=body.title,
-            params=body.params,
-            region=body.region,
-            design=body.design,
-        )
+    outcome = await container.projects.create(
+        user.id, title=body.title, design=body.design, params=body.params, region=body.region
+    )
     return _command_response(outcome)
 
 
@@ -379,7 +335,7 @@ async def document(
             {"detail": "Das PDF konnte nicht erstellt werden. Bitte versuche es erneut."},
             status_code=500,
         )
-    filename = f"homeworking-{model.inputs.pack_id}-{str(model.id)[:8]}.pdf"
+    filename = f"homeworking-{str(model.id)[:8]}.pdf"
     return Response(
         pdf,
         media_type="application/pdf",

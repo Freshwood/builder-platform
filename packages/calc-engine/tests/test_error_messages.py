@@ -167,7 +167,7 @@ def _build_errors(*parts: dict[str, Any], support: str = "floor") -> str:
             "parts": list(parts),
         }
     )
-    inputs = ProjectInputs(title="t", pack_id="design", params={}, design=design)
+    inputs = ProjectInputs(title="t", params={}, design=design)
     with pytest.raises(DesignRejectedError) as exc:
         default_engine().build(inputs)
     return " | ".join(exc.value.errors)

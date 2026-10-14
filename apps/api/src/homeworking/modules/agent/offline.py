@@ -2,6 +2,10 @@
 
 It understands a small set of German phrasings via patterns and calls the same tools as a real
 LLM. This keeps CI, E2E tests and local development free of API keys and network access.
+
+Like a real model it drafts the design itself and saves it with ``save_design``. It can only
+draft the few constructions in ``offline_designs/``; they stand in for what the LLM would write
+and are never shown to a real model (ADR-0008).
 """
 
 from __future__ import annotations
@@ -10,6 +14,8 @@ import json
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from functools import cache
+from pathlib import Path
 from typing import Any
 
 from pydantic_ai.messages import (
@@ -24,7 +30,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 
-from calc_engine.assembly.templates import DesignTemplate, templates
+from construction_model.assembly import AssemblyDesign
 
 _NUM = r"(\d+(?:[.,]\d+)?)"
 _UNIT = r"(mm|cm|m)\b"
@@ -66,8 +72,31 @@ _COUNT = re.compile(
 )
 _LENGTH = re.compile(rf"{_NUM}\s*{_UNIT}\s*(?:lang|breit)", re.IGNORECASE)
 _WIDTH = re.compile(rf"breite\s*(?:von\s*)?(?:ca\.?\s*)?{_NUM}\s*{_UNIT}", re.IGNORECASE)
-# Order in which dimensions of "a × b × c" map to template parameters.
+# Order in which dimensions of "a × b × c" map to design parameters.
 _DIM_ORDER = ("width_mm", "length_mm", "depth_mm", "height_mm")
+_DESIGNS = Path(__file__).resolve().parent / "offline_designs"
+
+
+@dataclass(frozen=True)
+class OfflineDesign:
+    """A construction the offline planner can draft: trigger words, title and design."""
+
+    key: str
+    title: str
+    keywords: tuple[str, ...]
+    design: AssemblyDesign
+
+
+@cache
+def offline_designs() -> tuple[OfflineDesign, ...]:
+    def load(key: str) -> AssemblyDesign:
+        path = _DESIGNS / f"{key}.json"
+        return AssemblyDesign.model_validate(json.loads(path.read_text(encoding="utf-8")))
+
+    return (
+        OfflineDesign("raised_bed", "Hochbeet", ("hochbeet",), load("raised_bed")),
+        OfflineDesign("shelf", "Regal", ("regal", "bücherregal", "buecherregal"), load("shelf")),
+    )
 
 
 def _to_mm(value: str, unit: str | None) -> int:
@@ -92,29 +121,23 @@ def _feature_params(text: str) -> dict[str, Any]:
     for word, wood in _WOODS.items():
         if word in text:
             params["wood"] = wood
-    if re.search(r"ohne\s+(noppen)?folie|ohne\s+noppenbahn", text):
-        params["liner"] = False
-    if re.search(r"ohne\s+(wühlmaus|wuehlmaus)?gitter", text):
-        params["vole_mesh"] = False
-    if re.search(r"sitzkante|abdeckleiste", text):
-        params["top_cap"] = True
     return params
 
 
-def _match_template(text: str) -> DesignTemplate | None:
-    best: tuple[int, DesignTemplate] | None = None
-    for tpl in templates().values():
-        for keyword in tpl.keywords:
+def _match_design(text: str) -> OfflineDesign | None:
+    best: tuple[int, OfflineDesign] | None = None
+    for candidate in offline_designs():
+        for keyword in candidate.keywords:
             if re.search(rf"\b{re.escape(keyword)}", text) and (
                 best is None or len(keyword) > best[0]
             ):
-                best = (len(keyword), tpl)
+                best = (len(keyword), candidate)
     return best[1] if best else None
 
 
-def _template_params(tpl: DesignTemplate, text: str) -> dict[str, Any]:
-    """Map simple phrasings to template parameters (names that the template actually has)."""
-    names = [p.name for p in tpl.design.params]
+def _design_params(design: AssemblyDesign, text: str) -> dict[str, Any]:
+    """Map simple phrasings to design parameters (names that the design actually has)."""
+    names = [p.name for p in design.params]
     dims = [n for n in _DIM_ORDER if n in names]
     params: dict[str, Any] = {}
     if m := _DIMS3.search(text):
@@ -137,10 +160,10 @@ def _template_params(tpl: DesignTemplate, text: str) -> dict[str, Any]:
         value, unit = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
         params["height_mm"] = _to_mm(value, unit)
     if m := _COUNT.search(text):
-        counts = [p.name for p in tpl.design.params if p.kind == "count"]
+        counts = [p.name for p in design.params if p.kind == "count"]
         if counts:
             params[counts[0]] = int(m.group(1))
-    bools = {p.name for p in tpl.design.params if p.kind == "bool"}
+    bools = {p.name for p in design.params if p.kind == "bool"}
     for name, words in {
         "backrest": ("lehne",),
         "castors": ("rollen",),
@@ -154,7 +177,7 @@ def _template_params(tpl: DesignTemplate, text: str) -> dict[str, Any]:
                 params[name] = False
             elif re.search(rf"mit\s+(\w+\s+)?{word}", text):
                 params[name] = True
-    choices = {o.value: p.name for p in tpl.design.params if p.kind == "choice" for o in p.options}
+    choices = {o.value: p.name for p in design.params if p.kind == "choice" for o in p.options}
     for value, wood in _feature_params(text).items():
         if value == "wood" and wood in choices:
             params[choices[wood]] = wood
@@ -178,40 +201,25 @@ def decide_for_user_text(raw: str) -> Decision:
             )
         ]
 
-    if "hochbeet" in text:
-        params: dict[str, Any] = {}
-        if dims := _DIMS.search(text):
-            unit = dims.group(4) or dims.group(2)
-            a = _to_mm(dims.group(1), dims.group(2) or unit)
-            b = _to_mm(dims.group(3), unit)
-            params["length_mm"], params["width_mm"] = max(a, b), min(a, b)
-        if height := _HEIGHT.search(text):
-            value, unit = (
-                (height.group(1), height.group(2))
-                if height.group(1)
-                else (height.group(3), height.group(4))
-            )
-            params["height_mm"] = _to_mm(value, unit)
-        params |= _feature_params(text)
-        if "length_mm" not in params:
-            return (
-                "Gern plane ich dein Hochbeet! Wie lang und wie breit soll es werden "
-                "(z. B. 2 × 1 m), und welche Höhe wünschst du dir?"
-            )
-        return [
-            ToolCall(
-                "create_project", {"pack_id": "raised_bed", "title": "Hochbeet", "params": params}
-            )
-        ]
+    if "hochbeet" in text and not _DIMS.search(text):
+        return (
+            "Gern plane ich dein Hochbeet! Wie lang und wie breit soll es werden "
+            "(z. B. 2 × 1 m), und welche Höhe wünschst du dir?"
+        )
 
-    if tpl := _match_template(text):
+    if drafted := _match_design(text):
+        params = _design_params(drafted.design, text)
+        if drafted.key == "raised_bed" and "width_mm" in params and "length_mm" in params:
+            # "2 × 1 m": the longer side is the length.
+            a, b = params["width_mm"], params["length_mm"]
+            params["length_mm"], params["width_mm"] = max(a, b), min(a, b)
         return [
             ToolCall(
-                "create_from_template",
+                "save_design",
                 {
-                    "template_key": tpl.key,
-                    "title": tpl.title,
-                    "params": _template_params(tpl, text),
+                    "design": drafted.design.model_dump(mode="json", exclude_defaults=True),
+                    "title": drafted.title,
+                    "params": params,
                 },
             )
         ]
@@ -231,10 +239,10 @@ def decide_for_user_text(raw: str) -> Decision:
 
     if any(word in text for word in _OTHER_PROJECTS):
         return (
-            "Das klingt nach einem spannenden Vorhaben! Im Offline-Modus kenne ich nur das "
-            "Hochbeet und die Vorlagen Regal, Gartenbank, Werkbank und Fensterladen. Mit angebundenem "
-            "Sprachmodell entwerfe ich auch freie Projekte aus Holz und Platten. Tragende "
-            "Bauwerke wie Carport oder Gartenhaus brauchen eine Fachplanung."
+            "Das klingt nach einem spannenden Vorhaben! Im Offline-Modus kann ich nur ein Hochbeet "
+            "oder ein Regal entwerfen. Mit angebundenem Sprachmodell entwerfe ich jedes Projekt "
+            "aus Holz und Platten individuell nach deinen Angaben. Tragende Bauwerke wie Carport "
+            "oder Gartenhaus brauchen eine Fachplanung."
         )
     return (
         "Ich helfe dir, dein Bauvorhaben zu planen. Beschreibe mir, was du bauen möchtest – "

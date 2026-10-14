@@ -132,7 +132,7 @@ async def app_with(settings: Settings, script: Script) -> AsyncIterator[Any]:
         container = app.state.container
         model = scripted(script)
         container.models = Models(designer=model, fast=model)
-        container.agent = build_agent(model, container.engine)
+        container.agent = build_agent(model)
         add_tools(container.agent)
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -259,7 +259,7 @@ async def test_shape_is_kept_per_run_without_growth(settings: Settings) -> None:
     await container.create_schema()
     try:
         owner = (await container.identity.create_guest()).id
-        agent = build_agent(scripted(Script(CALLS, "answer")), container.engine)
+        agent = build_agent(scripted(Script(CALLS, "answer")))
         add_tools(agent)
         deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
         await agent.run("Ein Regal", deps=deps)
@@ -280,7 +280,7 @@ async def test_provider_error_other_than_http_still_records_the_class(settings: 
     await container.create_schema()
     try:
         owner = (await container.identity.create_guest()).id
-        agent = build_agent(FunctionModel(broken), container.engine)
+        agent = build_agent(FunctionModel(broken))
         deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
         with pytest.raises(TimeoutError):
             await agent.run("Ein Regal", deps=deps)
@@ -300,7 +300,7 @@ async def test_failing_mapper_never_breaks_the_run(settings: Settings) -> None:
     try:
         owner = (await container.identity.create_guest()).id
         model = scripted(Script(CALLS, "answer"), BrokenMapper)
-        agent = build_agent(model, container.engine)
+        agent = build_agent(model)
         add_tools(agent)
         deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
         result = await agent.run("Ein Regal", deps=deps)

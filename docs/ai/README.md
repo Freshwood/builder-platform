@@ -65,12 +65,13 @@ other tools are not recorded. Entries are built by `tool_attempt()` in `modules/
   Feeding it to a `FunctionModel` `ToolCallPart` replays the call.
 - `outcome`: `accepted`, `engine_rejected` (`errors` = engine messages), `invalid_args` (schema
   violation or unrepairable JSON, `errors` = one `loc: message [type]` line each, or the repair
-  hint), `parameter_error`, `command_error`, `not_found`, `unknown_pack`, `no_project`,
+  hint), `parameter_error`, `command_error`, `not_found`, `no_project`,
   `exception` (unexpected error in a tool).
 - `design` is the validated design (origin `ai`) for accepted and engine-rejected `save_design`
   calls, otherwise `null`. `tool`, `accepted`, `errors` and `design` exist in older runs, too;
   those lack `tool_call_id`, `outcome` and `raw_args`.
-- Not recorded: calls of unknown tools and `get_template_design` with an unknown key.
+- Not recorded: calls of unknown tools. Runs before prompt 2026-10-14.1 may also contain
+  `unknown_pack`.
 
 Hooks (`RecordToolAttempts`, pydantic-ai capability): `before_tool_validate` keeps the raw
 arguments by `tool_call_id`, `on_tool_validate_error` and `on_tool_execute_error` record the

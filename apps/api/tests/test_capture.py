@@ -12,6 +12,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from api_designs import design_json
 
 from homeworking.bootstrap import build_container
 from homeworking.modules.agent import capture
@@ -330,10 +331,10 @@ def _complete(draft: Path) -> None:
     case["failure_class"] = "intent_mismatch"
     case["title"] = "Podest für Kinder"
     case["expect"] = {"envelope": {"max_length_mm": 2000}, "use": "indoor"}
-    case["golden"] = {"template": "shelf", "params": {}}
+    case["golden"] = {"design": "golden.json", "params": {}}
     case["notes"] = "Bearbeitet."
     path.write_text(json.dumps(case), encoding="utf-8")
-    (draft / "golden.json").unlink()
+    (draft / "golden.json").write_text(json.dumps(design_json("shelf")), encoding="utf-8")
 
 
 def test_a_draft_with_placeholders_is_refused(tmp_path: Path) -> None:

@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from design_fixtures import fixture_design
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from calc_engine.assembly.templates import template
 from homeworking.bootstrap import build_container
 from homeworking.modules.agent.args import parse_json, quote_bare_expressions
 from homeworking.modules.agent.tools import AgentDeps, build_agent
@@ -63,11 +63,11 @@ def test_unrepairable_json_names_position_and_cause() -> None:
 
 
 def _design_with_bare_expression() -> str:
-    """The shutter template as hand-written JSON with one formula not in quotes."""
-    text = json.dumps(template("window_shutter").design.model_dump(mode="json"))
+    """The shutter design as hand-written JSON with one formula not in quotes."""
+    text = json.dumps(fixture_design("window_shutter").model_dump(mode="json"))
     expr = next(
         v
-        for part in template("window_shutter").design.parts
+        for part in fixture_design("window_shutter").parts
         for v in (*(part.size or ()), *(part.at or ()))
         if isinstance(v, str) and " " in v
     )
@@ -100,7 +100,7 @@ async def test_save_design_accepts_unquoted_formulas(settings: Settings, as_raw_
     await container.create_schema()
     try:
         owner = (await container.identity.create_guest()).id
-        agent = build_agent(FunctionModel(respond), container.engine)
+        agent = build_agent(FunctionModel(respond))
         deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
         await agent.run("Ein Fensterladen", deps=deps)
         assert results == ["tool-return"]
@@ -109,21 +109,22 @@ async def test_save_design_accepts_unquoted_formulas(settings: Settings, as_raw_
         await container.close()
 
 
-async def test_cloud_template_covers_the_tonie_brief(settings: Settings) -> None:
-    """Tonie shelf, wall-mounted, untreated: the template fits, no free design is needed."""
+async def test_cloud_design_covers_the_tonie_brief(settings: Settings) -> None:
+    """Tonie shelf, wall-mounted, untreated: the design the model writes for the brief builds."""
+    design = fixture_design("cloud_shelf").model_dump(mode="json", exclude_defaults=True)
+    design.update(support="wall")
+    design.pop("finish", None)
 
     def respond(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
         if len(messages) == 1:
             return ModelResponse(
                 parts=[
                     ToolCallPart(
-                        "create_from_template",
+                        "save_design",
                         {
-                            "template_key": "cloud_shelf",
+                            "design": design,
                             "title": "Tonieregal Wolke",
                             "params": {"shelves": 3, "material": "glulam_spruce_18"},
-                            "untreated": True,
-                            "support": "wall",
                         },
                     )
                 ]
@@ -134,14 +135,13 @@ async def test_cloud_template_covers_the_tonie_brief(settings: Settings) -> None
     await container.create_schema()
     try:
         owner = (await container.identity.create_guest()).id
-        agent = build_agent(FunctionModel(respond), container.engine)
+        agent = build_agent(FunctionModel(respond))
         deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
         await agent.run("Tonieregal mit Wolke, Fichte, an der Wand", deps=deps)
         assert deps.project_id is not None
         model = await container.projects.get(owner, deps.project_id)
-        design = model.inputs.design
-        assert design is not None
-        assert (design.support, design.finish) == ("wall", None)
+        saved = model.inputs.design
+        assert (saved.support, saved.finish) == ("wall", None)
         names = " ".join(line.name for line in model.result.bom)
         # Base and shelves in spruce; the cloud stays birch plywood (spruce panels are 600 mm).
         assert "Leimholzplatte Fichte" in names

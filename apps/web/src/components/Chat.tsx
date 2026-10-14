@@ -42,8 +42,7 @@ function ProjectCard({ output }: { output: ToolOutput }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-xs font-semibold text-accent-strong">
-          {ACTION_LABEL[output.action ?? ""] ?? "Projekt"}
-          {project.trust === "ai_draft" && ", KI-Entwurf"}
+          {ACTION_LABEL[output.action ?? ""] ?? "Projekt"}, KI-Entwurf
         </span>
         <span className="block truncate font-medium">{project.summary}</span>
       </span>

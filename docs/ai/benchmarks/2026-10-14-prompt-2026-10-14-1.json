@@ -1,0 +1,186 @@
+{
+  "prefix": {
+    "instructions": 2867,
+    "tools_total": 4740,
+    "tools": {
+      "save_design": 3509,
+      "change_project": 920,
+      "add_explanation": 79,
+      "get_current_design": 62,
+      "list_materials": 60,
+      "get_project": 60,
+      "undo_last_change": 52
+    }
+  },
+  "design_create": {
+    "requests": 2,
+    "prefix_tokens_per_request": 7608,
+    "input_tokens": 16880,
+    "output_tokens": 1170,
+    "prefix_share": 0.901,
+    "max_request_input_tokens": 9266,
+    "stable_prefix": true,
+    "per_request": [
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 22,
+        "output": 3426
+      },
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 5307,
+        "output": 317
+      }
+    ],
+    "role": "designer"
+  },
+  "free_design": {
+    "requests": 5,
+    "prefix_tokens_per_request": 7608,
+    "input_tokens": 48563,
+    "output_tokens": 3300,
+    "prefix_share": 0.783,
+    "max_request_input_tokens": 11022,
+    "stable_prefix": true,
+    "per_request": [
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 33,
+        "output": 16
+      },
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 5034,
+        "output": 3420
+      },
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 8684,
+        "output": 3420
+      },
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 9005,
+        "output": 3386
+      },
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 10925,
+        "output": 317
+      }
+    ],
+    "role": "designer",
+    "design_attempts": [
+      false,
+      false,
+      true
+    ]
+  },
+  "followup_1": {
+    "requests": 2,
+    "prefix_tokens_per_request": 7608,
+    "input_tokens": 17886,
+    "output_tokens": 44,
+    "prefix_share": 0.851,
+    "max_request_input_tokens": 9305,
+    "stable_prefix": true,
+    "per_request": [
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 3116,
+        "output": 86
+      },
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 5431,
+        "output": 54
+      }
+    ],
+    "role": "fast"
+  },
+  "followup_2": {
+    "requests": 2,
+    "prefix_tokens_per_request": 7608,
+    "input_tokens": 19381,
+    "output_tokens": 44,
+    "prefix_share": 0.785,
+    "max_request_input_tokens": 10053,
+    "stable_prefix": true,
+    "per_request": [
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 5506,
+        "output": 87
+      },
+      {
+        "instructions": 9175,
+        "tools": 15169,
+        "history": 7825,
+        "output": 54
+      }
+    ],
+    "role": "fast"
+  },
+  "costs_usd": {
+    "solar_only": {
+      "scenarios": {
+        "design_create": 0.001392714,
+        "free_design": 0.0033677459999999996,
+        "followup_1": 0.001077894,
+        "followup_2": 0.001212444
+      },
+      "total": 0.007050798,
+      "per_repair_round": 0.0007660439999999999
+    },
+    "luna_only": {
+      "scenarios": {
+        "design_create": 0.0034107599999999997,
+        "free_design": 0.00819524,
+        "followup_1": 0.00226076,
+        "followup_2": 0.0025597600000000003
+      },
+      "total": 0.01642652,
+      "per_repair_round": 0.00197776
+    },
+    "flash_only": {
+      "scenarios": {
+        "design_create": 0.01191285,
+        "free_design": 0.02825715,
+        "followup_1": 0.00844485,
+        "followup_2": 0.009566100000000001
+      },
+      "total": 0.05818095,
+      "per_repair_round": 0.00661485
+    },
+    "routed_flash_designer": {
+      "scenarios": {
+        "design_create": 0.01191285,
+        "free_design": 0.02825715,
+        "followup_1": 0.001077894,
+        "followup_2": 0.001212444
+      },
+      "total": 0.042460338,
+      "per_repair_round": 0.00661485
+    },
+    "routed_luna_designer": {
+      "scenarios": {
+        "design_create": 0.0034107599999999997,
+        "free_design": 0.00819524,
+        "followup_1": 0.001077894,
+        "followup_2": 0.001212444
+      },
+      "total": 0.013896338,
+      "per_repair_round": 0.00197776
+    }
+  }
+}

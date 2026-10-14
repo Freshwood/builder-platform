@@ -31,7 +31,7 @@
          Der Nutzer wartet: Schreibe vor einem längeren Werkzeugaufruf (Entwurf, Umbau) einen kurzen
          Satz, was du planst, und rufe das Werkzeug in derselben Antwort auf. Beende eine Antwort nie
          mit einer Ankündigung – ohne Werkzeugaufruf passiert nichts. Rufe unabhängige Werkzeuge
-         gleichzeitig auf (z. B. list_materials und get_template_design). Keine Überlegungen oder
+         gleichzeitig auf (z. B. list_materials und get_current_design). Keine Überlegungen oder
          Selbstgespräche in der Antwort.
       6. Sicherheit: Keine Anleitungen für feste Elektroinstallation, Gas, Feuerstätten, Asbest oder
          Eingriffe in bestehende tragende Bauteile – verweise an Fachbetriebe. Neue Gebäude planst du
@@ -46,14 +46,12 @@
          jedem Querschnitt (Maßholz lumber_<holzart>_<stärke>x<breite>); Seltenes kostet nur mehr.
          Ist eine Wahl fachlich heikel (z. B. Fichte ungeschützt draußen), setze sie um, weise kurz
          darauf hin und biete die Alternative als Variante an. Sprich mit dem Nutzer nicht über
-         interne Begriffe (Pack, Katalog, Material-IDs, Werkzeugnamen).
-      9. Packs und Vorlagen stehen unten in der Übersicht. Nutze immer zuerst ein passendes Pack
-         (create_project) oder eine Vorlage (create_from_template) und passe sie über Parameter an
-         (Maße, Flügel, Holzart, Brettstärke); „unbehandelt“ → untreated=true, Einsatzort und
-         Montage → use/support. Weicht nur Montage oder Oberfläche ab, passt die Vorlage trotzdem.
-         Nur wenn nichts passt, entwirf frei mit save_design.
-      10. Freie Entwürfe (save_design):
-         - Erst list_materials, bei Bedarf get_template_design als Formatbeispiel. Katalogartikel
+         interne Begriffe (Katalog, Material-IDs, Werkzeugnamen).
+      9. Jedes Projekt ist ein Unikat. Es gibt keine Vorlagen und keine fertigen Pakete: Entwirf
+         jedes Projekt selbst mit save_design, genau nach den Angaben des Kunden (Maße, Material,
+         Bauweise, Einsatzort → use, Montage → support, „unbehandelt“ → kein finish).
+      10. Entwürfe (save_design):
+         - Erst list_materials. Katalogartikel
            nur mit ihren Maßen; sonst Maßholz (z. B. lumber_douglas_18x96).
          - Typische Bauweise, Querschnitte passend zur Größe: Türen, Klappen, Fensterläden aus
            Brettern (18–28 mm) mit Quer- und Strebeleisten (Z-Verstrebung), nicht aus dicken
@@ -113,39 +111,16 @@
           nennst, und nenne neben dem Einkauf den Verbrauch (material_used_eur). Nennt der Nutzer
           einen echten Preis, setze ihn mit change_project type="set_price" (item_id aus der
           Stückliste von get_project, unit_price je Einheit).
-      13. Strukturelle Änderungen eines freien Entwurfs (zusätzliches Fach, andere Konstruktion):
+      13. Strukturelle Änderungen des Entwurfs (zusätzliches Fach, andere Konstruktion):
           get_current_design, dann save_design mit dem vollständigen geänderten Entwurf, ohne title
           und params. Maßänderungen immer über change_project.
       14. Versionen: Jede Änderung ist eine Version, frühere Stände bleiben erhalten. Soll ein aktives
-          Projekt ganz neu geplant werden (andere Vorlage, anderes Pack, neuer Entwurf), rufe das
-          Werkzeug ohne new_project auf – das wird die nächste Version. new_project=true nur, wenn der
+          Projekt ganz neu geplant werden (neuer Entwurf), rufe save_design mit title und params
+          ohne new_project auf – das wird die nächste Version. new_project=true nur, wenn der
           Nutzer ausdrücklich ein weiteres, separates Projekt möchte.
-      
-      Planbar ohne freien Entwurf (Parameter in Klammern, Längen in mm):
-      - Pack raised_bed – Hochbeet aus Holz: Rechteckiges Hochbeet aus horizontalen Brettern an innenliegenden Eckpfosten, optional mit Noppenbahn, Wühlmausgitter und Sitzkante. (length_mm, width_mm, height_mm, wood, liner, vole_mesh, top_cap) → create_project
-      - Vorlage cloud_shelf – Wolkenregal: Regal mit Rückwand in Wolkenform und kleinen Fächern, stehend oder an der Wand, z. B. für Tonie-Figuren, Bücher oder Deko (width_mm, height_mm, depth_mm, shelves, material=plywood_birch_18|glulam_spruce_18) → create_from_template
-      - Vorlage garden_bench – Gartenbank: Massive Gartenbank aus Douglasie oder Lärche mit Sitzlatten, optional mit Rückenlehne (length_mm, seat_height_mm, slats, backrest, wood=douglas|larch) → create_from_template
-      - Vorlage shelf – Standregal: Regal aus Leimholz oder Multiplex mit einstellbarer Anzahl Böden und optionaler Rückwand (width_mm, depth_mm, height_mm, shelves, back_panel, material=glulam_spruce_18|plywood_birch_18) → create_from_template
-      - Vorlage timber_frame_house – Fachwerkhaus: Eingeschossiges Fachwerkhaus mit Satteldach: Streifenfundament, Schwelle, Ständer, Streben und Riegel gezapft, Gefache ausgemauert, Deckenbalken, Sparrendach mit Ziegeln, Fenster und Haustür (length_mm, depth_mm, wall_mm, roof_mm, bays_x, bays_y, wood=oak_beam|kvh, infill=infill_clay|infill_aerated) → create_from_template
-      - Vorlage window_shutter – Fensterladen: Brett-Fensterladen mit Querleisten, ein- oder zweiflügelig, mit Ladenbändern, Verschluss und Sturmhaken; Breite = gesamte Fensteröffnung (width_mm, height_mm, wings, boards, board_mm, wood=douglas|larch|oak|pine|spruce) → create_from_template
-      - Vorlage workbench – Werkbank: Stabile Werkbank mit Multiplex-Arbeitsplatte, Ablageboden und optionalen Rollen (width_mm, depth_mm, height_mm, lower_shelf, castors) → create_from_template
     ''',
-    'routing_version': '1',
+    'routing_version': '2',
     'tools': list([
-      dict({
-        'description': '''
-          List what can be planned: verified packs (with parameter schema) and design templates.
-          
-          Anything else can be designed freely with save_design.
-        ''',
-        'name': 'list_construction_packs',
-        'parameters': dict({
-          'additionalProperties': False,
-          'properties': dict({
-          }),
-          'type': 'object',
-        }),
-      }),
       dict({
         'description': 'Materials for free-form designs: catalog items and made-to-order lumber.',
         'name': 'list_materials',
@@ -157,124 +132,11 @@
         }),
       }),
       dict({
-        'description': 'Return the full design of a template as an example or starting point for save_design.',
-        'name': 'get_template_design',
-        'parameters': dict({
-          'additionalProperties': False,
-          'properties': dict({
-            'template_key': dict({
-              'type': 'string',
-            }),
-          }),
-          'required': list([
-            'template_key',
-          ]),
-          'type': 'object',
-        }),
-      }),
-      dict({
-        'description': 'Create a project from a design template; omitted parameters use template defaults.',
-        'name': 'create_from_template',
-        'parameters': dict({
-          'additionalProperties': False,
-          'properties': dict({
-            'explanation': dict({
-              'anyOf': list([
-                dict({
-                  'type': 'string',
-                }),
-                dict({
-                  'type': 'null',
-                }),
-              ]),
-              'default': None,
-              'description': 'The "Warum so?" explanation (see instructions).',
-            }),
-            'new_project': dict({
-              'default': False,
-              'description': 'Only true if the user explicitly wants another, separate project.',
-              'type': 'boolean',
-            }),
-            'params': dict({
-              'additionalProperties': dict({
-                'anyOf': list([
-                  dict({
-                    'type': 'integer',
-                  }),
-                  dict({
-                    'type': 'number',
-                  }),
-                  dict({
-                    'type': 'string',
-                  }),
-                  dict({
-                    'type': 'boolean',
-                  }),
-                ]),
-              }),
-              'description': 'Template parameters (lengths in mm).',
-              'type': 'object',
-            }),
-            'support': dict({
-              'anyOf': list([
-                dict({
-                  'enum': list([
-                    'floor',
-                    'wall',
-                  ]),
-                  'type': 'string',
-                }),
-                dict({
-                  'type': 'null',
-                }),
-              ]),
-              'default': None,
-              'description': '"wall" for wall mounting, "floor" for standing (otherwise the template\'s).',
-            }),
-            'template_key': dict({
-              'description': 'Template key, e.g. "shelf".',
-              'type': 'string',
-            }),
-            'title': dict({
-              'description': 'Short German project title.',
-              'type': 'string',
-            }),
-            'untreated': dict({
-              'default': False,
-              'description': 'True when the user wants no surface treatment (no oil or glaze).',
-              'type': 'boolean',
-            }),
-            'use': dict({
-              'anyOf': list([
-                dict({
-                  'enum': list([
-                    'indoor',
-                    'outdoor',
-                  ]),
-                  'type': 'string',
-                }),
-                dict({
-                  'type': 'null',
-                }),
-              ]),
-              'default': None,
-              'description': '"outdoor" or "indoor" if the brief says so (otherwise the template\'s).',
-            }),
-          }),
-          'required': list([
-            'template_key',
-            'title',
-            'params',
-          ]),
-          'type': 'object',
-        }),
-      }),
-      dict({
         'description': '''
-          Save a free-form parametric design (when no pack or template fits) or replace the
-          design of the current free-form project. The engine validates it and derives BOM, cut
-          list, screws, costs and drawings; on rejection fix the listed errors and call again
-          with the complete corrected design.
+          Save the one-off parametric design of a new project or replace the design of the
+          current project. The engine validates it and derives BOM, cut list, screws, costs and
+          drawings; on rejection fix the listed errors and call again with the complete corrected
+          design.
         ''',
         'name': 'save_design',
         'parameters': dict({
@@ -1351,72 +1213,12 @@
         }),
       }),
       dict({
-        'description': 'Return the design of the current free-form project (to change it with save_design).',
+        'description': 'Return the design of the current project (to change it with save_design).',
         'name': 'get_current_design',
         'parameters': dict({
           'additionalProperties': False,
           'properties': dict({
           }),
-          'type': 'object',
-        }),
-      }),
-      dict({
-        'description': 'Create a new project from a construction pack. Lengths in millimetres.',
-        'name': 'create_project',
-        'parameters': dict({
-          'additionalProperties': False,
-          'properties': dict({
-            'explanation': dict({
-              'anyOf': list([
-                dict({
-                  'type': 'string',
-                }),
-                dict({
-                  'type': 'null',
-                }),
-              ]),
-              'default': None,
-              'description': 'The "Warum so?" explanation (see instructions).',
-            }),
-            'new_project': dict({
-              'default': False,
-              'description': 'Only true if the user explicitly wants another, separate project.',
-              'type': 'boolean',
-            }),
-            'pack_id': dict({
-              'description': 'Id of the construction pack, e.g. "raised_bed".',
-              'type': 'string',
-            }),
-            'params': dict({
-              'additionalProperties': dict({
-                'anyOf': list([
-                  dict({
-                    'type': 'integer',
-                  }),
-                  dict({
-                    'type': 'number',
-                  }),
-                  dict({
-                    'type': 'string',
-                  }),
-                  dict({
-                    'type': 'boolean',
-                  }),
-                ]),
-              }),
-              'description': 'Pack parameters; omitted parameters use the pack defaults.',
-              'type': 'object',
-            }),
-            'title': dict({
-              'description': 'Short project title in German, e.g. "Hochbeet am Gartenhaus".',
-              'type': 'string',
-            }),
-          }),
-          'required': list([
-            'pack_id',
-            'title',
-            'params',
-          ]),
           'type': 'object',
         }),
       }),

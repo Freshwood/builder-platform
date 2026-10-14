@@ -39,16 +39,14 @@
   .ai-label { display: inline-block; font-size: 7pt; font-weight: 700; color: #4338ca; background: #eef2ff; padding: 0.3mm 1.5mm; margin-bottom: 1mm; }
   .muted { color: #6b7280; font-size: 8pt; }
   .page-break { break-before: page; }
-  .trust { display: inline-block; font-size: 8pt; font-weight: 700; padding: 0.5mm 2mm; border-radius: 1mm; background: #ecfdf5; color: #047857; }
-  .trust.template { background: #eff6ff; color: #1d4ed8; }
-  .trust.ai_draft { background: #fffbeb; color: #b45309; }
+  .trust { display: inline-block; font-size: 8pt; font-weight: 700; padding: 0.5mm 2mm; border-radius: 1mm; background: #fffbeb; color: #b45309; }
 </style>
 </head>
 <body>
 <header>
   <h1>{{ project.inputs.title }}</h1>
   <p class="lead">{{ result.summary }}</p>
-  <p class="trust {{ result.trust }}">{{ trust_label }}</p>
+  <p class="trust">{{ design_label }}</p>
   <p class="muted">Erstellt am {{ created }} · Projekt-ID {{ project.id }}</p>
 </header>
 
@@ -207,7 +205,7 @@
 
 <section aria-labelledby="h-provenance">
   <h2 id="h-provenance">Nachvollziehbarkeit</h2>
-  <p class="muted">Engine {{ result.provenance.engine_version }} · Pack {{ result.provenance.pack_id }} {{ result.provenance.pack_version }} · Katalog {{ result.provenance.catalog_version }} · Hinweise {{ notices_version }} · berechnet {{ computed }}</p>
+  <p class="muted">Engine {{ result.provenance.engine_version }} · Entwurfsformat {{ result.provenance.design_version }} · Katalog {{ result.provenance.catalog_version }} · Hinweise {{ notices_version }} · berechnet {{ computed }}</p>
   <table>
     <thead><tr><th scope="col">Regel</th><th scope="col">Beschreibung</th><th scope="col">Bezug</th></tr></thead>
     <tbody>

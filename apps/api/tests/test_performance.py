@@ -3,12 +3,12 @@
 import json
 
 import httpx
+from api_designs import create_body
 
 
 async def _create(client: httpx.AsyncClient) -> dict:  # type: ignore[type-arg]
     response = await client.post(
-        "/api/projects",
-        json={"pack_id": "raised_bed", "title": "Hochbeet", "params": {"width_mm": 1000}},
+        "/api/projects", json=create_body("raised_bed", "Hochbeet", width_mm=1000)
     )
     assert response.status_code == 201, response.text
     return response.json()  # type: ignore[no-any-return]

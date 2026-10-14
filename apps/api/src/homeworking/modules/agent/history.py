@@ -4,7 +4,7 @@ Without this, every request resends every design the model ever wrote, the mater
 and example designs from all earlier turns. The model only needs:
 
 - earlier turns: what was asked, which tools ran and what came out, but not the bulky
-  arguments (designs) or lookups (catalog, template designs); it can fetch them again;
+  arguments (designs) or lookups (catalog, current design); it can fetch them again;
 - the current turn: everything, except designs that a later attempt has superseded (their
   engine errors stay, so the model still sees what it already fixed).
 
@@ -32,7 +32,8 @@ from pydantic_ai.messages import (
 
 # design_project / redesign_project: tool names before prompt 2026-10-07.3 (stored chats).
 DESIGN_TOOLS = frozenset({"save_design", "design_project", "redesign_project"})
-# Read-only lookups whose result can simply be requested again.
+# Read-only lookups whose result can simply be requested again. get_template_design and
+# list_construction_packs were removed with prompt 2026-10-14.1 (ADR-0008); stored chats keep them.
 LOOKUP_TOOLS = frozenset(
     {"list_materials", "get_template_design", "get_current_design", "list_construction_packs"}
 )

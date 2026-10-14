@@ -1,4 +1,4 @@
-"""Door bay of the timber frame house template across the critical bay widths.
+"""Door bay of the timber frame house fixture design across the critical bay widths.
 
 The door bay is only one bay wide when the infill beside the door meets the 80 mm minimum of the
 infill materials (bay >= 1000 + 160 + 2 * 80 = 1320 mm). Narrower bays merge two neighbouring
@@ -7,12 +7,19 @@ bays into one door opening, so every parameter combination still builds with exa
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import pytest
 
 from calc_engine.assembly.resolve import resolve_parts, validate_params
-from calc_engine.assembly.templates import templates
 from calc_engine.engine import default_engine
 from construction_model.model import ConstructionResult, ProjectInputs
+
+# --import-mode=importlib does not add this directory to sys.path (see corpus.py).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from design_fixtures import fixture_design
 
 DOOR = "door_wood_1000x2100"
 WINDOW = "window_wood_800x1000"
@@ -20,11 +27,11 @@ INFILL_MIN_MM = 80
 POST_MM = 160
 
 engine = default_engine()
-design = templates()["timber_frame_house"].design
+design = fixture_design("timber_frame_house")
 
 
 def _build(**params: float | str) -> ConstructionResult:
-    return engine.build(ProjectInputs(title="t", pack_id="design", params=params, design=design))
+    return engine.build(ProjectInputs(title="t", params=params, design=design))
 
 
 def _quantity(result: ConstructionResult, item_id: str) -> int:

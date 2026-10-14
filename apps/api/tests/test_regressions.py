@@ -33,7 +33,6 @@ from corpus import Case, build_result, check  # noqa: E402
 from loader import AttemptRecord, CaseError, LoadedCase, load_case  # noqa: E402
 
 from calc_engine.assembly.intent import evaluate, view_consistency  # noqa: E402
-from calc_engine.assembly.templates import templates  # noqa: E402
 from calc_engine.engine import default_engine  # noqa: E402
 from construction_model.assembly import AssemblyDesign  # noqa: E402
 from construction_model.model import ProjectInputs  # noqa: E402
@@ -66,7 +65,7 @@ async def _run_calls(
     await container.create_schema()
     try:
         owner = (await container.identity.create_guest()).id
-        agent = build_agent(FunctionModel(respond), container.engine)
+        agent = build_agent(FunctionModel(respond))
         deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
         await agent.run("Regression", deps=deps)
         yield deps
@@ -117,8 +116,6 @@ async def test_recorded_call_still_gets_the_recorded_outcome(
 def golden_design(case: LoadedCase) -> AssemblyDesign:
     golden = case.case.golden
     assert golden is not None
-    if golden.template is not None:
-        return templates()[golden.template].design
     assert case.golden_design is not None
     return AssemblyDesign.model_validate(case.golden_design)
 
@@ -136,9 +133,7 @@ def test_golden_design_meets_the_invariants_and_the_intent(case: LoadedCase) -> 
     result = build_result(corpus_case, ENGINE)
 
     problems = [f"[{v.rule}] {v.detail}" for v in check(result, corpus_case)]
-    inputs = ProjectInputs(
-        title=case.case.title, pack_id="design", params=dict(golden.params), design=design
-    )
+    inputs = ProjectInputs(title=case.case.title, params=dict(golden.params), design=design)
     problems += [
         f"[{v.rule}] {v.detail}" for v in evaluate(inputs, result, case.case.expect, ENGINE)
     ]
@@ -212,13 +207,14 @@ def test_a_wellformed_case_loads(tmp_path: Path) -> None:
         {"origin": {"kind": "hand_written", "ref": "x", "date": "2026-10-12", "by": "me"}},
         {"origin": {"kind": "dream", "ref": "x", "date": "2026-10-12"}},
         {"failure_class": "bad_luck"},
+        {"failure_class": "template_defect"},
         {"expect": {"envelope": {"max_len_mm": 1}}},
         {"expect": {"features": ["walkabel_top"]}},
         {"attempts": [{"file": "attempts/01.json", "expect_outcome": "nope"}]},
         {"attempts": [{"file": "attempts/01.json", "expect_outcome": "accepted", "extra": 1}]},
         {"failure_class": "intent_mismatch"},  # needs a golden design
-        {"golden": {"params": {}}},  # neither design nor template
-        {"golden": {"design": "g.json", "template": "shelf"}},
+        {"golden": {"params": {}}},  # no design
+        {"golden": {"design": "g.json", "template": "shelf"}},  # templates are gone (ADR-0008)
         {"id": "other_name"},
     ],
     ids=lambda c: next(iter(c)) + ":" + str(next(iter(c.values())))[:30],

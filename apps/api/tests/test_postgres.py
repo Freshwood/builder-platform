@@ -4,6 +4,7 @@ import os
 
 import httpx
 import pytest
+from api_designs import create_body
 
 from homeworking.main import create_app
 from homeworking.settings import Settings
@@ -23,7 +24,7 @@ async def test_flow_on_postgres() -> None:
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             created = await client.post(
                 "/api/projects",
-                json={"pack_id": "raised_bed", "title": "PG", "params": {"length_mm": 3000}},
+                json=create_body("raised_bed", "PG", length_mm=3000),
             )
             assert created.status_code == 201, created.text
             project_id = created.json()["project"]["id"]

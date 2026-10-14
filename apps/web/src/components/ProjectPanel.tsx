@@ -15,7 +15,7 @@ import {
   ParamEditor,
   PositionBadge,
 } from "@/components/ProjectDetails";
-import { Icon, Pill, Segmented, TRUST, buttonClass, type IconName } from "@/components/ui";
+import { AI_DESIGN, Icon, Pill, Segmented, buttonClass, type IconName } from "@/components/ui";
 import {
   formatEur,
   useProject,
@@ -78,7 +78,6 @@ function Header({
   const undo = useUndo(project.id);
   const { mutate: undoNow, isPending: undoPending } = undo;
   const result = project.result;
-  const trust = TRUST[result.trust ?? "pack"] ?? TRUST.pack!;
 
   // Ctrl/Cmd+Z undoes the last change unless the user is typing. Depends on the stable
   // mutate function, not on the mutation object (a new object on every render).
@@ -102,8 +101,8 @@ function Header({
           <h2 className="text-3xl leading-tight font-extrabold sm:text-4xl">
             {project.inputs.title}
           </h2>
-          <Pill className={trust.className} title={trust.hint} testId="trust-badge">
-            {trust.label}
+          <Pill className={AI_DESIGN.className} title={AI_DESIGN.hint} testId="design-badge">
+            {AI_DESIGN.label}
           </Pill>
         </div>
         <p className="mt-1 text-muted" data-testid="project-summary">
@@ -700,8 +699,7 @@ export const ProjectPanel = memo(function ProjectPanel({ projectId }: { projectI
         <span>
           Planungshilfe – kein Standsicherheitsnachweis. Ob ein Vorhaben genehmigungspflichtig ist,
           regelt die Landesbauordnung; verbindlich ist die Auskunft des Bauamts. Engine{" "}
-          {result.provenance.engine_version}, Pack {result.provenance.pack_id}{" "}
-          {result.provenance.pack_version}
+          {result.provenance.engine_version}, Entwurfsformat {result.provenance.design_version}
         </span>
       </p>
     </div>

@@ -588,15 +588,11 @@ def promote(slug: str, root: Path = REGRESSIONS_DIR, *, run_checks: bool = True)
 
 
 def _check_golden_source(loaded: Any) -> None:
-    """The golden design must parse as an ``AssemblyDesign`` / name a shipped template."""
+    """The golden design must parse as an ``AssemblyDesign``."""
     from pydantic import ValidationError
 
-    from calc_engine.assembly.templates import templates
     from construction_model.assembly import AssemblyDesign
 
-    golden = loaded.case.golden
-    if golden.template is not None and golden.template not in templates():
-        raise CaptureError(f"golden.template '{golden.template}' ist keine ausgelieferte Vorlage.")
     if loaded.golden_design is not None:
         try:
             AssemblyDesign.model_validate(loaded.golden_design)

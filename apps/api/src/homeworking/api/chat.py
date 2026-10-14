@@ -135,7 +135,7 @@ async def chat(request: Request, container: ContainerDep, user: UserDep) -> Resp
     if verdict.blocked and verdict.response:
         agent = Agent(fixed_text_model(verdict.response), deps_type=AgentDeps)
         model, model_name = None, "safety"
-    fingerprint = await prompt_fingerprint(container.engine)
+    fingerprint = await prompt_fingerprint()
 
     log.info(
         "agent_turn",

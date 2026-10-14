@@ -19,7 +19,7 @@
 | § 25 TDDDG | gilt | ausschließlich technisch notwendige Cookies (Session) |
 | § 5 DDG | gilt | Seiten `/impressum` und `/datenschutz` (Platzhalter, müssen ausgefüllt werden) |
 | BGB §§ 327 ff., § 309 Nr. 7 | gilt | Hinweis „Planungshilfe, kein Standsicherheitsnachweis“, kein pauschaler Haftungsausschluss |
-| ProdHaftG-neu (RL 2024/2853) [?] | 09.12.2026 | Provenance: Engine-, Pack-, Katalog-, Prompt- und Modellversion pro Ergebnis, Replay über den Command-Log |
+| ProdHaftG-neu (RL 2024/2853) [?] | 09.12.2026 | Provenance: Engine-, Entwurfsformat-, Katalog-, Prompt- und Modellversion pro Ergebnis, Replay über den Command-Log |
 | LBO / RDG | gilt | keine verbindlichen Genehmigungsaussagen, nur allgemeine Information mit Verweis aufs Bauamt |
 | DIN-Urheberrecht | gilt | keine Normtexte oder Normtabellen in Code, Prompts oder PDFs, nur eigene Regeln mit Normverweis |
 | BFSG / WCAG 2.2 AA [?] | 28.06.2025 | axe-Prüfung in Playwright, SVG mit `<title>`/`<desc>`, PDF mit Tags (PDF/UA) |

@@ -6,10 +6,10 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import pytest
+from api_designs import design as offline_design
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from calc_engine.assembly.templates import template
 from homeworking.bootstrap import build_container
 from homeworking.modules.agent.tools import RAW_ARGS_MAX_CHARS, AgentDeps, build_agent
 from homeworking.settings import Settings
@@ -32,7 +32,7 @@ async def run_calls(
     await container.create_schema()
     try:
         owner = (await container.identity.create_guest()).id
-        agent = build_agent(FunctionModel(respond), container.engine)
+        agent = build_agent(FunctionModel(respond))
         deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
         await agent.run("Ein Regal", deps=deps)
         yield deps
@@ -41,7 +41,7 @@ async def run_calls(
 
 
 def shelf() -> dict[str, Any]:
-    design = template("shelf").design.model_dump(mode="json", exclude_defaults=True)
+    design = offline_design("shelf").model_dump(mode="json", exclude_defaults=True)
     design["object_type"] = "Regal"
     return design
 
@@ -59,7 +59,7 @@ async def test_bare_expressions_are_recorded_verbatim_and_repaired(settings: Set
     text = json.dumps(shelf())
     expr = next(
         v
-        for part in template("shelf").design.parts
+        for part in offline_design("shelf").parts
         for v in (*(part.size or ()), *(part.at or ()))
         if isinstance(v, str) and " " in v
     )
@@ -117,10 +117,14 @@ async def test_engine_rejection_is_recorded_with_errors(settings: Settings) -> N
 
 
 async def test_parameter_error_is_recorded(settings: Settings) -> None:
-    args = {"pack_id": "raised_bed", "title": "Beet", "params": {"width_mm": 999_999_999}}
-    async with run_calls(settings, [("create_project", args)]) as deps:
-        [entry] = deps.design_attempts
-    assert entry["tool"] == "create_project"
+    args = {"command": {"type": "set_parameters", "values": {"width_mm": 999_999_999}}}
+    calls: list[tuple[str, str | dict[str, Any]]] = [
+        ("save_design", {"title": "Regal", "design": shelf()}),
+        ("change_project", args),
+    ]
+    async with run_calls(settings, calls) as deps:
+        _created, entry = deps.design_attempts
+    assert entry["tool"] == "change_project"
     assert entry["outcome"] == "parameter_error"
     assert entry["errors"]
     assert entry["raw_args"] == args
@@ -129,12 +133,10 @@ async def test_parameter_error_is_recorded(settings: Settings) -> None:
 
 async def test_command_and_state_errors_are_recorded(settings: Settings) -> None:
     calls: list[tuple[str, str | dict[str, Any]]] = [
-        ("create_project", {"pack_id": "nope", "title": "x", "params": {}}),
         ("change_project", {"command": {"type": "set_parameters", "values": {"width_mm": 1}}}),
     ]
     async with run_calls(settings, calls) as deps:
-        unknown, no_project = deps.design_attempts
-    assert (unknown["tool"], unknown["outcome"]) == ("create_project", "unknown_pack")
+        [no_project] = deps.design_attempts
     assert (no_project["tool"], no_project["outcome"]) == ("change_project", "no_project")
 
 

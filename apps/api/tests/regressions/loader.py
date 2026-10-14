@@ -30,7 +30,6 @@ FailureClass = Literal[
     "engine_loop",
     "intent_mismatch",
     "drawing_defect",
-    "template_defect",
 ]
 Outcome = Literal[
     "accepted",
@@ -93,17 +92,10 @@ class AttemptRecord(_Model):
 
 
 class Golden(_Model):
-    """The correct construction. Exactly one of ``design`` (file) and ``template`` (key)."""
+    """The correct construction: a design file in the case directory and its parameters."""
 
-    design: str | None = Field(None, pattern=r"^[A-Za-z0-9_.-]+\.json$")
-    template: str | None = None
+    design: str = Field(pattern=r"^[A-Za-z0-9_.-]+\.json$")
     params: dict[str, ParamValue] = Field(default_factory=dict)
-
-    @model_validator(mode="after")
-    def _one_source(self) -> Golden:
-        if (self.design is None) == (self.template is None):
-            raise ValueError("golden needs exactly one of 'design' and 'template'")
-        return self
 
 
 class RegressionCase(_Model):
@@ -163,7 +155,7 @@ def load_case(directory: Path) -> LoadedCase:
             AttemptRecord.model_validate(_read_json(directory / ref.file)) for ref in case.attempts
         ]
         golden_design: dict[str, Any] | None = None
-        if case.golden is not None and case.golden.design is not None:
+        if case.golden is not None:
             data = _read_json(directory / case.golden.design)
             if not isinstance(data, dict):
                 raise CaseError(f"{directory / case.golden.design}: erwartet ein JSON-Objekt")

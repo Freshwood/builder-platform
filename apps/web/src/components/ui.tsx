@@ -76,22 +76,11 @@ export function Spinner({ className }: { className?: string }) {
   );
 }
 
-export const TRUST: Record<string, { label: string; hint: string; className: string }> = {
-  pack: {
-    label: "Geprüftes Pack",
-    hint: "Fachlich validierte Konstruktionsregeln",
-    className: "bg-success-soft text-success",
-  },
-  template: {
-    label: "Vorlage",
-    hint: "Konstruktion aus der Homeworking-Vorlagensammlung",
-    className: "bg-surface-muted text-text",
-  },
-  ai_draft: {
-    label: "KI-Entwurf",
-    hint: "Konstruktion von der KI vorgeschlagen, nicht fachlich geprüft",
-    className: "bg-ai-soft text-ai",
-  },
+// Every project is a one-off design by the AI, checked by the engine (ADR-0008).
+export const AI_DESIGN = {
+  label: "KI-Entwurf",
+  hint: "Von der KI für dieses Projekt entworfen und von der Engine geprüft, nicht fachlich geprüft",
+  className: "bg-ai-soft text-ai",
 };
 
 export function Pill({

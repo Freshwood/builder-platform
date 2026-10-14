@@ -387,10 +387,6 @@ export type ConstructionResult = {
     variants: Array<VariantSummary>;
     provenance: Provenance;
     /**
-     * Trust
-     */
-    trust?: 'pack' | 'template' | 'ai_draft';
-    /**
      * Param Specs
      */
     param_specs?: Array<ParamSpec>;
@@ -427,15 +423,13 @@ export type CostSummary = {
  */
 export type CreateProjectRequest = {
     /**
-     * Pack Id
-     *
-     * Construction pack id, 'design' for a free-form design or 'template'
-     */
-    pack_id: string;
-    /**
      * Title
      */
     title: string;
+    /**
+     * The one-off design of this project (ADR-0008)
+     */
+    design: AssemblyDesign;
     /**
      * Params
      */
@@ -443,16 +437,6 @@ export type CreateProjectRequest = {
         [key: string]: number | number | string | boolean;
     };
     region?: Region | null;
-    /**
-     * Required for pack_id 'design'
-     */
-    design?: AssemblyDesign | null;
-    /**
-     * Template Key
-     *
-     * Required for pack_id 'template'
-     */
-    template_key?: string | null;
 };
 
 /**
@@ -1037,41 +1021,9 @@ export type Notice = {
 export type Origin = 'user' | 'engine' | 'ai';
 
 /**
- * PackDescriptor
- */
-export type PackDescriptor = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Version
-     */
-    version: string;
-    /**
-     * Title
-     */
-    title: string;
-    /**
-     * Description
-     */
-    description: string;
-    /**
-     * Example Prompt
-     */
-    example_prompt: string;
-    /**
-     * Params Schema
-     */
-    params_schema: {
-        [key: string]: unknown;
-    };
-};
-
-/**
  * ParamSpec
  *
- * UI metadata of an adjustable parameter (packs and designs alike).
+ * UI metadata of an adjustable parameter of the design.
  */
 export type ParamSpec = {
     /**
@@ -1258,9 +1210,9 @@ export type ProjectInputs = {
      */
     title: string;
     /**
-     * Pack Id
+     * Free-form parametric design; every project is a one-off (ADR-0004, ADR-0008)
      */
-    pack_id: string;
+    design: AssemblyDesign;
     /**
      * Params
      */
@@ -1284,10 +1236,6 @@ export type ProjectInputs = {
     prices?: {
         [key: string]: string;
     };
-    /**
-     * Free-form parametric design (pack_id 'design', ADR-0004)
-     */
-    design?: AssemblyDesign | null;
 };
 
 /**
@@ -1302,10 +1250,6 @@ export type ProjectListEntry = {
      * Title
      */
     title: string;
-    /**
-     * Pack Id
-     */
-    pack_id: string;
     /**
      * Summary
      */
@@ -1325,7 +1269,7 @@ export type ProjectModel = {
     /**
      * Schema Version
      */
-    schema_version?: 1;
+    schema_version?: 2;
     /**
      * Id
      */
@@ -1360,13 +1304,9 @@ export type Provenance = {
      */
     engine_version: string;
     /**
-     * Pack Id
+     * Design Version
      */
-    pack_id: string;
-    /**
-     * Pack Version
-     */
-    pack_version: string;
+    design_version: string;
     /**
      * Catalog Version
      */
@@ -1768,24 +1708,6 @@ export type StockPlan = {
 export type Stroke = 'outline' | 'thin' | 'hidden' | 'center' | 'membrane';
 
 /**
- * TemplateEntry
- */
-export type TemplateEntry = {
-    /**
-     * Key
-     */
-    key: string;
-    /**
-     * Title
-     */
-    title: string;
-    /**
-     * Description
-     */
-    description: string;
-};
-
-/**
  * Tool
  */
 export type Tool = {
@@ -1972,42 +1894,6 @@ export type NoticesResponses = {
 };
 
 export type NoticesResponse = NoticesResponses[keyof NoticesResponses];
-
-export type ListPacksData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/packs';
-};
-
-export type ListPacksResponses = {
-    /**
-     * Response List Packs
-     *
-     * Successful Response
-     */
-    200: Array<PackDescriptor>;
-};
-
-export type ListPacksResponse = ListPacksResponses[keyof ListPacksResponses];
-
-export type ListTemplatesData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/templates';
-};
-
-export type ListTemplatesResponses = {
-    /**
-     * Response List Templates
-     *
-     * Successful Response
-     */
-    200: Array<TemplateEntry>;
-};
-
-export type ListTemplatesResponse = ListTemplatesResponses[keyof ListTemplatesResponses];
 
 export type ListProjectsData = {
     body?: never;

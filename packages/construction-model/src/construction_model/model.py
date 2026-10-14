@@ -1,6 +1,6 @@
 """Core project model.
 
-The project model separates *inputs* (pack, parameters, selected variant) from the *derived
+The project model separates *inputs* (design, parameters, selected variant) from the *derived
 result* produced by the deterministic engine. Only inputs are changed by commands; the result is
 always recomputed. Lengths are integer millimetres, money is ``Decimal``.
 """
@@ -19,7 +19,7 @@ from construction_model.assembly import AssemblyDesign
 from construction_model.base import Mm, Origin, ParamValue
 from construction_model.drawing import Drawing
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 __all__ = ["Mm", "Origin", "ParamValue"]
 
@@ -193,8 +193,7 @@ class VariantSummary(Frozen):
 
 class Provenance(Frozen):
     engine_version: str
-    pack_id: str
-    pack_version: str
+    design_version: str
     catalog_version: str
     catalog_as_of: str
     rules: list[RuleRef]
@@ -207,7 +206,7 @@ class ChoiceSpec(Frozen):
 
 
 class ParamSpec(Frozen):
-    """UI metadata of an adjustable parameter (packs and designs alike)."""
+    """UI metadata of an adjustable parameter of the design."""
 
     name: str
     label: str
@@ -247,9 +246,6 @@ class Solid(Frozen):
     mesh: SolidMesh | None = None
 
 
-Trust = Literal["pack", "template", "ai_draft"]
-
-
 class ConstructionResult(Frozen):
     """Everything the engine derives from the inputs."""
 
@@ -268,7 +264,6 @@ class ConstructionResult(Frozen):
     notices: list[Notice]
     variants: list[VariantSummary]
     provenance: Provenance
-    trust: Trust = "pack"
     param_specs: list[ParamSpec] = Field(default_factory=list)
     solids: list[Solid] = Field(default_factory=list)
 
@@ -286,7 +281,9 @@ class ProjectInputs(Frozen):
     """The part of the project that commands change."""
 
     title: str
-    pack_id: str
+    design: AssemblyDesign = Field(
+        description="Free-form parametric design; every project is a one-off (ADR-0004, ADR-0008)"
+    )
     params: dict[str, ParamValue]
     variant_key: str | None = None
     region: Region | None = None
@@ -295,15 +292,12 @@ class ProjectInputs(Frozen):
         default_factory=dict,
         description="Unit prices in EUR entered by the user, keyed by BOM item id",
     )
-    design: AssemblyDesign | None = Field(
-        None, description="Free-form parametric design (pack_id 'design', ADR-0004)"
-    )
 
 
 class ProjectModel(Frozen):
     """Single source of truth of a construction project."""
 
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
     id: UUID
     inputs: ProjectInputs
     result: ConstructionResult

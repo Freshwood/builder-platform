@@ -29,11 +29,10 @@ class _Command(BaseModel):
 
 class CreateProject(_Command):
     type: Literal["create_project"] = "create_project"
-    pack_id: str
     title: str = Field(min_length=1, max_length=200)
+    design: AssemblyDesign
     params: dict[str, ParamValue] = Field(default_factory=dict)
     region: Region | None = None
-    design: AssemblyDesign | None = None
 
 
 class SetParameters(_Command):
@@ -164,18 +163,17 @@ def apply_to_inputs(
 ) -> ProjectInputs:
     """Apply a single (non-undo) command and return new inputs.
 
-    Parameter values are *not* range-checked here; that is the job of the construction pack's
-    parameter schema in the engine.
+    Parameter values are *not* range-checked here; that is the job of the engine, which checks
+    them against the design's parameter declarations.
     """
     if isinstance(command, CreateProject):
         if inputs is not None:
             raise CommandError("Project already exists")
         return ProjectInputs(
             title=command.title,
-            pack_id=command.pack_id,
+            design=command.design,
             params=dict(command.params),
             region=command.region,
-            design=command.design,
         )
     if inputs is None:
         raise CommandError("The first command must create the project")
@@ -185,7 +183,7 @@ def apply_to_inputs(
             return inputs.model_copy(update={"params": {**inputs.params, **values}})
         case ChangeParameterBy(name=name, delta=delta):
             current = inputs.params.get(name)
-            if current is None and inputs.design is not None:
+            if current is None:
                 spec = next((p for p in inputs.design.params if p.name == name), None)
                 current = spec.default if spec is not None else None
             if isinstance(current, bool) or not isinstance(current, int | float):
@@ -206,8 +204,6 @@ def apply_to_inputs(
             note = Note(id=note_id, origin=origin, text=text, created_at=created_at)
             return inputs.model_copy(update={"notes": [*inputs.notes, note]})
         case ReplaceDesign(design=design):
-            if inputs.design is None:
-                raise CommandError("Only free-form design projects can be redesigned")
             kept = {k: v for k, v in inputs.params.items() if _still_valid(design, k, v)}
             # AI explanations describe the replaced construction; user notes stay.
             notes = [n for n in inputs.notes if n.origin is not Origin.AI]

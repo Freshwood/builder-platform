@@ -757,7 +757,7 @@ async def _run_all(
         container = build_container(local)
         await container.create_schema()
         try:
-            fingerprint = await prompt_fingerprint(container.engine)
+            fingerprint = await prompt_fingerprint()
             records, aborted = await evaluate_all(container, planned, prices, args.budget_usd)
         finally:
             await container.close()

@@ -232,7 +232,7 @@ export function PlanningProgress({
         <h3 className="text-sm font-semibold text-sky-200">Deine Anfrage</h3>
         <p className="mt-1 line-clamp-4 text-sm whitespace-pre-wrap text-white/80">{request}</p>
         <p className="mt-4 text-xs text-white/75">
-          Vorlagen sind in Sekunden fertig. Freie Entwürfe schreibt die KI Bauteil für Bauteil;
+          Jedes Projekt ist ein Unikat: Die KI entwirft es Bauteil für Bauteil nach deinen Angaben,
           danach prüft und berechnet die Engine Stückliste, Zuschnitt und Zeichnungen.
         </p>
       </div>

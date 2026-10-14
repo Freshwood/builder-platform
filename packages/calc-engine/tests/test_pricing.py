@@ -1,10 +1,16 @@
+import sys
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 
-from calc_engine.assembly.templates import templates
 from calc_engine.catalog import search_query
 from calc_engine.engine import default_engine
 from construction_model.model import ProjectInputs
+
+# --import-mode=importlib does not add this directory to sys.path (see corpus.py).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from design_fixtures import fixture_design
 
 engine = default_engine(clock=lambda: datetime(2026, 10, 6, tzinfo=UTC))
 
@@ -12,9 +18,8 @@ engine = default_engine(clock=lambda: datetime(2026, 10, 6, tzinfo=UTC))
 def shutter(prices: dict[str, Decimal] | None = None) -> ProjectInputs:
     return ProjectInputs(
         title="Laden",
-        pack_id="design",
         params={"width_mm": 310, "height_mm": 380},
-        design=templates()["window_shutter"].design,
+        design=fixture_design("window_shutter"),
         prices=prices or {},
     )
 

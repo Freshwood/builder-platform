@@ -6,8 +6,8 @@ from collections.abc import Mapping
 from dataclasses import replace
 from decimal import Decimal
 
+from calc_engine.build import Build
 from calc_engine.catalog import money, sum_money
-from calc_engine.pack import PackBuild
 from construction_model.model import BomLine
 
 
@@ -21,7 +21,7 @@ def _priced(line: BomLine, unit_price: Decimal) -> BomLine:
     )
 
 
-def apply_prices(built: PackBuild, prices: Mapping[str, Decimal]) -> PackBuild:
+def apply_prices(built: Build, prices: Mapping[str, Decimal]) -> Build:
     """Replace guide prices by user prices and recompute material and consumed cost.
 
     Packs build their BOM from catalog guide prices; this is the single place where user prices

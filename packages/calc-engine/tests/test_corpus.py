@@ -63,8 +63,7 @@ def test_corpus_is_non_trivial() -> None:
     assert len(names) > 100
     assert len(set(names)) == len(names), "Fallnamen müssen eindeutig sein"
     sources = {case.source for case in _CASES}
-    assert any(source.startswith("template:") for source in sources)
-    assert any(source.startswith("pack:") for source in sources)
+    assert any(source.startswith("fixture:") for source in sources)
     for key in EXTRA_DESIGNS:
         assert f"design:{key}" in sources
     assert len(DESIGNS_FROM_BUGS) >= 2

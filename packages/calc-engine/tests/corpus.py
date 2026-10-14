@@ -8,7 +8,7 @@ Those are the failures users actually report ("die Zeichnungen sind nicht das, w
 So a case is a design plus parameters plus the invariants its result must satisfy. Cases come
 from three sources:
 
-- the shipped templates and packs, each swept over its parameter range,
+- the hand-checked fixture designs (``fixtures/designs``), each swept over its parameter range,
 - ``EXTRA_DESIGNS``, free-form constructions in the shapes users ask for,
 - ``DESIGNS_FROM_BUGS``, regressions named after the bug report they came from.
 
@@ -39,6 +39,7 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
 from corpus_designs import DESIGNS_FROM_BUGS, EXTRA_DESIGNS  # noqa: E402
+from design_fixtures import fixture_design, fixture_designs  # noqa: E402
 
 #: Orthographic views must show every part exactly once; other views are derived differently.
 ORTHOGRAPHIC = frozenset({"front", "side", "plan", "back"})
@@ -46,19 +47,14 @@ ORTHOGRAPHIC = frozenset({"front", "side", "plan", "back"})
 
 @dataclass(frozen=True)
 class Case:
-    """One construction: a design or a pack, the parameters to build it with, and its origin."""
+    """One construction: a design, the parameters to build it with, and its origin."""
 
     name: str
-    design: AssemblyDesign | None = None
+    design: AssemblyDesign
     params: Mapping[str, Any] = field(default_factory=dict)
     source: str = "corpus"
-    pack_id: str | None = None
     expect_rejection: str | None = None
     notes: tuple[str, ...] = field(default_factory=tuple)
-
-    @property
-    def pack(self) -> str:
-        return self.pack_id or "design"
 
 
 @dataclass(frozen=True)
@@ -70,11 +66,7 @@ class Violation:
 
 def build_result(case: Case, engine: Engine | None = None) -> ConstructionResult:
     build = (engine or default_engine()).build
-    return build(
-        ProjectInputs(
-            title=case.name, pack_id=case.pack, params=dict(case.params), design=case.design
-        )
-    )
+    return build(ProjectInputs(title=case.name, params=dict(case.params), design=case.design))
 
 
 # --------------------------------------------------------------------------------------------
@@ -524,39 +516,20 @@ def _sample_size(design: AssemblyDesign) -> int:
     return 3
 
 
-def template_cases() -> Iterator[Case]:
-    """Every shipped template, swept over its parameter range."""
-    from calc_engine.assembly.templates import templates
-
-    for key, template in sorted(templates().items()):
-        design = template.design
+def fixture_cases() -> Iterator[Case]:
+    """Every fixture design, swept over its parameter range."""
+    for key, design in sorted(fixture_designs().items()):
         samples = _sample_size(design)
         for index, params in enumerate(_combinations(_param_values(design), key, extra=samples)):
-            yield Case(f"template:{key}#{index}", design, params, source=f"template:{key}")
-
-
-def pack_cases() -> Iterator[Case]:
-    """The construction packs, swept over their parameter range."""
-    for descriptor in default_engine().describe_packs():
-        bounds: dict[str, list[Any]] = {}
-        for name, spec in descriptor.params_schema.get("properties", {}).items():
-            options = [spec.get("default")]
-            options += [spec[key] for key in ("minimum", "maximum") if key in spec]
-            options += list(spec.get("enum", []))
-            bounds[name] = [v for v in dict.fromkeys(options) if v is not None]
-        source = f"pack:{descriptor.id}"
-        for index, params in enumerate(_combinations(bounds, source, extra=10)):
-            yield Case(f"{source}#{index}", None, params, source=source, pack_id=descriptor.id)
+            yield Case(f"fixture:{key}#{index}", design, params, source=f"fixture:{key}")
 
 
 def _bug_design(name: str) -> AssemblyDesign:
-    """The design a bug regression builds: its own dict, or the shipped template it names."""
-    from calc_engine.assembly.templates import templates
-
+    """The design a bug regression builds: its own dict, or the fixture design it names."""
     bug = DESIGNS_FROM_BUGS[name]
-    if bug.template is not None:
-        return templates()[bug.template].design
-    assert bug.design is not None, f"bug:{name} names neither a design nor a template"
+    if bug.fixture is not None:
+        return fixture_design(bug.fixture)
+    assert bug.design is not None, f"bug:{name} names neither a design nor a fixture"
     return AssemblyDesign.model_validate(bug.design)
 
 
@@ -584,9 +557,9 @@ def design_cases() -> Iterator[Case]:
 
 
 def cases() -> list[Case]:
-    """The whole corpus: templates, packs, free-form designs and bug regressions.
+    """The whole corpus: fixture designs, free-form designs and bug regressions.
 
     Deterministic: every random sample is seeded by the name of its design, so the list is the
     same on every machine and every run.
     """
-    return [*template_cases(), *pack_cases(), *design_cases()]
+    return [*fixture_cases(), *design_cases()]

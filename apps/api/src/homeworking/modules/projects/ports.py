@@ -24,7 +24,7 @@ class CommandRecord:
     command: Command
     actor: Actor
     engine_version: str
-    pack_version: str
+    design_version: str
     llm_trace_id: str | None = None
     diff: ModelDiff | None = None
     created_at: datetime | None = None
@@ -41,7 +41,6 @@ class StoredProject:
 class ProjectListItem:
     id: UUID
     title: str
-    pack_id: str
     summary: str
     updated_at: datetime | None
 

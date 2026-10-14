@@ -1,10 +1,17 @@
+import sys
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import httpx
 import pytest
 
 from homeworking.main import create_app
 from homeworking.settings import Settings
+
+# --import-mode=importlib: make the engine's hand-checked fixture designs importable in the API
+# tests (``from design_fixtures import fixture_design``), and the helpers next to this file.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "packages" / "calc-engine" / "tests"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
 @pytest.fixture

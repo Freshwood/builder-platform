@@ -4,16 +4,15 @@
 > Bauprojekt.
 
 Vision und Schritte stehen in der [ROADMAP](ROADMAP.md). Dieses Repository enthält **Phase I**:
-die private DIY-Agent-Plattform mit Projektmodell und deterministischer Engine. Geplant werden
-kann auf drei Vertrauensstufen ([ADR-0004](docs/architecture/adr/0004-freie-entwuerfe-bauteilmodell.md)):
+die private DIY-Agent-Plattform mit Projektmodell und deterministischer Engine.
 
-| Stufe | Beispiele | Woher die Konstruktion kommt |
-|---|---|---|
-| Geprüftes Pack | Hochbeet | programmiertes Construction Pack mit fachlich validierten Regeln |
-| Vorlage | Regal, Gartenbank, Werkbank, Fensterladen | parametrischer Entwurf aus `calc_engine/data/templates/` |
-| KI-Entwurf | alles aus Holz, Platten und Beschlägen | das LLM entwirft ein Bauteilmodell, die Engine prüft und berechnet |
+**Jedes Projekt ist ein Unikat** ([ADR-0008](docs/architecture/adr/0008-unikate-statt-packs.md)):
+Es gibt keine Construction Packs und keine Vorlagen. Das LLM entwirft für jede Anfrage ein
+eigenes Bauteilmodell aus Holz, Platten und Beschlägen
+([ADR-0004](docs/architecture/adr/0004-freie-entwuerfe-bauteilmodell.md)), die Engine prüft und
+berechnet es.
 
-Auch bei KI-Entwürfen rechnet das LLM nicht: Es beschreibt nur Bauteile (Material, Maß,
+Dabei rechnet das LLM nicht: Es beschreibt nur Bauteile (Material, Maß,
 Position als Ausdrücke über Parameter). Die Engine prüft Katalogmaße, Kollisionen, Zusammenhang
 und Boden- bzw. Wandkontakt und leitet Stückliste, Zuschnitt mit Schnittplan, Schrauben, Kosten,
 Zeichnungen (Ansichten, Isometrie mit Positionsnummern) und das 3D-Modell ab.
@@ -51,8 +50,8 @@ FastAPI-Monolith ─────────────────────
   drawings/    Drawing-IR → SVG      documents/  HTML → PDF/UA-1
   │
   ├─ packages/construction-model   reine Domäne: Inputs, Result, Commands, Diff
-  └─ packages/calc-engine          deterministische Engine + Packs (raised_bed)
-                                   + assembly/ (freie Entwürfe, Vorlagen, Projektion)
+  └─ packages/calc-engine          deterministische Engine (ADR-0008: keine Packs)
+                                   + assembly/ (Entwürfe, Prüfung, Projektion)
 PostgreSQL (JSONB-Dokument + Command-Log)
 ```
 
@@ -99,12 +98,12 @@ LLM_API_KEY=…
 Für die Produktion gilt: EU-Anbieter mit AV-Vertrag und Zero Data Retention, siehe
 [DSGVO-Notizen](docs/compliance/dsgvo-dpia-template.md).
 
-Ohne LLM (`LLM_MODE=test`) versteht der Offline-Planer Hochbeet und die Vorlagen, z. B.
-„Regal 80 × 30 × 180 cm mit 5 Böden“, „Gartenbank 1,6 m aus Lärche“, „Werkbank 150 × 70 cm mit
-Rollen“. Freie Entwürfe brauchen ein Modell, das zuverlässig lange, verschachtelte
-Werkzeug-Argumente erzeugt (Klasse Claude Sonnet, Mistral Medium 3.5 oder vergleichbar); für
-Vorlagen und Maßänderungen genügt ein kleines Modell. Optional übernimmt `LLM_MODEL_FAST` diese
-Routine-Turns, und `LLM_MODEL` bleibt für freie Entwürfe ([ADR-0006](docs/architecture/adr/0006-token-budget-und-modell-routing.md)).
+Ohne LLM (`LLM_MODE=test`) entwirft der Offline-Planer nur ein Hochbeet und ein Regal
+(`modules/agent/offline_designs/`), z. B. „Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche“ oder
+„Regal 80 × 30 × 180 cm mit 5 Böden“. Echte Entwürfe brauchen ein Modell, das zuverlässig lange,
+verschachtelte Werkzeug-Argumente erzeugt (Klasse Claude Sonnet, Mistral Medium 3.5 oder
+vergleichbar); für Maßänderungen, Preise und Rückfragen genügt ein kleines Modell. Optional
+übernimmt `LLM_MODEL_FAST` diese Routine-Turns, und `LLM_MODEL` bleibt für Entwürfe ([ADR-0006](docs/architecture/adr/0006-token-budget-und-modell-routing.md)).
 `AGENT_TOTAL_TOKENS_LIMIT` (Standard 200 000) begrenzt einen Chat-Turn inklusive
 Korrekturrunden.
 
@@ -117,8 +116,8 @@ Montage, Maße, Holzart, Oberfläche, Budget, Erfahrung, Werkzeug, Nutzung); er 
 strukturierte Liste an die erste Chat-Nachricht angehängt. Während der Assistent arbeitet, zeigt
 der Chat jeden Arbeitsschritt live (Werkzeugaufrufe, Gedankengang, beim freien Entwurf die
 Anzahl der bereits geschriebenen Bauteile), rechts erscheint ein Fortschrittspanel mit Laufzeit.
-Um Modell-Runden zu sparen, stehen Packs und Vorlagen direkt in den Instruktionen, und die
-Erläuterung wird beim Erstellen mitgegeben (`explanation`) statt per eigenem Aufruf.
+Um Modell-Runden zu sparen, wird die Erläuterung beim Erstellen mitgegeben (`explanation`) statt
+per eigenem Aufruf.
 
 ## Qualität
 
@@ -127,7 +126,7 @@ Erläuterung wird beim Erstellen mitgegeben (`explanation`) statt per eigenem Au
 | `task check` | ruff, mypy (strict), import-linter (Modulgrenzen), eslint, tsc – Python und Web parallel |
 | `task test` | pytest: Engine-Invarianten (hypothesis), SVG-Golden-Files, API, Agent, PDF |
 | `task test:pg` | wie `test`, zusätzlich Integrationstest gegen PostgreSQL |
-| `task e2e` | Playwright: Hochbeet planen → „50 cm breiter“ → Undo → Variante → PDF, mit axe-Prüfung (WCAG 2.2 AA); Browser einmalig mit `task e2e:install` |
+| `task e2e` | Playwright mit Offline-Planer: Hochbeet entwerfen → „50 cm breiter“ → Undo → Variante → PDF, mit axe-Prüfung (WCAG 2.2 AA); Browser einmalig mit `task e2e:install` |
 | `task openapi` | OpenAPI exportieren und TypeScript-Client neu generieren (nur wenn sich die API geändert hat) |
 | `task ci` | `check`, `test` und OpenAPI-Drift-Prüfung wie in der CI |
 | `task fmt` | formatieren und Autofixes anwenden |
@@ -137,22 +136,14 @@ Hinweis für WSL: Liegt das Repo unter `/mnt/c`, sind Python-Imports sehr langsa
 legen oder `UV_PROJECT_ENVIRONMENT` auf einen Pfad unter `~` setzen (z. B. in `.env`, siehe
 `.env.example`; Task lädt `.env` automatisch).
 
-## Eine neue Vorlage hinzufügen
+## Die Engine um eine Konstruktion erweitern
 
-1. JSON-Datei in `packages/calc-engine/src/calc_engine/data/templates/` anlegen (`key`, `title`,
-   `description`, `keywords`, `design` im Format `construction_model.assembly.AssemblyDesign`,
-   `origin: "engine"`). Materialien und Maße stammen aus `data/catalog.json`; Holz in beliebigem
-   Querschnitt als Maßholz `lumber_{wood}` (Querschnitt aus dem Bauteilmaß).
-2. In `packages/calc-engine/tests/test_assembly.py` einen hypothesis-Test über den ganzen
-   Parameterbereich ergänzen – er findet Kombinationen, bei denen Teile nicht mehr aufs
-   Plattenformat passen oder sich durchdringen.
-3. Die Schlüsselwörter machen die Vorlage auch für den Offline-Planer verfügbar.
+Es gibt keine Vorlagen oder Packs mehr (ADR-0008). Kann die Engine eine Konstruktion nicht
+abbilden, wird sie allgemein erweitert (Formen, Verbindungen, Prüfungen im Entwurfsformat), nie
+für ein einzelnes Objekt:
 
-## Ein neues Construction Pack hinzufügen
-
-1. `packages/calc-engine/src/calc_engine/packs/<pack>/` anlegen mit Parametern (Pydantic),
-   Geometrie, `build()` (BOM, Zuschnitt, Zeichnungs-IR, Anleitung, Hinweise, `RuleRef`s) und
-   `variants()`.
-2. Das Pack in `calc_engine.engine.default_engine()` registrieren.
-3. Tests schreiben: Referenzfälle, Invarianten mit hypothesis, SVG-Golden-Files.
-4. Fachliche Regelvalidierung dokumentieren (Compliance-Gate Schritt 3).
+1. Fähigkeit im Entwurfsformat (`construction_model.assembly`) und in `calc_engine.assembly`
+   ergänzen; das ist eine Prompt-Änderung (Skill `prompt-change`).
+2. Einen Entwurf, der sie nutzt, in den Corpus aufnehmen (`packages/calc-engine/tests/corpus_designs.py`
+   oder `tests/fixtures/designs/`); der Corpus prüft ihn über den ganzen Parameterbereich.
+3. Fachliche Regelvalidierung dokumentieren (Compliance-Gate Schritt 3).

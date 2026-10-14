@@ -25,9 +25,9 @@ from uuid import uuid4
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from calc_engine.assembly.templates import template
 from homeworking.bootstrap import Container, build_container
 from homeworking.modules.agent.metering import Meter, tokens, tool_definitions_json
+from homeworking.modules.agent.offline import offline_designs
 from homeworking.modules.agent.routing import route
 from homeworking.modules.agent.tools import AgentDeps, build_agent
 from homeworking.settings import Settings
@@ -66,9 +66,15 @@ def _text(text: str) -> Step:
     return lambda _messages: ModelResponse(parts=[TextPart(text)])
 
 
+def _shelf() -> dict[str, Any]:
+    """A realistic design as the model writes it (the offline planner's shelf)."""
+    shelf = next(d for d in offline_designs() if d.key == "shelf")
+    return shelf.design.model_dump(mode="json", exclude_defaults=True)
+
+
 def _broken_design(shift_mm: int) -> dict[str, Any]:
-    """The shelf template moved below the floor: the engine rejects it with several errors."""
-    design = template("shelf").design.model_dump(mode="json", exclude_defaults=True)
+    """The shelf moved below the floor: the engine rejects it with several errors."""
+    design = _shelf()
     for part in design["parts"]:
         x, y, z = part["at"]
         part["at"] = [x, y, f"({z}) - {shift_mm}"]
@@ -77,7 +83,7 @@ def _broken_design(shift_mm: int) -> dict[str, Any]:
 
 
 def _valid_design() -> dict[str, Any]:
-    design = template("shelf").design.model_dump(mode="json", exclude_defaults=True)
+    design = _shelf()
     design["object_type"] = "Regal"
     return design
 
@@ -93,10 +99,10 @@ TOOLS = Tools()
 
 
 def free_design_turn() -> list[Step]:
-    """Free design: look up materials and an example, two engine rejections, then accepted."""
+    """Free design: look up materials, two engine rejections, then accepted."""
     args = {"title": "Wandregal", "params": {"width_mm": 800}, "explanation": EXPLANATION}
     return [
-        _calls(("list_materials", {}), ("get_template_design", {"template_key": "shelf"})),
+        _calls(("list_materials", {})),
         _calls((TOOLS.design, {**args, "design": _broken_design(60)})),
         _calls((TOOLS.design, {**args, "design": _broken_design(20)})),
         _calls((TOOLS.design, {**args, "design": _valid_design()})),
@@ -104,40 +110,11 @@ def free_design_turn() -> list[Step]:
     ]
 
 
-def pack_turn() -> list[Step]:
-    params = {"length_mm": 2000, "width_mm": 1000, "height_mm": 800, "wood": "larch"}
-    return [
-        _calls(
-            (
-                "create_project",
-                {
-                    "pack_id": "raised_bed",
-                    "title": "Hochbeet",
-                    "params": params,
-                    "explanation": EXPLANATION,
-                },
-            )
-        ),
-        _text(FINAL_ANSWER),
-    ]
-
-
-def template_turn() -> list[Step]:
+def design_turn() -> list[Step]:
+    """The common case: one design, accepted on the first attempt."""
     params = {"width_mm": 800, "depth_mm": 300, "height_mm": 1800, "shelves": 5}
-    return [
-        _calls(
-            (
-                "create_from_template",
-                {
-                    "template_key": "shelf",
-                    "title": "Regal",
-                    "params": params,
-                    "explanation": EXPLANATION,
-                },
-            )
-        ),
-        _text(FINAL_ANSWER),
-    ]
+    args = {"title": "Regal", "params": params, "explanation": EXPLANATION}
+    return [_calls((TOOLS.design, {**args, "design": _valid_design()})), _text(FINAL_ANSWER)]
 
 
 def change_turn(command: dict[str, Any]) -> list[Step]:
@@ -170,7 +147,7 @@ class Bench:
         history: list[ModelMessage] | None = None,
     ) -> list[ModelMessage]:
         meter = Meter()
-        agent = build_agent(FunctionModel(meter.wrap(_script(steps))), self.container.engine)
+        agent = build_agent(FunctionModel(meter.wrap(_script(steps))))
         result = await agent.run(prompt, deps=deps, message_history=history)
         routed = route(prompt, has_project=deps.project_id is not None)
         self.results[name] = {**meter.totals(), "role": routed.role}
@@ -187,7 +164,7 @@ class Bench:
         deps = AgentDeps(
             owner_id=uuid4(), projects=self.container.projects, project_id=None, trace_id="b"
         )
-        await build_agent(FunctionModel(capture), self.container.engine).run("x", deps=deps)
+        await build_agent(FunctionModel(capture)).run("x", deps=deps)
         info = seen[0]
         tools = {t.name: tokens(len(tool_definitions_json([t]))) for t in info.function_tools}
         return {
@@ -205,8 +182,7 @@ class Bench:
                 owner_id=owner, projects=self.container.projects, project_id=None, trace_id="b"
             )
 
-        await self.turn("pack_create", "Hochbeet 2 × 1 m, 80 cm hoch, Lärche", pack_turn(), deps())
-        await self.turn("template_create", "Regal 80 × 30 × 180 cm", template_turn(), deps())
+        await self.turn("design_create", "Regal 80 × 30 × 180 cm", design_turn(), deps())
 
         free = deps()
         # Follow-up turns get the stored model messages of earlier runs as history, like the

@@ -10,7 +10,6 @@ export type ToolProject = {
   project_id?: string;
   title?: string;
   summary?: string;
-  trust?: string;
   material_cost_eur?: string;
 };
 export type ToolOutput = {

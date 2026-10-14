@@ -10,6 +10,33 @@ Each entry names the version, the fingerprint, what changed and why, and the eff
 offline token benchmark (`task bench`). Every stored agent run carries `prompt_version` and
 `prompt_fingerprint`, so a result can be traced back to exactly one entry.
 
+## 2026-10-14.1 (fingerprint `417fa06d546c2a92`, routing version 2)
+
+Product direction (ROADMAP.md, "Aktueller Schwerpunkt (2026-10-14)", ADR-0008): every project
+is a one-off. A construction pack or a curated template makes every result look the same, so
+the agent now designs every project itself from the customer's brief, and the engine checks
+it and derives everything else. Packs (`raised_bed`) and the six design templates are removed
+from the engine, the API and the agent.
+
+- Tools removed: `create_project` (packs), `create_from_template`, `get_template_design`,
+  `list_construction_packs`. The old names stay in `history.LOOKUP_TOOLS` so stored chats are
+  still compacted.
+- The pack/template overview that was appended to the instructions on every request is gone.
+- Rule 9 now says: every project is a one-off, always designed with `save_design` from the
+  brief; use, support and "unbehandelt" go straight into the design. Rules 5, 8, 10, 13 and 14
+  lose their pack/template wording.
+- `save_design` and `get_current_design` descriptions no longer distinguish "free-form" from
+  pack/template projects. Tool results no longer carry `trust`.
+- Routing (`ROUTING_VERSION` 2): the `pack_or_template` shortcut to the fast model is gone; a
+  new project is a design and goes to the designer model.
+
+Offline benchmark (`2026-10-10-prompt-2026-10-10-1.md` → `2026-10-14-prompt-2026-10-14-1.md`):
+static prefix 9,163 → 7,607 tokens per request (−1,556, −17 %; instructions 3,531 → 2,867, tool
+definitions 5,632 → 4,740). The scenarios `pack_create` and `template_create` are replaced by
+`design_create` (one design accepted on the first attempt, 16,880 tokens). Comparable scenarios:
+`free_design` 59,518 → 48,563 (−18 %), `followup_1` 21,084 → 17,886 (−15 %), `followup_2`
+22,591 → 19,381 (−14 %). `test_token_budget.py` is tightened accordingly.
+
 ## 2026-10-10.1 (fingerprint `302126348b5f7ffc`)
 
 Bug report "Could not create a simple project" (`docs/problems/bug.md`): the user wanted a

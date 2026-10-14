@@ -27,6 +27,85 @@ Dadurch kann dieselbe zugrunde liegende Projektdatenstruktur schrittweise von DI
 
 ---
 
+# Aktueller Schwerpunkt (2026-10-14)
+
+Diese drei Leitsätze haben Vorrang vor allen folgenden Schritten. Wo ältere Abschnitte ihnen
+widersprechen, gelten die Leitsätze ([ADR-0008](docs/architecture/adr/0008-unikate-statt-packs.md)).
+
+## 1. Jedes Projekt ist ein Unikat
+
+Es gibt **keine Construction Packs und keine Vorlagen**. Ein Unikat kann nicht aus einem Paket
+stammen, sonst sieht jedes Ergebnis gleich aus.
+
+Die KI hat stattdessen die **handwerkliche Fertigkeit**, aus der Angabe des Kunden einen eigenen,
+fertigen und brauchbaren Entwurf zu erstellen: Bauteile, Maße als Ausdrücke, Verbindungen,
+Bauschritte. Die Engine prüft den Entwurf und leitet alles Weitere ab. Die KI rechnet dabei nie.
+
+```text
+Kundenangabe ──▶ KI entwirft frei (Unikat) ──▶ Engine prüft ──▶ Engine leitet ab
+                                                  │                ├── 3D-Modell
+                                                  │                ├── Zeichnungen (SVG/PDF)
+                                                  └─ Fehler ──▶ KI ├── Stückliste, Zuschnitt
+                                                     korrigiert    ├── Kosten
+                                                                   └── Bauanleitung
+```
+
+## 2. 3D-Modell aus Vektorgrafiken – günstig und tokenarm
+
+Das 3D-Modell entsteht auf einfache Weise aus Vektorprofilen:
+
+```text
+Bauteil = 2D-Vektorprofil (Polygon/Pfad, Maße als Ausdrücke)
+        + Stärke / Extrusionsrichtung
+        + Lage im Projekt
+              ↓  Engine (deterministisch)
+        Extrusion → 3D-Körper → Ansichten, Bemaßung, Stückliste, Zuschnitt
+```
+
+- Der Quader ist nur ein Sonderfall des Profils (Rechteck × Stärke).
+- 3D-Modell und 2D-Zeichnungen kommen aus **derselben Geometrie**; sie können sich nicht
+  widersprechen.
+- **Tokenoptimiert:** ein Tool-Aufruf pro Entwurf, kompakte Profilsyntax, keine Katalog- oder
+  Vorlagenlisten im Prompt, Großdaten nur auf Abruf. Jede Änderung wird mit `task bench` gemessen,
+  das Token-Budget darf nur sinken.
+- Kein Bildmodell, kein CAD-Kernel: die Extrusion ist einfache, prüfbare Mathematik in der Engine.
+
+## 3. Wasserdichte Verträge zwischen KI und Engine
+
+Der Entwurf eines Projekts darf nie fehlerhaft beim Nutzer ankommen. Dafür sind die Verträge
+zwischen KI-Agent(en) und Engine fest definiert:
+
+1. **Ein Schema als einzige Quelle** (`AssemblyDesign`, keine unbekannten Felder), versioniert.
+   Wo der Provider es kann, wird es als Strict-/Structured-Output erzwungen.
+2. **Feste Prüfkette:** zentrale Reparatur von Tool-Argumenten → Schemaprüfung → Ausdrücke →
+   Auflösung → Konstruktionsprüfung (Material, Querschnitt, Durchdringung, Zusammenhang,
+   Auflager, Verbindungen) → Ableitung.
+3. **Jede Ablehnung ist maschinenlesbar:** Fehlercode, genauer Pfad im Entwurf, konkreter
+   Korrekturvorschlag. Die KI muss nicht raten.
+4. **Begrenzte Reparaturschleife.** Gelingt die Korrektur nicht, bekommt der Nutzer eine klare
+   Rückfrage statt eines kaputten Entwurfs.
+5. **Vertragstests:** Entwurfs-Corpus, Property-Tests, Sammlung fehlerhafter Tool-Argumente. Jeder
+   gemeldete Fehler wird ein Regressionsfall. Die Live-Evaluation mit Erfolgsquote ist Gate für
+   jede Prompt- oder Schemaänderung.
+
+> **Harte Garantie:** Kein ungeprüfter oder fehlerhafter Entwurf erreicht den Nutzer.
+>
+> Die Ausgabe eines Sprachmodells selbst ist nie garantiert fehlerfrei. Garantiert wird, dass
+> die Engine jeden Fehler erkennt, die KI ihn gezielt korrigiert und nichts Fehlerhaftes
+> ausgeliefert wird.
+
+## Nächste Meilensteine
+
+| # | Meilenstein | Ergebnis |
+|---:|---|---|
+| 1 | Packs und Vorlagen entfernt | Jeder Entwurf entsteht frei aus der Kundenangabe |
+| 2 | Profil-Bauteil (Vektorprofil + Extrusion) im Schema | 3D aus Vektorgrafik, Quader als Sonderfall |
+| 3 | Maschinenlesbare Fehlercodes in der Prüfkette | Gezielte Korrektur, weniger Reparaturrunden |
+| 4 | Strict-/Structured-Output für den Entwurfs-Aufruf | Formfehler kommen gar nicht erst an |
+| 5 | Erfolgsquote der Live-Evaluation als Release-Gate | Messbar fehlerfreie Entwürfe |
+
+---
+
 # Die 10 Schritte
 
 ## 1. Private DIY-Agent-Plattform
@@ -51,8 +130,8 @@ Der Agent:
 2. erkennt fehlende Informationen
 3. stellt Rückfragen
 4. erzeugt mehrere sinnvolle Varianten
-5. schlägt eine Konstruktion vor
-6. erstellt Maße und Skizzen
+5. entwirft eine eigene Konstruktion für genau dieses Vorhaben (Unikat)
+6. erstellt Maße, Skizzen und ein 3D-Modell
 7. berechnet Materialmengen
 8. erstellt eine Materialliste
 9. schätzt Kosten
@@ -84,6 +163,7 @@ Kosten
 - Fremdleistungen: optional
 
 Dokumente
+- 3D-Modell
 - Gesamtplan
 - Draufsicht
 - Seitenansicht
@@ -327,11 +407,13 @@ Maßhaltige Zeichnungen werden **nicht primär durch ein Bildmodell erzeugt**.
 Sondern:
 
 ```text
-Construction Model
+Construction Model (Bauteile als Vektorprofile)
+       ↓
+Extrusion in der Engine
        ↓
 Parametric Geometry
-       ↓
-SVG / DXF / PDF
+       ├──▶ 3D-Modell
+       └──▶ SVG / DXF / PDF
 ```
 
 Generative Bildmodelle können später für illustrative Darstellungen verwendet werden.
@@ -457,8 +539,7 @@ eine Community aufbauen:
 Privates Projekt ──veröffentlichen──▶ Community-Bibliothek (kostenlos, mit Lizenz, z. B. CC BY-SA)
                                          │
                                          ├── forken: eigene Kopie mit Herkunftsverweis, weiter verbessern
-                                         ├── bewerten, kommentieren, „gebaut“-Fotos
-                                         └── gute Forks fließen als Vorlage zurück (kuratiert)
+                                         └── bewerten, kommentieren, „gebaut“-Fotos
 
 Besonderes Projekt ──verkaufen──▶ Marktplatz (Ersteller legt Preis fest, Plattform erhält Provision)
 ```
@@ -467,9 +548,8 @@ Besonderes Projekt ──verkaufen──▶ Marktplatz (Ersteller legt Preis fes
   Region, eigene Preise und Chatverlauf bleiben privat.
 - **Forken:** Kopie inklusive Entwurf und Parametern, mit Verweis auf das Original und dessen
   Version (Provenance). Zeichnungen, Stückliste und Kosten rechnet die Engine für den Fork neu.
-- **Kosten sparen:** Ein veröffentlichter Entwurf ersetzt teure KI-Läufe – wer etwas Ähnliches
-  bauen will, startet vom Fork statt vom leeren Chat. Der Agent kann passende Community-Projekte
-  vorschlagen, bevor er frei entwirft.
+- **Kein Vorlagenkatalog:** Ein Fork entsteht nur, wenn ein Nutzer ihn ausdrücklich will. Der
+  Agent schlägt keine Community-Projekte als Vorlage vor; er entwirft jedes Projekt als Unikat.
 - **Verkaufen:** Ersteller bieten besondere Pläne kostenpflichtig an; die Plattform verdient über
   eine Provision.
 - **Compliance (Gate 6):** Nutzungsbedingungen mit Lizenz für geteilte Inhalte, Moderation und
@@ -896,13 +976,13 @@ Die erste Version soll nur eine Sache außergewöhnlich gut machen:
 
 ---
 
-# Empfohlene erste Domänen
+# Erste Einsatzbereiche
 
 Der MVP sollte nicht wirklich „alles“ können.
 
-Der interne Datenstandard kann universal sein.
-
-Die ersten Construction Packs sollten beispielsweise sein:
+Der interne Datenstandard ist universal. Es gibt keine Packs oder Vorlagen pro Bauart; die
+folgenden Bereiche sind nur Beispiele, an denen die freie Entwurfsfähigkeit der KI zuerst
+gemessen wird:
 
 ```text
 Terrasse
@@ -1058,6 +1138,9 @@ führt nicht zu einer neuen Chat-Antwort, sondern zu einer **konsistenten Änder
 | 9 | Enterprise/Public | Große Bauvorhaben |
 | 10 | Construction OS | Plattform & Ökosystem |
 
+Vorrang haben derzeit Schritt 3 und 4 im Sinne des [aktuellen Schwerpunkts](#aktueller-schwerpunkt-2026-10-14):
+Unikate, 3D aus Vektorprofilen und wasserdichte Verträge.
+
 ---
 
 # Empfohlene Reihenfolge der Investitionen
@@ -1104,6 +1187,7 @@ Nach wenigen Minuten erhält er:
 ```text
 ✓ 3 Konstruktionsvarianten
 ✓ Maße
+✓ 3D-Modell
 ✓ 2D-Skizzen
 ✓ Materialliste
 ✓ Zuschnittliste
@@ -1128,10 +1212,11 @@ Der Rest ist die Evolution dieses Projekts zu einer universellen Bauplattform.
 
 1. **Schritt 1 und 2 zusammengezogen:** Projektmodell und Command-Log gibt es ab dem ersten Release
    ([ADR-0002](docs/architecture/adr/0002-projektmodell-und-command-log.md)).
-2. **Schritt 3 für genau ein Pack in Phase I:** Mengen und Kosten kommen von Anfang an aus der
-   deterministischen Engine.
-3. **Erstes Construction Pack ist das Hochbeet:** statisch unkritisch, genehmigungsfrei, deckt aber die
-   ganze Kette ab: Geometrie, BOM, Zuschnitt, SVG, PDF, Kosten. Danach folgen Terrasse und Schuppen.
+2. **Schritt 3 von Anfang an:** Mengen und Kosten kommen aus der deterministischen Engine.
+3. ~~Erstes Construction Pack ist das Hochbeet.~~ *Überholt am 2026-10-14:* Packs und Vorlagen
+   sind entfernt. Jeder Entwurf entsteht frei über das generische Bauteilmodell
+   ([ADR-0004](docs/architecture/adr/0004-freie-entwuerfe-bauteilmodell.md),
+   [ADR-0008](docs/architecture/adr/0008-unikate-statt-packs.md)).
 4. **Der Agent mutiert nur über typisierte Commands.** Daraus ergibt sich die Provenance aus Schritt 9
    von Beginn an.
 5. **Bauteile bekommen stabile GUIDs und IFC-nahe Typen.** Damit ist Schritt 7 später nur ein Adapter.

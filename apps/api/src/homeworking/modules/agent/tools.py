@@ -15,11 +15,9 @@ from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models import Model, ModelRequestContext
 from pydantic_ai.tools import ToolDefinition
 
-from calc_engine.assembly.derive import DESIGN_PACK_ID
-from calc_engine.assembly.templates import template, templates
 from calc_engine.catalog import Catalog
-from calc_engine.engine import DesignRejectedError, Engine, ParameterError, UnknownPackError
-from construction_model.assembly import SUPPORTS, USES, AssemblyDesign, Support, Use
+from calc_engine.engine import DesignRejectedError
+from construction_model.assembly import AssemblyDesign
 from construction_model.commands import (
     AddNote,
     ChangeParameterBy,
@@ -99,7 +97,6 @@ def project_summary(model: ProjectModel, *, with_bom: bool = False) -> dict[str,
     summary: dict[str, Any] = {
         "project_id": str(model.id),
         "title": model.inputs.title,
-        "trust": r.trust,
         "summary": r.summary,
         "params": r.effective_params,
         "adjustable": [
@@ -169,16 +166,11 @@ def diff_summary(diff: ModelDiff) -> dict[str, Any]:
     return out
 
 
-def _literal[T: str](value: Any, allowed: tuple[T, ...]) -> T | None:
-    """``value`` if it is one of ``allowed`` (a design-level field found among the params)."""
-    return next((a for a in allowed if a == value), None)
-
-
 def _error(message: str) -> dict[str, Any]:
     return {"error": message}
 
 
-def _design_rejected(exc: ParameterError) -> dict[str, Any]:
+def _design_rejected(exc: DesignRejectedError) -> dict[str, Any]:
     return {
         "error": "Der Entwurf wurde von der Engine abgelehnt. Korrigiere ihn und rufe das "
         "Werkzeug erneut mit dem vollständigen Entwurf auf.",
@@ -276,27 +268,6 @@ def _design_json(design: AssemblyDesign) -> dict[str, Any]:
     return design.model_dump(mode="json", exclude_defaults=True)
 
 
-def planning_overview(engine: Engine) -> str:
-    """Packs and templates as compact text for the instructions (saves a tool round trip)."""
-    lines = ["Planbar ohne freien Entwurf (Parameter in Klammern, Längen in mm):"]
-    for pack in engine.describe_packs():
-        props = pack.params_schema.get("properties", {})
-        lines.append(
-            f"- Pack {pack.id} – {pack.title}: {pack.description} ({', '.join(props)}) "
-            "→ create_project"
-        )
-    for tpl in templates().values():
-        params = ", ".join(
-            f"{p.name}={'|'.join(str(o.value) for o in p.options)}" if p.options else p.name
-            for p in tpl.design.params
-        )
-        lines.append(
-            f"- Vorlage {tpl.key} – {tpl.title}: {tpl.description} ({params}) "
-            "→ create_from_template"
-        )
-    return "\n".join(lines)
-
-
 async def _store_explanation(
     ctx: RunContext[AgentDeps], project_id: UUID, text: str | None
 ) -> None:
@@ -348,7 +319,7 @@ def tool_attempt(
 
     ``outcome`` is ``accepted``, ``invalid_args`` (validation or JSON repair failed before the tool
     ran), ``engine_rejected``, ``parameter_error``, ``command_error``, ``not_found``,
-    ``unknown_pack``, ``no_project`` or ``exception``. ``tool``, ``accepted``, ``errors`` and
+    ``no_project`` or ``exception`` (older runs may also have ``unknown_pack``). ``tool``, ``accepted``, ``errors`` and
     ``design`` (null unless a design was validated) are the keys older runs already have.
     """
     return {
@@ -404,28 +375,26 @@ async def _save_design(
     title: str | None,
     params: dict[str, ParamValue] | None,
 ) -> CommandOutcome:
-    """Create a design project, redesign the current one or re-plan it as a design project."""
+    """Create a project, redesign the current one or re-plan it with a new design."""
     projects, owner, trace = ctx.deps.projects, ctx.deps.owner_id, ctx.deps.trace_id
     if target is None:
         return await projects.create(
             owner,
-            pack_id=DESIGN_PACK_ID,
             title=title or design.object_type,
-            params=params or {},
             design=design,
+            params=params or {},
             actor="agent",
             trace_id=trace,
         )
-    current = (await projects.get(owner, target)).inputs
-    if current.design is not None and title is None and params is None:
-        # Structural change of a free-form design: keeps valid params and user notes.
+    if title is None and params is None:
+        # Structural change of the design: keeps valid params and user notes.
         return await projects.execute(
             owner, target, ReplaceDesign(design=design), actor="agent", trace_id=trace
         )
+    current = (await projects.get(owner, target)).inputs
     return await projects.replan(
         owner,
         target,
-        pack_id=DESIGN_PACK_ID,
         title=title or current.title,
         params=params or {},
         design=design,
@@ -604,11 +573,11 @@ class RecordToolAttempts(AbstractCapability[AgentDeps]):
         return None
 
 
-def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
+def build_agent(model: Model) -> Agent[AgentDeps, str]:
     agent: Agent[AgentDeps, str] = Agent(
         model,
         deps_type=AgentDeps,
-        instructions=[INSTRUCTIONS, planning_overview(engine)],
+        instructions=INSTRUCTIONS,
         retries=2,
         capabilities=[
             ProcessHistory(process_history),
@@ -620,94 +589,9 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
     )
 
     @agent.tool
-    def list_construction_packs(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
-        """List what can be planned: verified packs (with parameter schema) and design templates.
-
-        Anything else can be designed freely with save_design.
-        """
-        return {
-            "packs": [d.model_dump() for d in ctx.deps.projects.engine.describe_packs()],
-            "templates": [
-                {
-                    "key": t.key,
-                    "title": t.title,
-                    "description": t.description,
-                    "params": {p.name: p.label for p in t.design.params},
-                }
-                for t in templates().values()
-            ],
-        }
-
-    @agent.tool
     def list_materials(ctx: RunContext[AgentDeps]) -> str:
         """Materials for free-form designs: catalog items and made-to-order lumber."""
         return materials_table(ctx.deps.projects.engine.catalog)
-
-    @agent.tool_plain
-    def get_template_design(template_key: str) -> dict[str, Any]:
-        """Return the full design of a template as an example or starting point for save_design."""
-        try:
-            return _design_json(template(template_key).design)
-        except KeyError:
-            return _error(f"Unbekannte Vorlage '{template_key}'")
-
-    @agent.tool
-    async def create_from_template(
-        ctx: RunContext[AgentDeps],
-        template_key: str,
-        title: str,
-        params: ParamsArg,
-        explanation: str | None = None,
-        untreated: bool = False,
-        use: Use | None = None,
-        support: Support | None = None,
-        new_project: bool = False,
-    ) -> dict[str, Any]:
-        """Create a project from a design template; omitted parameters use template defaults.
-
-        Args:
-            template_key: Template key, e.g. "shelf".
-            title: Short German project title.
-            params: Template parameters (lengths in mm).
-            explanation: The "Warum so?" explanation (see instructions).
-            untreated: True when the user wants no surface treatment (no oil or glaze).
-            use: "outdoor" or "indoor" if the brief says so (otherwise the template's).
-            support: "wall" for wall mounting, "floor" for standing (otherwise the template's).
-            new_project: Only true if the user explicitly wants another, separate project.
-        """
-        target = _target(ctx, new_project)
-        # Models tend to put the flag and design-level fields among the template parameters.
-        params = dict(params)
-        untreated = bool(params.pop("untreated", untreated))
-        use = _literal(params.pop("use", None), USES) or use
-        support = _literal(params.pop("support", None), SUPPORTS) or support
-        async with ctx.deps.write_lock:
-            try:
-                outcome = await ctx.deps.projects.create_from_template(
-                    ctx.deps.owner_id,
-                    template_key=template_key,
-                    title=title,
-                    params=params,
-                    untreated=untreated,
-                    use=use,
-                    support=support,
-                    replace_project_id=target,
-                    actor="agent",
-                    trace_id=ctx.deps.trace_id,
-                )
-            except ParameterError as exc:
-                return _fail(
-                    ctx,
-                    "parameter_error",
-                    "Ungültige Parameter: " + "; ".join(exc.errors),
-                    exc.errors,
-                )
-            except UnknownPackError:
-                return _fail(ctx, "unknown_pack", f"Unbekannte Vorlage '{template_key}'")
-            await _store_explanation(ctx, outcome.project.id, explanation)
-        ctx.deps.project_id = outcome.project.id
-        ctx.deps.changed_projects.add(outcome.project.id)
-        return {"action": _action(target), "project": project_summary(outcome.project)}
 
     @agent.tool(retries=3)
     async def save_design(
@@ -718,10 +602,10 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
         explanation: str | None = None,
         new_project: bool = False,
     ) -> dict[str, Any]:
-        """Save a free-form parametric design (when no pack or template fits) or replace the
-        design of the current free-form project. The engine validates it and derives BOM, cut
-        list, screws, costs and drawings; on rejection fix the listed errors and call again
-        with the complete corrected design.
+        """Save the one-off parametric design of a new project or replace the design of the
+        current project. The engine validates it and derives BOM, cut list, screws, costs and
+        drawings; on rejection fix the listed errors and call again with the complete corrected
+        design.
 
         Args:
             design: The complete design.
@@ -739,9 +623,6 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
             except DesignRejectedError as exc:
                 _attempt(ctx, "engine_rejected", exc.errors, design)
                 return _design_rejected(exc)
-            except ParameterError as exc:
-                message = "Ungültige Parameter: " + "; ".join(exc.errors)
-                return _fail(ctx, "parameter_error", message, exc.errors, design)
             except (CommandError, ProjectNotFoundError) as exc:
                 return _fail(
                     ctx, _command_outcome(exc), f"Änderung nicht möglich: {exc}", design=design
@@ -760,74 +641,14 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
 
     @agent.tool
     async def get_current_design(ctx: RunContext[AgentDeps]) -> dict[str, Any]:
-        """Return the design of the current free-form project (to change it with save_design)."""
+        """Return the design of the current project (to change it with save_design)."""
         if ctx.deps.project_id is None:
             return _fail(ctx, "no_project", "Es ist kein Projekt aktiv.")
         try:
             model = await ctx.deps.projects.get(ctx.deps.owner_id, ctx.deps.project_id)
         except ProjectNotFoundError:
             return _fail(ctx, "not_found", "Projekt nicht gefunden.")
-        if model.inputs.design is None:
-            return _fail(
-                ctx,
-                "command_error",
-                "Das Projekt nutzt ein Construction Pack; ändere es mit change_project.",
-            )
         return {"params": model.inputs.params, "design": _design_json(model.inputs.design)}
-
-    @agent.tool
-    async def create_project(
-        ctx: RunContext[AgentDeps],
-        pack_id: str,
-        title: str,
-        params: ParamsArg,
-        explanation: str | None = None,
-        new_project: bool = False,
-    ) -> dict[str, Any]:
-        """Create a new project from a construction pack. Lengths in millimetres.
-
-        Args:
-            pack_id: Id of the construction pack, e.g. "raised_bed".
-            title: Short project title in German, e.g. "Hochbeet am Gartenhaus".
-            params: Pack parameters; omitted parameters use the pack defaults.
-            explanation: The "Warum so?" explanation (see instructions).
-            new_project: Only true if the user explicitly wants another, separate project.
-        """
-        target = _target(ctx, new_project)
-        async with ctx.deps.write_lock:
-            try:
-                if target is not None:
-                    outcome = await ctx.deps.projects.replan(
-                        ctx.deps.owner_id,
-                        target,
-                        pack_id=pack_id,
-                        title=title,
-                        params=params,
-                        actor="agent",
-                        trace_id=ctx.deps.trace_id,
-                    )
-                else:
-                    outcome = await ctx.deps.projects.create(
-                        ctx.deps.owner_id,
-                        pack_id=pack_id,
-                        title=title,
-                        params=params,
-                        actor="agent",
-                        trace_id=ctx.deps.trace_id,
-                    )
-            except ParameterError as exc:
-                return _fail(
-                    ctx,
-                    "parameter_error",
-                    "Ungültige Parameter: " + "; ".join(exc.errors),
-                    exc.errors,
-                )
-            except UnknownPackError:
-                return _fail(ctx, "unknown_pack", f"Unbekanntes Construction Pack '{pack_id}'")
-            await _store_explanation(ctx, outcome.project.id, explanation)
-        ctx.deps.project_id = outcome.project.id
-        ctx.deps.changed_projects.add(outcome.project.id)
-        return {"action": _action(target), "project": project_summary(outcome.project)}
 
     @agent.tool
     async def change_project(ctx: RunContext[AgentDeps], command: AgentCommand) -> dict[str, Any]:
@@ -847,7 +668,7 @@ def build_agent(model: Model, engine: Engine) -> Agent[AgentDeps, str]:
                     actor="agent",
                     trace_id=ctx.deps.trace_id,
                 )
-            except ParameterError as exc:
+            except DesignRejectedError as exc:
                 return _fail(
                     ctx,
                     "parameter_error",

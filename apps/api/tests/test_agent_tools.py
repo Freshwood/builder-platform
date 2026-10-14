@@ -1,10 +1,14 @@
+import asyncio
 import json
+from typing import Any, cast
+from uuid import uuid4
 
 import pytest
+from api_designs import design as offline_design
+from design_fixtures import fixture_design
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from calc_engine.assembly.templates import template
 from calc_engine.catalog import default_catalog
 from homeworking.bootstrap import build_container
 from homeworking.modules.agent.args import _parse_json_string
@@ -49,8 +53,10 @@ async def test_parallel_tool_calls_do_not_conflict(settings: Settings) -> None:
     await container.create_schema()
     try:
         owner = (await container.identity.create_guest()).id
-        created = await container.projects.create(owner, pack_id="raised_bed", title="A", params={})
-        agent = build_agent(FunctionModel(respond), container.engine)
+        created = await container.projects.create(
+            owner, title="A", design=offline_design("raised_bed"), params={}
+        )
+        agent = build_agent(FunctionModel(respond))
         deps = AgentDeps(
             owner_id=owner, projects=container.projects, project_id=created.project.id, trace_id="t"
         )
@@ -70,15 +76,13 @@ async def test_create_stores_explanation_without_extra_round_trip(settings: Sett
         nonlocal requests
         requests += 1
         if requests == 1:
-            assert "Vorlage shelf" in (info.instructions or "")
             return ModelResponse(
                 parts=[
                     ToolCallPart(
-                        "create_from_template",
+                        "save_design",
                         {
-                            "template_key": "shelf",
+                            "design": offline_design("shelf").model_dump(mode="json"),
                             "title": "Regal",
-                            "params": {},
                             "explanation": "Leimholz, stumpf verschraubt.",
                         },
                     )
@@ -90,7 +94,7 @@ async def test_create_stores_explanation_without_extra_round_trip(settings: Sett
     await container.create_schema()
     try:
         owner = (await container.identity.create_guest()).id
-        agent = build_agent(FunctionModel(respond), container.engine)
+        agent = build_agent(FunctionModel(respond))
         deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
         await agent.run("Ein Regal", deps=deps)
         assert requests == 2
@@ -103,7 +107,7 @@ async def test_create_stores_explanation_without_extra_round_trip(settings: Sett
 
 async def test_design_sent_as_json_string_is_accepted(settings: Settings) -> None:
     """Models often serialise the large design argument into a string; it must still validate."""
-    design = template("window_shutter").design.model_dump_json()
+    design = fixture_design("window_shutter").model_dump_json()
     results: list[str] = []
 
     def respond(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
@@ -126,7 +130,7 @@ async def test_design_sent_as_json_string_is_accepted(settings: Settings) -> Non
     await container.create_schema()
     try:
         owner = (await container.identity.create_guest()).id
-        agent = build_agent(FunctionModel(respond), container.engine)
+        agent = build_agent(FunctionModel(respond))
         deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
         await agent.run("Ein Fensterladen", deps=deps)
         assert results == ["tool-return"]
@@ -139,7 +143,7 @@ async def test_design_sent_as_json_string_is_accepted(settings: Settings) -> Non
 
 def test_json_string_with_unbalanced_brackets_is_repaired() -> None:
     """A stray or missing brace at the end of a design string must not cost a retry."""
-    design = template("window_shutter").design.model_dump(mode="json")
+    design = fixture_design("window_shutter").model_dump(mode="json")
     text = json.dumps(design)
     # One brace too many inside the last list (the bug report's case) and one missing at the end.
     stray = text[: text.rindex("]")] + "}" + text[text.rindex("]") :]
@@ -155,44 +159,21 @@ def test_invalid_json_string_names_the_error_position() -> None:
         _parse_json_string('{"a": 1 "b": 2}')
 
 
-async def test_template_can_be_built_untreated_in_pine(settings: Settings) -> None:
-    """'Kiefer, unbehandelt' fits the shutter template: no free design, no finish in the list."""
+def test_the_model_sees_no_packs_or_templates() -> None:
+    """Every project is a one-off design (ADR-0008): no catalogue of ready-made constructions."""
+    seen: list[AgentInfo] = []
 
-    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        if len(messages) == 1:
-            assert "wood=douglas|larch|oak|pine|spruce" in (info.instructions or "")
-            return ModelResponse(
-                parts=[
-                    ToolCallPart(
-                        "create_from_template",
-                        {
-                            "template_key": "window_shutter",
-                            "title": "Fensterladen",
-                            # The flag and use often end up among the params
-                            "params": {
-                                "width_mm": 310,
-                                "height_mm": 380,
-                                "wood": "pine",
-                                "untreated": True,
-                                "use": "outdoor",
-                            },
-                        },
-                    )
-                ]
-            )
-        return ModelResponse(parts=[TextPart("Fertig.")])
+    def capture(_messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        seen.append(info)
+        return ModelResponse(parts=[TextPart("ok")])
 
-    container = build_container(settings)
-    await container.create_schema()
-    try:
-        owner = (await container.identity.create_guest()).id
-        agent = build_agent(FunctionModel(respond), container.engine)
-        deps = AgentDeps(owner_id=owner, projects=container.projects, project_id=None, trace_id="t")
-        await agent.run("Fensterläden aus Kiefer, unbehandelt", deps=deps)
-        assert deps.project_id is not None
-        model = await container.projects.get(owner, deps.project_id)
-        names = [line.name for line in model.result.bom]
-        assert any("Kiefer" in name for name in names)
-        assert not any("öl" in name.lower() or "lasur" in name.lower() for name in names)
-    finally:
-        await container.close()
+    deps = AgentDeps(owner_id=uuid4(), projects=cast(Any, None), project_id=None, trace_id="t")
+    asyncio.run(build_agent(FunctionModel(capture)).run("x", deps=deps))
+    names = {t.name for t in seen[0].function_tools}
+    assert names.isdisjoint(
+        {"create_project", "create_from_template", "get_template_design", "list_construction_packs"}
+    )
+    assert "save_design" in names
+    instructions = seen[0].instructions or ""
+    assert "create_from_template" not in instructions
+    assert "Planbar ohne freien Entwurf" not in instructions

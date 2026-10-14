@@ -3,6 +3,8 @@
 - Status: akzeptiert
 - Datum: 2026-10-02
 - Ergänzt: [ADR-0002](0002-projektmodell-und-command-log.md)
+- Teilweise abgelöst: §5 und §6 durch [ADR-0008](0008-unikate-statt-packs.md) (keine Packs,
+  keine Vorlagen, jedes Projekt ist ein Entwurf)
 
 ## Kontext
 
@@ -41,9 +43,13 @@ reproduzierbar und passen nicht zur Stückliste.
    - `ai_draft` – vom LLM frei erzeugter Entwurf, gekennzeichnet als „KI-Entwurf, nicht fachlich
      geprüft“ (Transparenz nach Art. 50 KI-Verordnung).
    Häufig genutzte KI-Entwürfe können zu Vorlagen und später zu Packs reifen.
+   *Abgelöst durch [ADR-0008](0008-unikate-statt-packs.md): Packs, Vorlagen und `trust`
+   entfallen, jedes Projekt ist ein KI-Entwurf.*
 6. **Vorlagen zuerst.** Der Agent nutzt eine passende Vorlage (`create_from_template`) und passt
    Parameter an; er entwirft frei (`design_project`) nur, wenn keine Vorlage passt. Das spart
    Tokens und erhöht die Qualität.
+   *Abgelöst durch [ADR-0008](0008-unikate-statt-packs.md): Der Agent entwirft jedes Projekt
+   selbst mit `save_design`.*
 7. **Grenzen bleiben:** Keine tragenden Gebäudeteile, Dächer, Carports, Balkone, Treppen,
    Absturzsicherungen, Elektro/Gas. Das Sicherheits-Gate und die Größengrenzen der Engine setzen
    das durch; Ergebnisse bleiben Planungshilfe ohne Standsicherheitsnachweis.

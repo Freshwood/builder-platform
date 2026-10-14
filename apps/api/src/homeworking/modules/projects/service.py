@@ -9,10 +9,9 @@ from uuid import UUID, uuid4
 
 import anyio
 
-from calc_engine.assembly.derive import DESIGN_PACK_ID
-from calc_engine.assembly.templates import template
-from calc_engine.engine import ENGINE_VERSION, Engine, UnknownPackError
-from construction_model.assembly import AssemblyDesign, Support, Use
+from calc_engine.assembly.derive import DESIGN_VERSION
+from calc_engine.engine import ENGINE_VERSION, Engine
+from construction_model.assembly import AssemblyDesign
 from construction_model.commands import (
     Command,
     CommandError,
@@ -93,7 +92,6 @@ class ProjectService:
         seq: int,
         command: Command,
         actor: Actor,
-        pack_id: str,
         trace_id: str | None,
         diff: ModelDiff,
     ) -> CommandRecord:
@@ -102,7 +100,7 @@ class ProjectService:
             command=command,
             actor=actor,
             engine_version=ENGINE_VERSION,
-            pack_version=self._engine.pack_version(pack_id),
+            design_version=DESIGN_VERSION,
             llm_trace_id=trace_id,
             diff=diff,
         )
@@ -111,104 +109,42 @@ class ProjectService:
         self,
         owner_id: UUID,
         *,
-        pack_id: str,
         title: str,
+        design: AssemblyDesign,
         params: dict[str, ParamValue],
         region: Region | None = None,
-        design: AssemblyDesign | None = None,
         actor: Actor = "user",
         trace_id: str | None = None,
     ) -> CommandOutcome:
-        command = CreateProject(
-            pack_id=pack_id, title=title, params=params, region=region, design=design
-        )
-        self._engine.ensure_known(pack_id, design)
+        command = CreateProject(title=title, design=design, params=params, region=region)
         inputs = self._apply(None, command)
         result = await self._build(inputs)
         model = ProjectModel(id=uuid4(), inputs=inputs, result=result)
         diff = diff_results(None, result)
-        await self._repo.add(
-            owner_id, model, self._record(1, command, actor, pack_id, trace_id, diff)
-        )
+        await self._repo.add(owner_id, model, self._record(1, command, actor, trace_id, diff))
         return CommandOutcome(project=model, diff=diff, seq=1, can_undo=False)
-
-    async def create_from_template(
-        self,
-        owner_id: UUID,
-        *,
-        template_key: str,
-        title: str | None = None,
-        params: dict[str, ParamValue] | None = None,
-        region: Region | None = None,
-        untreated: bool = False,
-        use: Use | None = None,
-        support: Support | None = None,
-        replace_project_id: UUID | None = None,
-        actor: Actor = "user",
-        trace_id: str | None = None,
-    ) -> CommandOutcome:
-        """Create a free-form project from a curated design template (ADR-0004).
-
-        ``untreated``, ``use`` and ``support`` adapt the template to the brief (no finish,
-        outdoor, wall mounting); the engine checks the result like any other design. With
-        ``replace_project_id`` the template becomes a new version of that project instead.
-        """
-        try:
-            tpl = template(template_key)
-        except KeyError:
-            raise UnknownPackError(template_key) from None
-        update: dict[str, Any] = {
-            k: v for k, v in {"use": use, "support": support}.items() if v is not None
-        }
-        if untreated:
-            update["finish"] = None
-        design = tpl.design.model_copy(update=update)
-        if replace_project_id is not None:
-            return await self.replan(
-                owner_id,
-                replace_project_id,
-                pack_id=DESIGN_PACK_ID,
-                title=title or tpl.title,
-                params=params or {},
-                design=design,
-                actor=actor,
-                trace_id=trace_id,
-            )
-        return await self.create(
-            owner_id,
-            pack_id=DESIGN_PACK_ID,
-            title=title or tpl.title,
-            params=params or {},
-            region=region,
-            design=design,
-            actor=actor,
-            trace_id=trace_id,
-        )
 
     async def replan(
         self,
         owner_id: UUID,
         project_id: UUID,
         *,
-        pack_id: str,
         title: str,
+        design: AssemblyDesign,
         params: dict[str, ParamValue],
-        design: AssemblyDesign | None = None,
         actor: Actor = "user",
         trace_id: str | None = None,
     ) -> CommandOutcome:
-        """Plan an existing project anew (other pack, template or design) as its next version.
+        """Plan an existing project anew with another design as its next version.
 
         Region, user prices and user notes stay; AI explanations belong to the old construction.
         """
-        self._engine.ensure_known(pack_id, design)
         current = (await self._owned(owner_id, project_id)).model.inputs
         inputs = ProjectInputs(
             title=title,
-            pack_id=pack_id,
+            design=design,
             params=dict(params),
             region=current.region,
-            design=design,
             prices=current.prices,
             notes=[n for n in current.notes if n.origin is not Origin.AI],
         )
@@ -293,9 +229,7 @@ class ProjectService:
         diff = diff_results(old.result, result)
         records = await self._repo.commands(project_id)
         seq = (records[-1].seq if records else 0) + 1
-        await self._repo.append(
-            model, self._record(seq, command, actor, inputs.pack_id, trace_id, diff)
-        )
+        await self._repo.append(model, self._record(seq, command, actor, trace_id, diff))
         undoable = can_undo([*(r.command for r in records), command])
         return CommandOutcome(project=model, diff=diff, seq=seq, can_undo=undoable)
 
@@ -319,9 +253,7 @@ class ProjectService:
         model = stored.model.model_copy(update={"inputs": inputs, "result": result})
         diff = diff_results(stored.model.result, result)
         seq = (records[-1].seq if records else 0) + 1
-        await self._repo.append(
-            model, self._record(seq, Undo(), actor, inputs.pack_id, trace_id, diff)
-        )
+        await self._repo.append(model, self._record(seq, Undo(), actor, trace_id, diff))
         return CommandOutcome(project=model, diff=diff, seq=seq, can_undo=len(effective) > 1)
 
     async def delete(self, owner_id: UUID, project_id: UUID) -> None:
@@ -341,7 +273,7 @@ class ProjectService:
                     "seq": r.seq,
                     "actor": r.actor,
                     "engine_version": r.engine_version,
-                    "pack_version": r.pack_version,
+                    "design_version": r.design_version,
                     "llm_trace_id": r.llm_trace_id,
                     "created_at": r.created_at.isoformat() if r.created_at else None,
                     "command": command_adapter.dump_python(r.command, mode="json"),

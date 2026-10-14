@@ -21,9 +21,9 @@ from calc_engine.assembly.resolve import (
     substitute,
 )
 from calc_engine.assembly.sheets import plan_sheets
+from calc_engine.build import Build
 from calc_engine.catalog import BomBuilder, Catalog, CatalogItem, money, sum_money
 from calc_engine.cutting import plan_cuts
-from calc_engine.pack import PackBuild
 from construction_model.assembly import AssemblyDesign
 from construction_model.model import (
     BomLine,
@@ -44,8 +44,8 @@ from construction_model.model import (
     Tool,
 )
 
-DESIGN_PACK_ID = "design"
-DESIGN_PACK_VERSION = "1.1.0"
+DESIGN_VERSION = "1.1.0"
+# Unchanged since the pack era so that part GUIDs of stored projects stay stable.
 _GUID_NS = uuid5(NAMESPACE_URL, "https://homeworking.example/packs/design")
 SCREW_SPACING_MM = 250
 SCREW_RESERVE = Decimal("1.1")
@@ -817,9 +817,7 @@ def _instructions(
     return steps
 
 
-def build_design(
-    design: AssemblyDesign, params: dict[str, ParamValue], catalog: Catalog
-) -> PackBuild:
+def build_design(design: AssemblyDesign, params: dict[str, ParamValue], catalog: Catalog) -> Build:
     """Build everything for a design with validated, effective parameters."""
     parts = resolve_parts(design, params)
     checked = check_design(design, parts, catalog)
@@ -1022,27 +1020,18 @@ def build_design(
         [money(catalog.tool(t).price_min, catalog.tool(t).price_max) for t in tool_ids]
     )
 
-    notices: list[Notice] = []
-    if design.origin == Origin.AI:
-        notices.append(
-            Notice(
-                code="AI_DRAFT",
-                severity=Severity.WARNING,
-                message=(
-                    "KI-Entwurf: Die Konstruktion hat eine KI vorgeschlagen; sie ist nicht "
-                    "fachlich geprüft. Mengen, Kosten und Zeichnungen berechnet die Engine aus dem "
-                    "Entwurf – prüfe Stabilität und Verbindungen vor dem Bau."
-                ),
-            )
+    # Every project is a one-off AI design (ADR-0008); there are no curated templates any more.
+    notices: list[Notice] = [
+        Notice(
+            code="AI_DRAFT",
+            severity=Severity.WARNING,
+            message=(
+                "KI-Entwurf: Die Konstruktion hat eine KI vorgeschlagen; sie ist nicht "
+                "fachlich geprüft. Mengen, Kosten und Zeichnungen berechnet die Engine aus dem "
+                "Entwurf – prüfe Stabilität und Verbindungen vor dem Bau."
+            ),
         )
-    else:
-        notices.append(
-            Notice(
-                code="TEMPLATE",
-                severity=Severity.INFO,
-                message="Vorlage: Konstruktion aus der Homeworking-Vorlagensammlung, an deine Maße angepasst.",
-            )
-        )
+    ]
     for index, message in enumerate(warnings):
         notices.append(
             Notice(code=f"CHECK_{index + 1}", severity=Severity.WARNING, message=message)
@@ -1128,7 +1117,7 @@ def build_design(
                 build_template(box, number, info.part.name, _tone(info, catalog), legend)
             )
 
-    return PackBuild(
+    return Build(
         summary=summary,
         key_figures=key_figures,
         components=components,
@@ -1228,4 +1217,4 @@ def _material_label(info: PartInfo, catalog: Catalog) -> str:
     return material.label if material else info.item.name
 
 
-__all__ = ["DESIGN_PACK_ID", "DESIGN_PACK_VERSION", "build_design", "check_design"]
+__all__ = ["DESIGN_VERSION", "build_design", "check_design"]

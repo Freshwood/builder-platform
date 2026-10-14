@@ -28,7 +28,12 @@ Agent-Lauf, mit fester Antwortvorlage.
 4. Arbeitsschutz: Schutzbrille, Gehörschutz und Handschuhe bei Maschinenarbeit. Die Hinweise der
    Werkzeughersteller beachten.
 
-## Fachspezifische Regeln: Hochbeet (Pack `raised_bed`)
+## Fachspezifische Regeln: Hochbeet
+
+Bis ADR-0008 setzte das Pack `raised_bed` diese Regeln durch. Heute entwirft die KI jedes
+Hochbeet selbst; die Regeln gehören als Engine-Prüfungen bzw. Hinweise ins Entwurfsformat
+(offen, siehe ROADMAP).
+
 
 - Bei Nutzpflanzen kein kesseldruckimprägniertes oder chemisch behandeltes Holz. Empfohlen: Lärche,
   Douglasie, ggf. thermisch modifiziertes Holz.

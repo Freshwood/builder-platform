@@ -1,7 +1,7 @@
 """Intent check: a built construction must match what the user asked for.
 
 Every rule of ``calc_engine.assembly.intent`` has a passing and a failing case, built through the
-real engine from the shipped templates and from the podium of docs/problems/bug.md. No LLM, no
+real engine from the fixture designs and from the podium of docs/problems/bug.md. No LLM, no
 network. The podium is the motivating case: it passes every corpus invariant and still can be
 too big or have no walkable top.
 """
@@ -20,6 +20,8 @@ from pydantic import ValidationError
 # --import-mode=importlib does not add this directory to sys.path (see corpus.py).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from design_fixtures import fixture_design, fixture_designs
+
 from calc_engine.assembly.intent import (
     FEATURE_PARAMS,
     Expectation,
@@ -29,7 +31,6 @@ from calc_engine.assembly.intent import (
     solid_bounds,
     view_consistency,
 )
-from calc_engine.assembly.templates import templates
 from calc_engine.engine import default_engine
 from construction_model.assembly import AssemblyDesign
 from construction_model.drawing import Dimension
@@ -57,12 +58,12 @@ def build(
 ) -> tuple[ProjectInputs, ConstructionResult]:
     if isinstance(design, dict):
         design = AssemblyDesign.model_validate(design)
-    inputs = ProjectInputs(title="t", pack_id="design", params=params, design=design)
+    inputs = ProjectInputs(title="t", params=params, design=design)
     return inputs, ENGINE.build(inputs)
 
 
-def template_build(key: str, **params: Any) -> tuple[ProjectInputs, ConstructionResult]:
-    return build(templates()[key].design, **params)
+def fixture_build(key: str, **params: Any) -> tuple[ProjectInputs, ConstructionResult]:
+    return build(fixture_design(key), **params)
 
 
 def check(
@@ -150,14 +151,14 @@ def test_a_bad_expectation_fails_at_load_time_with_a_clear_message(
 
 
 def test_an_empty_expectation_is_always_met() -> None:
-    assert check(template_build("shelf"), {}) == []
+    assert check(fixture_build("shelf"), {}) == []
 
 
 # --------------------------------------------------------------------------------------------
 # Envelope
 # --------------------------------------------------------------------------------------------
 
-# Workbench template: 1500 x 650 x 900 mm (length x width x height).
+# Workbench fixture: 1500 x 650 x 900 mm (length x width x height).
 
 
 @pytest.mark.parametrize(
@@ -172,7 +173,7 @@ def test_an_empty_expectation_is_always_met() -> None:
     ],
 )
 def test_envelope_limits(field: str, ok: int, too_tight: int) -> None:
-    built = template_build("workbench")
+    built = fixture_build("workbench")
     assert check(built, {"envelope": {field: ok}}) == []
     found = check(built, {"envelope": {field: too_tight}})
     assert rules(found) == [f"envelope.{field.removesuffix('_mm')}"]
@@ -181,7 +182,7 @@ def test_envelope_limits(field: str, ok: int, too_tight: int) -> None:
 
 def test_envelope_length_is_the_longer_side_whatever_the_orientation() -> None:
     """Depth 900 is longer than width 850 here: 'length' is the longer side, not the x axis."""
-    deep = template_build("workbench", width_mm=850, depth_mm=900)
+    deep = fixture_build("workbench", width_mm=850, depth_mm=900)
     assert check(deep, {"envelope": {"max_length_mm": 900, "max_width_mm": 850}}) == []
     found = check(deep, {"envelope": {"max_length_mm": 880}})
     assert rules(found) == ["envelope.max_length"]
@@ -189,7 +190,7 @@ def test_envelope_length_is_the_longer_side_whatever_the_orientation() -> None:
 
 
 def test_envelope_accepts_rounding_noise_but_not_a_real_overrun() -> None:
-    built = template_build("workbench", width_mm=1500)
+    built = fixture_build("workbench", width_mm=1500)
     assert check(built, {"envelope": {"max_length_mm": 1499.6}}) == []
     assert check(built, {"envelope": {"max_length_mm": 1499}}) != []
 
@@ -228,7 +229,7 @@ def test_envelope_counts_rotated_parts() -> None:
 
 
 def test_envelope_without_solids_cannot_be_checked() -> None:
-    inputs, result = template_build("shelf")
+    inputs, result = fixture_build("shelf")
     empty = result.model_copy(update={"solids": []})
     found = evaluate(inputs, empty, Expectation.model_validate({"envelope": {"max_length_mm": 1}}))
     assert rules(found) == ["envelope"]
@@ -240,7 +241,7 @@ def test_envelope_without_solids_cannot_be_checked() -> None:
 
 
 def test_use_and_support() -> None:
-    shutter = template_build("window_shutter")  # outdoor, wall
+    shutter = fixture_build("window_shutter")  # outdoor, wall
     assert check(shutter, {"use": "outdoor", "support": "wall"}) == []
     found = check(shutter, {"use": "indoor", "support": "floor"})
     assert rules(found) == ["use", "support"]
@@ -248,17 +249,9 @@ def test_use_and_support() -> None:
     assert "'wall'" in found[1].detail
 
 
-def test_use_and_support_are_only_known_for_free_form_designs() -> None:
-    inputs = ProjectInputs(title="t", pack_id="raised_bed", params={})
-    result = ENGINE.build(inputs)
-    found = evaluate(inputs, result, Expectation(use="outdoor"), ENGINE)
-    assert rules(found) == ["use"]
-    assert "raised_bed" in found[0].detail
-
-
 def test_materials_any_wants_a_part_of_that_material() -> None:
-    larch = template_build("garden_bench", wood="larch")
-    douglas = template_build("garden_bench", wood="douglas")
+    larch = fixture_build("garden_bench", wood="larch")
+    douglas = fixture_build("garden_bench", wood="douglas")
     assert check(larch, {"materials_any": ["larch"]}) == []
     assert check(douglas, {"materials_any": ["larch", "oak"]}) != []
     assert check(douglas, {"materials_any": ["larch", "douglas"]}) == []
@@ -270,14 +263,14 @@ def test_materials_any_wants_a_part_of_that_material() -> None:
 
 def test_materials_none_excludes_a_material_such_as_squared_timber() -> None:
     """'Boards, not squared timber': catalog ids of squared timber start with 'square_'."""
-    assert check(template_build("shelf"), {"materials_none": ["square_"]}) == []
-    found = check(template_build("workbench"), {"materials_none": ["square_"]})
+    assert check(fixture_build("shelf"), {"materials_none": ["square_"]}) == []
+    found = check(fixture_build("workbench"), {"materials_none": ["square_"]})
     assert rules(found) == ["materials_none"]
     assert "square_spruce_70x70" in found[0].detail
 
 
 def test_parts_count_limits() -> None:
-    built = template_build("shelf")  # 8 components
+    built = fixture_build("shelf")  # 8 components
     assert len(built[1].components) == 8
     assert check(built, {"parts": {"min": 8, "max": 8}}) == []
     assert rules(check(built, {"parts": {"min": 9}})) == ["parts.min"]
@@ -290,20 +283,20 @@ def test_parts_count_limits() -> None:
 
 
 def test_walkable_top_passes_for_a_full_surface() -> None:
-    assert check(template_build("workbench"), {"features": ["walkable_top"]}) == []
+    assert check(fixture_build("workbench"), {"features": ["walkable_top"]}) == []
     assert check(build(_corpus_podium(), surface="panel"), {"features": ["walkable_top"]}) == []
     assert check(build(_corpus_podium(), surface="boards"), {"features": ["walkable_top"]}) == []
 
 
 def test_walkable_top_fails_when_a_back_wall_stands_above_the_surface() -> None:
     """The cloud shelf's base plate covers its footprint, but the cloud rises above it."""
-    found = check(template_build("cloud_shelf"), {"features": ["walkable_top"]})
+    found = check(fixture_build("cloud_shelf"), {"features": ["walkable_top"]})
     assert rules(found) == ["feature.walkable_top"]
     assert "oberste" in found[0].detail
 
 
 def test_walkable_top_fails_when_no_level_covers_enough() -> None:
-    cloud = template_build("cloud_shelf")  # each shelf covers about 53 % of the footprint
+    cloud = fixture_build("cloud_shelf")  # each shelf covers about 53 % of the footprint
     found = check(cloud, {"features": [{"walkable_top": {"min_height_mm": 100}}]})
     assert rules(found) == ["feature.walkable_top"]
     assert "Grundfläche" in found[0].detail
@@ -334,7 +327,7 @@ def test_walkable_top_coverage_parameter() -> None:
 
 
 def test_walkable_top_height_range() -> None:
-    workbench = template_build("workbench")  # top at 900, lower shelf top at 237
+    workbench = fixture_build("workbench")  # top at 900, lower shelf top at 237
     in_range = {"walkable_top": {"min_height_mm": 850, "max_height_mm": 950}}
     assert check(workbench, {"features": [in_range]}) == []
     too_high = {"walkable_top": {"min_height_mm": 1000}}
@@ -345,7 +338,7 @@ def test_walkable_top_height_range() -> None:
 
 def test_walkable_top_must_be_the_top_unless_allowed_otherwise() -> None:
     """A bench seat is covered, but the backrest stands above it."""
-    bench = template_build("garden_bench")
+    bench = fixture_build("garden_bench")
     seat = {"min_coverage": 0.8, "max_height_mm": 460}
     found = check(bench, {"features": [{"walkable_top": seat}]})
     assert rules(found) == ["feature.walkable_top"]
@@ -357,11 +350,11 @@ def test_choice_param_passes_when_every_option_builds_and_fits() -> None:
     built = build(_corpus_podium())
     assert check(built, PODIUM_EXPECTATION) == []
     assert (
-        check(template_build("garden_bench"), {"features": ["choice_param:wood=douglas|larch"]})
+        check(fixture_build("garden_bench"), {"features": ["choice_param:wood=douglas|larch"]})
         == []
     )
     mapping = {"choice_param": {"name": "wood", "values": ["oak", "pine"]}}
-    assert check(template_build("window_shutter"), {"features": [mapping]}) == []
+    assert check(fixture_build("window_shutter"), {"features": [mapping]}) == []
 
 
 @pytest.mark.parametrize(
@@ -443,40 +436,40 @@ def test_corpus_podium_is_exactly_as_wide_as_requested_for_every_width() -> None
 
 
 def test_hinged_doors() -> None:
-    shutter = template_build("window_shutter")  # two wings, four hinges
+    shutter = fixture_build("window_shutter")  # two wings, four hinges
     assert check(shutter, {"features": ["hinged_doors"]}) == []
     assert check(shutter, {"features": [{"hinged_doors": {"wings": 2, "min_hinges": 2}}]}) == []
-    one_wing = template_build("window_shutter", wings=1)
+    one_wing = fixture_build("window_shutter", wings=1)
     assert check(one_wing, {"features": ["hinged_doors"]}) == []
 
 
 def test_hinged_doors_fails_with_too_few_hinges() -> None:
-    shutter = template_build("window_shutter")
+    shutter = fixture_build("window_shutter")
     found = check(shutter, {"features": [{"hinged_doors": {"wings": 3}}]})
     assert rules(found) == ["feature.hinged_doors"]
     assert "4 Scharniere für 3 Flügel" in found[0].detail
     assert check(shutter, {"features": [{"hinged_doors": {"min_hinges": 3}}]}) != []
-    found = check(template_build("workbench"), {"features": ["hinged_doors"]})
+    found = check(fixture_build("workbench"), {"features": ["hinged_doors"]})
     assert "0 Scharniere" in found[0].detail
 
 
 def test_standing_stable() -> None:
-    assert check(template_build("workbench"), {"features": ["standing_stable"]}) == []
-    assert check(template_build("garden_bench"), {"features": ["standing_stable"]}) == []
+    assert check(fixture_build("workbench"), {"features": ["standing_stable"]}) == []
+    assert check(fixture_build("garden_bench"), {"features": ["standing_stable"]}) == []
     assert check(build(_corpus_podium()), {"features": ["standing_stable"]}) == []
-    # Tall and narrow, but anchored to the wall by the template's tip-over kit.
-    tall = template_build("shelf", width_mm=400, depth_mm=200, height_mm=2000)
+    # Tall and narrow, but anchored to the wall by the design's tip-over kit.
+    tall = fixture_build("shelf", width_mm=400, depth_mm=200, height_mm=2000)
     assert check(tall, {"features": ["standing_stable"]}) == []
 
 
 def test_standing_stable_fails_for_wall_mounted_objects() -> None:
-    found = check(template_build("window_shutter"), {"features": ["standing_stable"]})
+    found = check(fixture_build("window_shutter"), {"features": ["standing_stable"]})
     assert rules(found) == ["feature.standing_stable"]
     assert "wandmontiert" in found[0].detail
 
 
 def test_standing_stable_ratio_parameter() -> None:
-    workbench = template_build("workbench")  # 900 high on 650 deep: ratio 1.4
+    workbench = fixture_build("workbench")  # 900 high on 650 deep: ratio 1.4
     assert check(workbench, {"features": [{"standing_stable": {"max_height_ratio": 1.5}}]}) == []
     found = check(workbench, {"features": [{"standing_stable": {"max_height_ratio": 1.0}}]})
     assert rules(found) == ["feature.standing_stable"]
@@ -512,17 +505,17 @@ def test_standing_stable_fails_when_the_weight_overhangs_the_feet() -> None:
 
 
 def test_levels() -> None:
-    shelf = template_build("shelf")  # five shelves
+    shelf = fixture_build("shelf")  # five shelves
     assert check(shelf, {"features": [{"levels": {"min": 5}}]}) == []
     found = check(shelf, {"features": [{"levels": {"min": 6}}]})
     assert rules(found) == ["feature.levels"]
     assert "5 Ebenen" in found[0].detail
-    assert check(template_build("workbench"), {"features": [{"levels": {"min": 2}}]}) == []
+    assert check(fixture_build("workbench"), {"features": [{"levels": {"min": 2}}]}) == []
 
 
 def test_contoured() -> None:
-    assert check(template_build("cloud_shelf"), {"features": ["contoured"]}) == []
-    found = check(template_build("workbench"), {"features": ["contoured"]})
+    assert check(fixture_build("cloud_shelf"), {"features": ["contoured"]}) == []
+    found = check(fixture_build("workbench"), {"features": ["contoured"]})
     assert rules(found) == ["feature.contoured"]
     assert "0 Bauteile mit Kontur" in found[0].detail
 
@@ -561,20 +554,18 @@ def test_corpus_podium_with_a_panel_top_meets_the_bug_report() -> None:
 # --------------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("key", sorted(templates()))
-def test_views_of_every_template_are_consistent(key: str) -> None:
-    assert view_consistency(template_build(key)[1]) == []
+@pytest.mark.parametrize("key", sorted(fixture_designs()))
+def test_views_of_every_fixture_design_are_consistent(key: str) -> None:
+    assert view_consistency(fixture_build(key)[1]) == []
 
 
-def test_views_of_the_podium_and_a_pack_are_consistent() -> None:
+def test_views_of_the_podium_are_consistent() -> None:
     assert view_consistency(build(_corpus_podium())[1]) == []
     assert view_consistency(build(_corpus_podium(), surface="panel")[1]) == []
-    pack = ENGINE.build(ProjectInputs(title="t", pack_id="raised_bed", params={}))
-    assert view_consistency(pack) == []
 
 
 def test_solid_bounds_match_the_drawn_extent_of_a_meshed_part() -> None:
-    result = template_build("cloud_shelf")[1]
+    result = fixture_build("cloud_shelf")[1]
     assert any(s.mesh is not None for s in result.solids)
     lo, hi = solid_bounds(next(s for s in result.solids if s.mesh is not None))
     assert hi[0] - lo[0] == pytest.approx(750, abs=1)
@@ -602,7 +593,7 @@ def _tamper(
 
 
 def test_view_consistency_catches_a_changed_overall_width() -> None:
-    result = template_build("workbench")[1]
+    result = fixture_build("workbench")[1]
     assert view_consistency(result) == []
     tampered = _tamper(result, "front", 0, text="1400")
     found = view_consistency(tampered)
@@ -614,7 +605,7 @@ def test_view_consistency_catches_a_changed_overall_width() -> None:
 
 
 def test_view_consistency_catches_views_that_disagree_with_each_other() -> None:
-    result = template_build("workbench")[1]
+    result = fixture_build("workbench")[1]
     # Plan and front both lose 100 mm of width, so each equals the other but not the solids ...
     tampered = _tamper(_tamper(result, "front", 0, text="1400"), "plan", 0, text="1400")
     found = view_consistency(tampered)
@@ -630,7 +621,7 @@ def test_view_consistency_catches_views_that_disagree_with_each_other() -> None:
 
 
 def test_view_consistency_catches_a_dimension_line_that_does_not_match_its_text() -> None:
-    result = template_build("workbench")[1]
+    result = fixture_build("workbench")[1]
     tampered = _tamper(result, "plan", 1, y1=-10.0)
     found = view_consistency(tampered)
     assert rules(found) == ["view.dimension_line"]
@@ -638,20 +629,20 @@ def test_view_consistency_catches_a_dimension_line_that_does_not_match_its_text(
 
 
 def test_view_consistency_catches_a_broken_level_chain() -> None:
-    result = template_build("workbench")[1]
+    result = fixture_build("workbench")[1]
     tampered = _tamper(result, "front", 2, text="500")
     found = view_consistency(tampered)
     assert rules(found) == ["view.chain"]
 
 
 def test_view_consistency_catches_a_text_that_is_not_a_number() -> None:
-    result = template_build("workbench")[1]
+    result = fixture_build("workbench")[1]
     found = view_consistency(_tamper(result, "side", 0, text="ca. 650"))
     assert "view.dimensions" in rules(found)
 
 
 def test_view_consistency_catches_a_description_with_the_wrong_size() -> None:
-    result = template_build("workbench")[1]
+    result = fixture_build("workbench")[1]
     drawings = [
         d.model_copy(update={"description": d.description.replace("1500 ×", "1450 ×")})
         for d in result.drawings
@@ -661,7 +652,7 @@ def test_view_consistency_catches_a_description_with_the_wrong_size() -> None:
 
 
 def test_view_consistency_catches_solids_that_changed_after_drawing() -> None:
-    result = template_build("workbench")[1]
+    result = fixture_build("workbench")[1]
     solids = [
         s.model_copy(update={"size": (s.size[0] + 100, *s.size[1:])})
         if s.part_id == "top[0]"
@@ -674,5 +665,5 @@ def test_view_consistency_catches_solids_that_changed_after_drawing() -> None:
 
 
 def test_view_consistency_without_solids_says_so() -> None:
-    result = template_build("shelf")[1].model_copy(update={"solids": []})
+    result = fixture_build("shelf")[1].model_copy(update={"solids": []})
     assert rules(view_consistency(result)) == ["view.solids"]

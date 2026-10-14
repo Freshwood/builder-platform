@@ -83,11 +83,8 @@ def _params(result: ConstructionResult) -> list[tuple[str, str]]:
     ]
 
 
-TRUST_LABELS = {
-    "pack": "Geprüftes Construction Pack",
-    "template": "Vorlage aus der Homeworking-Sammlung",
-    "ai_draft": "KI-Entwurf – Konstruktion nicht fachlich geprüft",
-}
+# Every project is a one-off AI design that the engine has checked (ADR-0008).
+DESIGN_LABEL = "KI-Entwurf, von der Engine geprüft – Konstruktion nicht fachlich geprüft"
 
 
 def render_html(project: ProjectModel, *, now: datetime | None = None) -> str:
@@ -111,12 +108,8 @@ def render_html(project: ProjectModel, *, now: datetime | None = None) -> str:
         drawings=drawings,
         ai_notes=ai_notes,
         ai_label=AI_CONTENT_LABEL,
-        ai_keyword=(
-            "AI-generated text: yes"
-            if ai_notes or result.trust == "ai_draft"
-            else "AI-generated text: no"
-        ),
-        trust_label=TRUST_LABELS[result.trust],
+        ai_keyword="AI-generated text: yes",
+        design_label=DESIGN_LABEL,
         ai_statement=AI_DOCUMENT_STATEMENT,
         document_notices=DOCUMENT_NOTICES,
         notices_version=NOTICES_VERSION,

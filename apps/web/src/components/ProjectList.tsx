@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Icon, buttonClass, relativeTime } from "@/components/ui";
 import { useProjects } from "@/lib/api";
 
-// Free designs and templates have an isometric view, packs at least a front view.
+// Designs have an isometric view; the front view is the fallback.
 const THUMB_VIEWS = ["iso", "front"];
 
 /** Drawing of a project as a thumbnail, falling back to an icon when no view exists. */

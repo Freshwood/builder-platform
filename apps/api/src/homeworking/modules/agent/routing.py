@@ -1,8 +1,9 @@
 """Pick the model for a chat turn (ADR-0006), deterministically and without an extra LLM call.
 
 Free-form designs are the hard part: long structured JSON, geometry, repair rounds. They stay on
-the designer model. Turns that only pick a template, change parameters, prices or variants,
-undo, or ask about the project are routine tool calls; a fast, cheaper model handles them.
+the designer model, and every new project is a design (ADR-0008). Turns that only change
+parameters, prices or variants, undo, or ask about the project are routine tool calls; a fast,
+cheaper model handles them.
 When in doubt the designer is used: a wrong "fast" decision costs quality, a wrong "designer"
 decision only costs money.
 """
@@ -13,13 +14,13 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-from homeworking.modules.agent.offline import _DELTA, _VARIANTS, _match_template
+from homeworking.modules.agent.offline import _DELTA, _VARIANTS
 
 Role = Literal["designer", "fast"]
 
-ROUTING_VERSION = "1"
+ROUTING_VERSION = "2"
 
-# Words that ask for a new or changed construction (beyond template parameters).
+# Words that ask for a new or changed construction (beyond parameters).
 _STRUCTURAL = re.compile(
     r"entw(?:u|ü|ue)rf|konstru|umbau|bau(?:e|t)?\s+(?:mir|eine?n?)\b.*\b(?:mit|ohne)\b|"
     r"zus(?:ä|ae)tzlich|schublade|klappe|t(?:ü|ue)r(?:en)?\b|fach\b|f(?:ä|ae)cher|"
@@ -64,6 +65,4 @@ def route(text: str, *, has_project: bool) -> Route:
             return Route("fast", "parameters")
         if _QUESTION.search(lowered):
             return Route("fast", "question")
-    if "hochbeet" in lowered or _match_template(lowered) is not None:
-        return Route("fast", "pack_or_template")
     return Route("designer", "default")

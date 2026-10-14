@@ -99,7 +99,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from calc_engine.engine import Engine, ParameterError, default_engine
+from calc_engine.engine import DesignRejectedError, Engine, default_engine
 from construction_model.assembly import Support, Use
 from construction_model.drawing import Dimension
 from construction_model.model import ConstructionResult, ProjectInputs, Solid
@@ -426,14 +426,6 @@ def _envelope(result: ConstructionResult, env: Envelope) -> list[Violation]:
 
 
 def _declared(inputs: ProjectInputs, field: str, wanted: str, label: str) -> list[Violation]:
-    if inputs.design is None:
-        return [
-            Violation(
-                field,
-                f"{label} ist nur bei freien Entwürfen prüfbar; dieses Projekt nutzt das Paket "
-                f"'{inputs.pack_id}'",
-            )
-        ]
     actual = getattr(inputs.design, field)
     if actual != wanted:
         return [Violation(field, f"{label} ist '{actual}', gewünscht war '{wanted}'")]
@@ -765,7 +757,7 @@ def _choice_param(
         variant = inputs.model_copy(update={"params": {**inputs.params, p.name: value}})
         try:
             built = engine.build(variant)
-        except ParameterError as error:
+        except DesignRejectedError as error:
             found.append(
                 Violation(
                     rule, f"{p.name}={value} lässt sich nicht bauen: {'; '.join(error.errors)}"
@@ -797,9 +789,7 @@ def view_consistency(result: ConstructionResult) -> list[Violation]:
 
     * each overall dimension text equals the solids' bounding box extent on that axis,
     * the dimension line's own coordinates span the same length as its text,
-    * for designs, the level chain adds up to the overall height of the solids (pack drawings
-      are drawn by hand and use their own dimension layout, so only their overall dimensions
-      are checked),
+    * the level chain adds up to the overall height of the solids,
     * the same axis reads the same in every view (width in front = width in plan, ...),
     * the size in each view description and in the key figure ``Außenmaße`` agrees.
 
@@ -812,15 +802,11 @@ def view_consistency(result: ConstructionResult) -> list[Violation]:
     extent = _extents(box)
     found: list[Violation] = []
     printed: dict[int, list[tuple[str, float]]] = {0: [], 1: [], 2: []}
-    # Hand-drawn pack views (raised bed) put other dimensions after the overall ones.
-    chained = result.trust != "pack"
 
     for drawing in result.drawings:
         axes = ORTHOGRAPHIC_AXES.get(drawing.view)
         if axes is not None:
-            found += _check_ortho_view(
-                drawing.view, drawing.primitives, axes, extent, box, printed, chained
-            )
+            found += _check_ortho_view(drawing.view, drawing.primitives, axes, extent, box, printed)
         match = _SIZE_IN_TEXT.search(drawing.description)
         if match and not drawing.view.startswith("template_"):
             stated = tuple(float(g) for g in match.groups())
@@ -872,7 +858,6 @@ def _check_ortho_view(
     extent: Vec,
     box: tuple[Vec, Vec],
     printed: dict[int, list[tuple[str, float]]],
-    chained: bool,
 ) -> list[Violation]:
     dims = [p for p in primitives if isinstance(p, Dimension)]
     if len(dims) < 2:
@@ -907,7 +892,7 @@ def _check_ortho_view(
                     f"mit {dim.text} mm",
                 )
             )
-    chain = dims[2:] if chained else []
+    chain = dims[2:]
     if chain:
         values = [_dimension_value(d.text) for d in chain]
         if any(v is None for v in values):

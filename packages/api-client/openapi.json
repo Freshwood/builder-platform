@@ -73,56 +73,6 @@
         }
       }
     },
-    "/api/packs": {
-      "get": {
-        "tags": [
-          "projects"
-        ],
-        "summary": "List Packs",
-        "operationId": "list_packs",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/PackDescriptor"
-                  },
-                  "type": "array",
-                  "title": "Response List Packs"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/templates": {
-      "get": {
-        "tags": [
-          "projects"
-        ],
-        "summary": "List Templates",
-        "operationId": "list_templates",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/TemplateEntry"
-                  },
-                  "type": "array",
-                  "title": "Response List Templates"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/projects": {
       "get": {
         "tags": [
@@ -1399,16 +1349,6 @@
           "provenance": {
             "$ref": "#/components/schemas/Provenance"
           },
-          "trust": {
-            "type": "string",
-            "enum": [
-              "pack",
-              "template",
-              "ai_draft"
-            ],
-            "title": "Trust",
-            "default": "pack"
-          },
           "param_specs": {
             "items": {
               "$ref": "#/components/schemas/ParamSpec"
@@ -1487,16 +1427,15 @@
       },
       "CreateProjectRequest": {
         "properties": {
-          "pack_id": {
-            "type": "string",
-            "title": "Pack Id",
-            "description": "Construction pack id, 'design' for a free-form design or 'template'"
-          },
           "title": {
             "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Title"
+          },
+          "design": {
+            "$ref": "#/components/schemas/AssemblyDesign",
+            "description": "The one-off design of this project (ADR-0008)"
           },
           "params": {
             "additionalProperties": {
@@ -1527,35 +1466,12 @@
                 "type": "null"
               }
             ]
-          },
-          "design": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AssemblyDesign"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Required for pack_id 'design'"
-          },
-          "template_key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Template Key",
-            "description": "Required for pack_id 'template'"
           }
         },
         "type": "object",
         "required": [
-          "pack_id",
-          "title"
+          "title",
+          "design"
         ],
         "title": "CreateProjectRequest"
       },
@@ -2593,45 +2509,6 @@
         "title": "Origin",
         "description": "Who produced a piece of content (relevant for AI Act Art. 50 labelling)."
       },
-      "PackDescriptor": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "version": {
-            "type": "string",
-            "title": "Version"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description"
-          },
-          "example_prompt": {
-            "type": "string",
-            "title": "Example Prompt"
-          },
-          "params_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Params Schema"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "version",
-          "title",
-          "description",
-          "example_prompt",
-          "params_schema"
-        ],
-        "title": "PackDescriptor"
-      },
       "ParamSpec": {
         "properties": {
           "name": {
@@ -2692,7 +2569,7 @@
           "kind"
         ],
         "title": "ParamSpec",
-        "description": "UI metadata of an adjustable parameter (packs and designs alike)."
+        "description": "UI metadata of an adjustable parameter of the design."
       },
       "PartSpec": {
         "properties": {
@@ -3136,9 +3013,9 @@
             "type": "string",
             "title": "Title"
           },
-          "pack_id": {
-            "type": "string",
-            "title": "Pack Id"
+          "design": {
+            "$ref": "#/components/schemas/AssemblyDesign",
+            "description": "Free-form parametric design; every project is a one-off (ADR-0004, ADR-0008)"
           },
           "params": {
             "additionalProperties": {
@@ -3196,24 +3073,13 @@
             "type": "object",
             "title": "Prices",
             "description": "Unit prices in EUR entered by the user, keyed by BOM item id"
-          },
-          "design": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AssemblyDesign"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Free-form parametric design (pack_id 'design', ADR-0004)"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "title",
-          "pack_id",
+          "design",
           "params"
         ],
         "title": "ProjectInputs",
@@ -3229,10 +3095,6 @@
           "title": {
             "type": "string",
             "title": "Title"
-          },
-          "pack_id": {
-            "type": "string",
-            "title": "Pack Id"
           },
           "summary": {
             "type": "string",
@@ -3255,7 +3117,6 @@
         "required": [
           "id",
           "title",
-          "pack_id",
           "summary",
           "updated_at"
         ],
@@ -3265,9 +3126,9 @@
         "properties": {
           "schema_version": {
             "type": "integer",
-            "const": 1,
+            "const": 2,
             "title": "Schema Version",
-            "default": 1
+            "default": 2
           },
           "id": {
             "type": "string",
@@ -3320,13 +3181,9 @@
             "type": "string",
             "title": "Engine Version"
           },
-          "pack_id": {
+          "design_version": {
             "type": "string",
-            "title": "Pack Id"
-          },
-          "pack_version": {
-            "type": "string",
-            "title": "Pack Version"
+            "title": "Design Version"
           },
           "catalog_version": {
             "type": "string",
@@ -3353,8 +3210,7 @@
         "type": "object",
         "required": [
           "engine_version",
-          "pack_id",
-          "pack_version",
+          "design_version",
           "catalog_version",
           "catalog_as_of",
           "rules",
@@ -4085,29 +3941,6 @@
           "membrane"
         ],
         "title": "Stroke"
-      },
-      "TemplateEntry": {
-        "properties": {
-          "key": {
-            "type": "string",
-            "title": "Key"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description"
-          }
-        },
-        "type": "object",
-        "required": [
-          "key",
-          "title",
-          "description"
-        ],
-        "title": "TemplateEntry"
       },
       "Tool": {
         "properties": {

@@ -19,7 +19,6 @@ from uuid import uuid4
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from calc_engine.engine import Engine
 from homeworking.modules.agent.prompts import PROMPT_VERSION
 from homeworking.modules.agent.routing import ROUTING_VERSION
 from homeworking.modules.agent.tools import AgentDeps, build_agent
@@ -45,7 +44,7 @@ class PromptSpec:
         return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
-async def prompt_spec(engine: Engine) -> PromptSpec:
+async def prompt_spec() -> PromptSpec:
     """Capture instructions and tool definitions exactly as a model request would carry them."""
     captured: list[AgentInfo] = []
 
@@ -55,7 +54,7 @@ async def prompt_spec(engine: Engine) -> PromptSpec:
 
     # No tool is called, so the deps are never used.
     deps = AgentDeps(owner_id=uuid4(), projects=cast(Any, None), project_id=None, trace_id="spec")
-    await build_agent(FunctionModel(capture), engine).run("spec", deps=deps)
+    await build_agent(FunctionModel(capture)).run("spec", deps=deps)
     info = captured[0]
     return PromptSpec(
         instructions=info.instructions or "",
@@ -70,15 +69,14 @@ async def prompt_spec(engine: Engine) -> PromptSpec:
     )
 
 
-_cache: dict[int, str] = {}
+_cache: list[str] = []
 
 
-async def prompt_fingerprint(engine: Engine) -> str:
-    """Fingerprint of the live prompt (computed once per engine and process)."""
-    key = id(engine)
-    if key not in _cache:
-        _cache[key] = (await prompt_spec(engine)).fingerprint
-    return _cache[key]
+async def prompt_fingerprint() -> str:
+    """Fingerprint of the live prompt (computed once per process)."""
+    if not _cache:
+        _cache.append((await prompt_spec()).fingerprint)
+    return _cache[0]
 
 
 def read_lock() -> dict[str, str]:
@@ -95,9 +93,7 @@ def main() -> None:
     import asyncio
     import sys
 
-    from calc_engine.engine import default_engine
-
-    fingerprint = asyncio.run(prompt_fingerprint(default_engine()))
+    fingerprint = asyncio.run(prompt_fingerprint())
     lock = read_lock() if LOCK_FILE.exists() else {}
     if lock.get("fingerprint") == fingerprint:
         print(f"prompt.lock is up to date ({PROMPT_VERSION}, {fingerprint})")

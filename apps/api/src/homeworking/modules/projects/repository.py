@@ -9,7 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from construction_model.commands import command_adapter
+from construction_model.commands import Command, command_adapter
 from construction_model.diff import ModelDiff
 from construction_model.model import ProjectModel
 from homeworking.db.schema import ProjectCommandRow, ProjectRow
@@ -20,8 +20,35 @@ from homeworking.modules.projects.ports import (
     StoredProject,
 )
 
+# The design version every project had while it was stored as pack "design" (schema 1).
+_SCHEMA_1_DESIGN_VERSION = "1.1.0"
+
+
+def _inputs_1_to_2(inputs: dict[str, Any]) -> dict[str, Any]:
+    """Schema 1 inputs carried ``pack_id``; migration 0004 removed every non-design project."""
+    return {k: v for k, v in inputs.items() if k != "pack_id"}
+
+
+def _model_1_to_2(document: dict[str, Any]) -> dict[str, Any]:
+    """Packs and templates are gone (ADR-0008): no ``pack_id``, no ``trust``."""
+    result = {k: v for k, v in document["result"].items() if k != "trust"}
+    provenance = {
+        k: v for k, v in result["provenance"].items() if k not in ("pack_id", "pack_version")
+    }
+    provenance["design_version"] = document["result"]["provenance"].get(
+        "pack_version", _SCHEMA_1_DESIGN_VERSION
+    )
+    result["provenance"] = provenance
+    return {
+        **document,
+        "schema_version": 2,
+        "inputs": _inputs_1_to_2(document["inputs"]),
+        "result": result,
+    }
+
+
 # Upcasters migrate stored documents from older schema versions: {from_version: fn}.
-UPCASTERS: dict[int, Any] = {}
+UPCASTERS: dict[int, Any] = {1: _model_1_to_2}
 
 
 def load_model(document: dict[str, Any]) -> ProjectModel:
@@ -32,13 +59,22 @@ def load_model(document: dict[str, Any]) -> ProjectModel:
     return ProjectModel.model_validate(document)
 
 
+def load_command(document: dict[str, Any]) -> Command:
+    """Validate a logged command; commands logged before schema 2 may still carry ``pack_id``."""
+    if "pack_id" in document:
+        document = {k: v for k, v in document.items() if k != "pack_id"}
+    if isinstance(document.get("inputs"), dict):
+        document = {**document, "inputs": _inputs_1_to_2(document["inputs"])}
+    return command_adapter.validate_python(document)
+
+
 def _to_record(row: ProjectCommandRow) -> CommandRecord:
     return CommandRecord(
         seq=row.seq,
-        command=command_adapter.validate_python(row.command),
+        command=load_command(row.command),
         actor="agent" if row.actor == "agent" else "user",
         engine_version=row.engine_version,
-        pack_version=row.pack_version,
+        design_version=row.design_version,
         llm_trace_id=row.llm_trace_id,
         diff=ModelDiff.model_validate(row.diff) if row.diff else None,
         created_at=row.created_at,
@@ -53,7 +89,7 @@ def _command_row(project_id: UUID, record: CommandRecord) -> ProjectCommandRow:
         actor=record.actor,
         llm_trace_id=record.llm_trace_id,
         engine_version=record.engine_version,
-        pack_version=record.pack_version,
+        design_version=record.design_version,
         diff=record.diff.model_dump(mode="json") if record.diff else None,
     )
 
@@ -69,7 +105,6 @@ class SqlProjectRepository:
                     id=model.id,
                     owner_id=owner_id,
                     title=model.inputs.title,
-                    pack_id=model.inputs.pack_id,
                     schema_version=model.schema_version,
                     model=model.model_dump(mode="json"),
                 )
@@ -94,7 +129,6 @@ class SqlProjectRepository:
                 select(
                     ProjectRow.id,
                     ProjectRow.title,
-                    ProjectRow.pack_id,
                     summary,
                     ProjectRow.updated_at,
                 )
@@ -102,10 +136,8 @@ class SqlProjectRepository:
                 .order_by(ProjectRow.updated_at.desc(), ProjectRow.created_at.desc())
             )
             return [
-                ProjectListItem(
-                    id=id_, title=title, pack_id=pack_id, summary=text or "", updated_at=updated
-                )
-                for id_, title, pack_id, text, updated in rows
+                ProjectListItem(id=id_, title=title, summary=text or "", updated_at=updated)
+                for id_, title, text, updated in rows
             ]
 
     async def append(self, model: ProjectModel, record: CommandRecord) -> None:
@@ -121,7 +153,6 @@ class SqlProjectRepository:
                 if row is None:
                     raise LookupError(model.id)
                 row.title = model.inputs.title
-                row.pack_id = model.inputs.pack_id
                 row.schema_version = model.schema_version
                 row.model = model.model_dump(mode="json")
                 session.add(_command_row(model.id, record))

@@ -1,17 +1,9 @@
-"""Construction pack interface.
-
-A pack encapsulates the domain knowledge for one kind of construction (raised bed, terrace, ...).
-It validates parameters, proposes variants and deterministically builds the construction result.
-"""
+"""Build output of the engine: everything derived from one design and its parameters."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Protocol
 
-from pydantic import BaseModel
-
-from calc_engine.catalog import Catalog
 from construction_model.drawing import Drawing
 from construction_model.model import (
     BomLine,
@@ -38,7 +30,7 @@ class VariantSpec:
 
 
 @dataclass(frozen=True)
-class PackBuild:
+class Build:
     summary: str
     key_figures: dict[str, str]
     components: list[Component]
@@ -53,25 +45,3 @@ class PackBuild:
     notices: list[Notice]
     rules: list[RuleRef]
     solids: list[Solid] = field(default_factory=list)
-
-
-class Pack(Protocol):
-    id: str
-    version: str
-    title: str
-    description: str
-    params_model: type[BaseModel]
-    example_prompt: str
-
-    def variants(self, params: BaseModel) -> list[VariantSpec]: ...
-
-    def build(self, params: BaseModel, catalog: Catalog) -> PackBuild: ...
-
-
-class PackDescriptor(BaseModel):
-    id: str
-    version: str
-    title: str
-    description: str
-    example_prompt: str
-    params_schema: dict[str, Any]

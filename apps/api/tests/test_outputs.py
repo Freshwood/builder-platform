@@ -2,6 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
+from api_designs import design
 from syrupy.extensions.single_file import SingleFileSnapshotExtension, WriteMode
 
 from calc_engine.engine import default_engine
@@ -24,7 +25,7 @@ def _project(**params: object) -> ProjectModel:
     engine = default_engine(clock=lambda: NOW)
     inputs = ProjectInputs(
         title="Hochbeet Referenz",
-        pack_id="raised_bed",
+        design=design("raised_bed"),
         params={"length_mm": 2400, "width_mm": 1000, "height_mm": 800, **params},  # type: ignore[dict-item]
         notes=[
             Note(id=PROJECT_ID, origin=Origin.AI, text="Lärche wegen Haltbarkeit.", created_at=NOW)
@@ -33,15 +34,15 @@ def _project(**params: object) -> ProjectModel:
     return ProjectModel(id=PROJECT_ID, inputs=inputs, result=engine.build(inputs))
 
 
-@pytest.mark.parametrize("view", ["plan", "front", "side", "corner_detail"])
+@pytest.mark.parametrize("view", ["plan", "front", "side", "iso"])
 def test_svg_golden(view: str, snapshot) -> None:  # type: ignore[no-untyped-def]
-    drawing = next(d for d in _project(top_cap=True).result.drawings if d.view == view)
+    drawing = next(d for d in _project(wood="larch").result.drawings if d.view == view)
     svg = render_svg(drawing, element_id=view)
     assert svg == snapshot(extension_class=SvgSnapshot)
 
 
 def test_svg_is_accessible() -> None:
-    drawing = _project().result.drawings[0]
+    drawing = next(d for d in _project().result.drawings if d.view == "plan")
     svg = render_svg(drawing, element_id="x")
     assert 'role="img"' in svg
     assert '<title id="x-title">Draufsicht</title>' in svg

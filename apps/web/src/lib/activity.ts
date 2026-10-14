@@ -13,6 +13,7 @@ export type ActivityStep = {
 
 type Labels = { running: string; done: string };
 
+// Tools removed with prompt 2026-10-14.1 (ADR-0008) keep their labels: stored chats replay them.
 const TOOL_LABELS: Record<string, Labels> = {
   list_construction_packs: { running: "Prüfe Vorlagen …", done: "Vorlagen geprüft" },
   list_materials: { running: "Lese Materialkatalog …", done: "Materialkatalog gelesen" },

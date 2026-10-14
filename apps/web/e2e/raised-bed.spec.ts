@@ -29,7 +29,9 @@ test("plan a raised bed, change it via chat and undo", async ({ page }) => {
 
   await send(page, "Ich möchte ein Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche bauen.");
   const summary = page.getByTestId("project-summary");
-  await expect(summary).toHaveText("Hochbeet Lärche 2,00 m × 1,00 m, Höhe 0,87 m");
+  await expect(summary).toHaveText("Hochbeet aus Brettern – 2000 × 1000 × 870 mm");
+  // Every project is a one-off design by the AI (ADR-0008).
+  await expect(page.getByTestId("design-badge")).toHaveText("KI-Entwurf");
   await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/);
   const costBefore = await page.getByTestId("material-cost").textContent();
 
@@ -41,25 +43,29 @@ test("plan a raised bed, change it via chat and undo", async ({ page }) => {
   await page.getByRole("button", { name: "Pläne" }).click();
   await page.getByRole("button", { name: "Draufsicht", exact: true }).click();
   const plan = page.getByTestId("drawing-plan");
-  await expect(plan).toHaveAttribute("alt", /Draufsicht des Hochbeets, außen 2000 × 1000 mm/);
+  await expect(plan).toHaveAttribute("alt", /Draufsicht von Hochbeet \(2000 × 1000 × 870 mm/);
   await expect
     .poll(() => plan.evaluate((img: HTMLImageElement) => img.naturalWidth))
     .toBeGreaterThan(0);
 
   await send(page, "Mach es 50 cm breiter");
-  await expect(summary).toHaveText("Hochbeet Lärche 2,00 m × 1,50 m, Höhe 0,87 m");
+  await expect(summary).toHaveText("Hochbeet aus Brettern – 2000 × 1500 × 870 mm");
   await expect(page.getByTestId("material-cost")).not.toHaveText(costBefore ?? "");
-  await expect(plan).toHaveAttribute("alt", /außen 2000 × 1500 mm/);
-  // One drawing per shown version, not one request per view.
-  expect(new Set(svgRequests.map((url) => new URL(url).pathname)).size).toBe(1);
+  await expect(plan).toHaveAttribute("alt", /\(2000 × 1500 × 870 mm/);
+  // Only the shown drawings (the default isometric view, then the plan), not every view.
+  expect(new Set(svgRequests.map((url) => new URL(url).pathname.split("/").pop()))).toEqual(
+    new Set(["iso.svg", "plan.svg"]),
+  );
   await page.getByRole("tab", { name: "Material" }).click();
-  await expect(page.getByTestId("bom")).toContainText("Hochbeeterde");
+  await expect(page.getByTestId("bom")).toContainText("Brett Lärche");
 
   await page.getByRole("button", { name: "Rückgängig" }).click();
-  await expect(summary).toHaveText("Hochbeet Lärche 2,00 m × 1,00 m, Höhe 0,87 m");
+  await expect(summary).toHaveText("Hochbeet aus Brettern – 2000 × 1000 × 870 mm");
+  await expect(page.getByTestId("material-cost")).toHaveText(costBefore ?? "");
 
-  await page.getByRole("button", { name: "Variante Komfort wählen" }).click();
-  await expect(summary).toHaveText("Hochbeet Douglasie 2,00 m × 1,00 m, Höhe 0,90 m");
+  await page.getByRole("button", { name: "Variante Douglasie wählen" }).click();
+  await expect(page.getByTestId("material-cost")).not.toHaveText(costBefore ?? "");
+  await expect(page.getByTestId("bom")).toContainText("Brett Douglasie");
 
   await expectNoSeriousA11yViolations(page);
 
@@ -79,12 +85,12 @@ test("safety gate refers electrical work to professionals", async ({ page }) => 
   await expect(page.getByTestId("project-panel")).toHaveCount(0);
 });
 
-test("plan a shelf from a template with 3D model and cutting plan", async ({ page }) => {
+test("plan a shelf with 3D model and cutting plan", async ({ page }) => {
   await page.goto("/");
   await send(page, "Regal 80 x 30 x 180 cm mit 5 Böden");
   const summary = page.getByTestId("project-summary");
   await expect(summary).toHaveText("Standregal mit 5 Böden – 800 × 300 × 1800 mm");
-  await expect(page.getByTestId("trust-badge")).toHaveText("Vorlage");
+  await expect(page.getByTestId("design-badge")).toHaveText("KI-Entwurf");
   await expect(page.getByTestId("viewer-3d")).toBeVisible();
   await expect(page.getByRole("list", { name: "Positionen" })).toContainText("Fachboden");
 
@@ -142,7 +148,7 @@ test("project brief collects details and sends them with the request", async ({ 
     "Standregal mit 5 Böden – 800 × 300 × 1800 mm",
   );
   await expect(page.getByRole("list", { name: "Arbeitsschritte des Assistenten" })).toContainText(
-    "Projekt berechnet",
+    "Konstruktion berechnet",
   );
   await expect(page.getByLabel("Was möchtest du bauen oder reparieren?")).toBeVisible();
   await page.screenshot({ path: "test-results/after.png", fullPage: true });

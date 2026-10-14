@@ -1,5 +1,7 @@
 """Free forms, members, carpentry joints, bulk materials and buildings (ADR-0007)."""
 
+import sys
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -7,10 +9,14 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from calc_engine.assembly import shapes
-from calc_engine.assembly.templates import templates
 from calc_engine.engine import DesignRejectedError, default_engine
 from construction_model.assembly import AssemblyDesign
 from construction_model.model import ConstructionResult, ProjectInputs
+
+# --import-mode=importlib does not add this directory to sys.path (see corpus.py).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from design_fixtures import fixture_design
 
 engine = default_engine()
 
@@ -18,7 +24,7 @@ engine = default_engine()
 def build(design: AssemblyDesign | dict[str, Any], **params: Any) -> ConstructionResult:
     if isinstance(design, dict):
         design = AssemblyDesign.model_validate(design)
-    return engine.build(ProjectInputs(title="t", pack_id="design", params=params, design=design))
+    return engine.build(ProjectInputs(title="t", params=params, design=design))
 
 
 def frame(parts: list[dict[str, Any]], **extra: Any) -> dict[str, Any]:
@@ -182,7 +188,7 @@ def test_level_cut_on_a_horizontal_member_is_rejected() -> None:
 
 
 def test_cloud_shelf_gets_a_template_drawing_and_jigsaw() -> None:
-    r = build(templates()["cloud_shelf"].design)
+    r = build(fixture_design("cloud_shelf"))
     assert "template_2" in {d.view for d in r.drawings}
     cloud = next(c for c in r.cut_list if c.part == "Rückwand Wolke")
     assert cloud.note == "Kontur nach Schablone aussägen"
@@ -252,9 +258,9 @@ def test_objects_keep_their_size_limit() -> None:
 def test_cloud_shelf_is_valid_for_all_parameters(
     width: int, height: int, depth: int, shelves: int, material: str, support: str
 ) -> None:
-    """Valid standing and wall-mounted (create_from_template applies support from the brief)."""
+    """Valid standing and wall-mounted (the agent sets support from the brief)."""
     r = build(
-        templates()["cloud_shelf"].design.model_copy(update={"support": support}),
+        fixture_design("cloud_shelf").model_copy(update={"support": support}),
         width_mm=width,
         height_mm=height,
         depth_mm=depth,
@@ -277,7 +283,7 @@ def test_timber_frame_house_is_valid_for_all_parameters(
     length: int, depth: int, wall: int, roof: int, bays_x: int, bays_y: int
 ) -> None:
     r = build(
-        templates()["timber_frame_house"].design,
+        fixture_design("timber_frame_house"),
         length_mm=length,
         depth_mm=depth,
         wall_mm=wall,
@@ -289,7 +295,7 @@ def test_timber_frame_house_is_valid_for_all_parameters(
 
 
 def test_timber_frame_house_is_complete() -> None:
-    r = build(templates()["timber_frame_house"].design)
+    r = build(fixture_design("timber_frame_house"))
     items = {line.item_id for line in r.bom}
     assert {
         "concrete_c25",

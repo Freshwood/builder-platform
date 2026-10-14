@@ -19,9 +19,9 @@ from homeworking.settings import Settings
         ("Höhe bitte 90 cm", True, "fast", "parameters"),
         ("Lieber aus Lärche", True, "fast", "parameters"),
         ("Warum sind die Bretter 28 mm stark?", True, "fast", "question"),
-        # Packs and templates: fast model
-        ("Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche", False, "fast", "pack_or_template"),
-        ("Regal 80 × 30 × 180 cm mit 5 Böden", False, "fast", "pack_or_template"),
+        # Every new project is a one-off design (ADR-0008): designer
+        ("Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche", False, "designer", "default"),
+        ("Regal 80 × 30 × 180 cm mit 5 Böden", False, "designer", "default"),
         # Free designs and structural changes: designer
         ("Ein Schuhschrank mit zwei Türen", False, "designer", "structural"),
         ("Füge eine Schublade hinzu", True, "designer", "structural"),
@@ -57,7 +57,7 @@ async def test_agent_run_stores_provenance(settings: Settings) -> None:
             run = (await session.scalars(select(AgentRunRow))).one()
     assert run.prompt_fingerprint
     assert run.safety_rules_version
-    assert (run.model_role, run.routing_reason) == ("fast", "pack_or_template")
+    assert (run.model_role, run.routing_reason) == ("designer", "default")
     assert run.duration_ms is not None
     assert run.usage is not None
     assert run.usage["requests"] == len(run.usage["per_request"]) == 2

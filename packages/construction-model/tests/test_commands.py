@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import pytest
 
+from construction_model.assembly import AssemblyDesign
 from construction_model.commands import (
     AddNote,
     ChangeParameterBy,
@@ -19,17 +20,43 @@ from construction_model.commands import (
 )
 from construction_model.model import Origin, ProjectInputs
 
+DESIGN = AssemblyDesign.model_validate(
+    {
+        "object_type": "Brett",
+        "summary": "Brett",
+        "params": [
+            {
+                "name": "width_mm",
+                "label": "Breite",
+                "kind": "length",
+                "default": 800,
+                "min": 300,
+                "max": 2000,
+            }
+        ],
+        "parts": [
+            {
+                "id": "board",
+                "name": "Brett",
+                "material": "m",
+                "size": ["width_mm", 100, 18],
+                "at": [0, 0, 0],
+            }
+        ],
+    }
+)
+
 
 def _created() -> ProjectInputs:
     return apply_to_inputs(
-        None, CreateProject(pack_id="raised_bed", title="Beet", params={"width_mm": 1000})
+        None, CreateProject(title="Beet", design=DESIGN, params={"width_mm": 1000})
     )
 
 
 def test_create_requires_empty_project() -> None:
     inputs = _created()
     with pytest.raises(CommandError):
-        apply_to_inputs(inputs, CreateProject(pack_id="raised_bed", title="x"))
+        apply_to_inputs(inputs, CreateProject(title="x", design=DESIGN))
 
 
 def test_first_command_must_create() -> None:
@@ -68,7 +95,7 @@ def test_add_note_keeps_origin() -> None:
 
 def test_effective_commands_resolves_undo_with_stack_semantics() -> None:
     log = [
-        (1, CreateProject(pack_id="p", title="t")),
+        (1, CreateProject(title="t", design=DESIGN)),
         (2, Rename(title="a")),
         (3, Rename(title="b")),
         (4, Undo()),
@@ -80,11 +107,11 @@ def test_effective_commands_resolves_undo_with_stack_semantics() -> None:
 
 
 def test_create_cannot_be_undone() -> None:
-    log = [CreateProject(pack_id="p", title="t"), Undo()]
+    log = [CreateProject(title="t", design=DESIGN), Undo()]
     with pytest.raises(CommandError):
         effective_commands(enumerate(log))  # type: ignore[arg-type]
-    assert not can_undo([CreateProject(pack_id="p", title="t")])
-    assert can_undo([CreateProject(pack_id="p", title="t"), Rename(title="x")])
+    assert not can_undo([CreateProject(title="t", design=DESIGN)])
+    assert can_undo([CreateProject(title="t", design=DESIGN), Rename(title="x")])
 
 
 def test_command_json_roundtrip() -> None:

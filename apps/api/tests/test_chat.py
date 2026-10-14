@@ -78,18 +78,19 @@ async def test_change_without_project_reports_error(client: httpx.AsyncClient) -
             {"length_mm": 2400, "width_mm": 1200, "height_mm": 900},
         ),
         (
-            "hochbeet 120x80cm höhe 60 cm mit sitzkante",
-            {"length_mm": 1200, "width_mm": 800, "height_mm": 600, "top_cap": True},
+            "hochbeet 120x80cm höhe 60 cm",
+            {"length_mm": 1200, "width_mm": 800, "height_mm": 600},
         ),
-        ("Hochbeet 1 × 2 m ohne Folie", {"length_mm": 2000, "width_mm": 1000, "liner": False}),
+        ("Hochbeet 1 × 2 m aus Lärche", {"length_mm": 2000, "width_mm": 1000, "wood": "larch"}),
     ],
 )
 def test_offline_planner_parses_dimensions(text: str, expected: dict) -> None:  # type: ignore[type-arg]
     decision = decide_for_user_text(text)
     assert isinstance(decision, list)
-    assert decision[0] == ToolCall(
-        "create_project", {"pack_id": "raised_bed", "title": "Hochbeet", "params": expected}
-    )
+    assert decision[0].name == "save_design"
+    assert decision[0].args["title"] == "Hochbeet"
+    assert decision[0].args["params"] == expected
+    assert decision[0].args["design"]["object_type"] == "Hochbeet"
 
 
 def test_offline_planner_relative_change() -> None:
@@ -101,12 +102,12 @@ def test_offline_planner_relative_change() -> None:
     ]
 
 
-async def test_chat_plans_from_template_offline(client: httpx.AsyncClient) -> None:
+async def test_chat_drafts_a_design_offline(client: httpx.AsyncClient) -> None:
     events = await _chat(client, "Ich brauche ein Regal 100 x 35 x 200 cm mit 6 Böden")
     outputs = _tool_outputs(events)
     assert outputs[0]["action"] == "created"
     project = outputs[0]["project"]
-    assert project["trust"] == "template"
+    assert "trust" not in project
     assert project["params"]["width_mm"] == 1000
     assert project["params"]["shelves"] == 6
 
@@ -115,18 +116,7 @@ async def test_chat_plans_from_template_offline(client: httpx.AsyncClient) -> No
     assert outputs[0]["diff"]["changed_params"]["width_mm"] == {"before": 1000, "after": 1200}
 
 
-def test_offline_template_matching_prefers_longest_keyword() -> None:
+def test_offline_planner_only_drafts_what_it_knows() -> None:
+    """Without a language model there are no templates to fall back on (ADR-0008)."""
     decision = decide_for_user_text("Werkbank 150 x 70 cm mit Rollen")
-    assert isinstance(decision, list)
-    assert decision[0].name == "create_from_template"
-    assert decision[0].args["template_key"] == "workbench"
-    assert decision[0].args["params"] == {"width_mm": 1500, "depth_mm": 700, "castors": True}
-
-
-def test_offline_planner_uses_shutter_template() -> None:
-    decision = decide_for_user_text(
-        "Ich möchte Fensterläden mit 2 Flügeln bauen, Breite 31cm Höhe 38cm"
-    )
-    assert isinstance(decision, list)
-    assert decision[0].args["template_key"] == "window_shutter"
-    assert decision[0].args["params"] == {"width_mm": 310, "height_mm": 380, "wings": 2}
+    assert isinstance(decision, str)

@@ -91,7 +91,7 @@ async def test_agent_sends_compacted_history(settings: Settings) -> None:
 
     container = build_container(settings)
     try:
-        agent = build_agent(FunctionModel(respond), container.engine)
+        agent = build_agent(FunctionModel(respond))
         deps = AgentDeps(
             owner_id=uuid4(), projects=container.projects, project_id=None, trace_id="t"
         )

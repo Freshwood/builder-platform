@@ -3,6 +3,7 @@
 import json
 
 import httpx
+from api_designs import create_body
 
 from homeworking.api.chat import ABORTED_TEXT
 
@@ -73,7 +74,6 @@ async def test_new_request_in_a_project_becomes_its_next_version(
 
     projects = (await client.get("/api/projects")).json()
     assert [p["id"] for p in projects] == [project_id]
-    assert projects[0]["pack_id"] == "design"
 
     versions = (await client.get(f"/api/projects/{project_id}/versions")).json()
     assert versions[-1]["label"].startswith("Projekt „")
@@ -82,10 +82,7 @@ async def test_new_request_in_a_project_becomes_its_next_version(
 
 
 async def test_view_and_restore_an_earlier_version(client: httpx.AsyncClient) -> None:
-    created = await client.post(
-        "/api/projects",
-        json={"pack_id": "template", "template_key": "shelf", "title": "Regal", "params": {}},
-    )
+    created = await client.post("/api/projects", json=create_body("shelf", "Regal"))
     project_id = created.json()["project"]["id"]
     width = created.json()["project"]["result"]["effective_params"]["width_mm"]
     await client.post(

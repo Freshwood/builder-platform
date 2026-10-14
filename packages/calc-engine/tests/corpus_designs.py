@@ -515,7 +515,7 @@ EXTRA_DESIGNS: dict[str, dict[str, Any]] = {
 class BugRegression:
     """A construction that once failed for a user, pinned to the parameters of the report.
 
-    Either ``design`` (a free-form design dict) or ``template`` (the key of a shipped template)
+    Either ``design`` (a free-form design dict) or ``fixture`` (the key of a fixture design)
     names what was built. ``params`` are the values from the report; the corpus builds exactly
     these first and then sweeps the design like any other, so the regression is never narrower
     than the family it belongs to.
@@ -523,7 +523,7 @@ class BugRegression:
 
     report: str
     design: dict[str, Any] | None = None
-    template: str | None = None
+    fixture: str | None = None
     params: dict[str, Any] = field(default_factory=dict)
 
 
@@ -541,11 +541,11 @@ DESIGNS_FROM_BUGS: dict[str, BugRegression] = {
         design=PODIUM,
         params={"length_mm": 2000, "deck_boards": 8, "height_mm": 350, "surface": "panel"},
     ),
-    # test_assembly.py::test_window_shutter_template_matches_the_reported_case: 31 x 38 cm,
+    # test_assembly.py::test_window_shutter_matches_the_reported_case: 31 x 38 cm,
     # two wings of boards with hinges and a latch.
     "window_shutter": BugRegression(
         report="packages/calc-engine/tests/test_assembly.py (Fensterladen 31 x 38 cm)",
-        template="window_shutter",
+        fixture="window_shutter",
         params={"width_mm": 310, "height_mm": 380, "wings": 2, "board_mm": 18},
     ),
 }

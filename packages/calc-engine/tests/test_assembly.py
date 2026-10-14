@@ -1,6 +1,8 @@
 import re
+import sys
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -9,7 +11,6 @@ from hypothesis import strategies as st
 
 from calc_engine.assembly.expr import ExprError, evaluate
 from calc_engine.assembly.sheets import plan_sheets
-from calc_engine.assembly.templates import templates
 from calc_engine.engine import DesignRejectedError, default_engine
 from construction_model.assembly import AssemblyDesign
 from construction_model.commands import (
@@ -20,6 +21,11 @@ from construction_model.commands import (
 )
 from construction_model.model import ConstructionResult, Origin, ProjectInputs
 
+# --import-mode=importlib does not add this directory to sys.path (see corpus.py).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from design_fixtures import fixture_design, fixture_designs
+
 FIXED_NOW = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
 engine = default_engine(clock=lambda: FIXED_NOW)
 
@@ -27,7 +33,7 @@ engine = default_engine(clock=lambda: FIXED_NOW)
 def build(design: AssemblyDesign | dict[str, Any], **params: Any) -> ConstructionResult:
     if isinstance(design, dict):
         design = AssemblyDesign.model_validate(design)
-    return engine.build(ProjectInputs(title="t", pack_id="design", params=params, design=design))
+    return engine.build(ProjectInputs(title="t", params=params, design=design))
 
 
 def table(**overrides: Any) -> dict[str, Any]:
@@ -77,7 +83,6 @@ def table(**overrides: Any) -> dict[str, Any]:
 
 def test_minimal_design_builds_everything() -> None:
     r = build(table())
-    assert r.trust == "ai_draft"
     assert r.key_figures["Außenmaße (B × T × H)"] == "600 × 400 × 500 mm"
     assert [c.position for c in r.cut_list] == [1, 2]
     assert r.cut_list[0].count == 4
@@ -154,12 +159,10 @@ def test_parameter_bounds_are_enforced() -> None:
         build(table(), colour="red")
 
 
-@pytest.mark.parametrize("key", sorted(templates()))
-def test_templates_build_with_defaults_and_variants(key: str) -> None:
-    tpl = templates()[key]
-    r = build(tpl.design)
-    assert r.trust == "template"
-    assert r.variants, "templates offer variants"
+@pytest.mark.parametrize("key", sorted(fixture_designs()))
+def test_fixture_designs_build_with_defaults_and_variants(key: str) -> None:
+    r = build(fixture_design(key))
+    assert r.variants, "fixture designs offer variants"
     assert all(v.material_cost.min > 0 for v in r.variants)
     assert [s.title for s in r.instructions[:2]] == [
         "Material einkaufen",
@@ -177,7 +180,7 @@ def test_templates_build_with_defaults_and_variants(key: str) -> None:
 
 
 def test_instructions_are_step_by_step() -> None:
-    r = build(templates()["window_shutter"].design)
+    r = build(fixture_design("window_shutter"))
     buy, cut = r.instructions[0], r.instructions[1]
     assert len(buy.details) == len(r.bom)
     # Cutting goes bar by bar with lengths and position numbers.
@@ -206,7 +209,7 @@ def test_instructions_are_step_by_step() -> None:
 def test_shelf_is_valid_for_all_parameters(
     width: int, depth: int, height: int, shelves: int, back: bool
 ) -> None:
-    design = templates()["shelf"].design
+    design = fixture_design("shelf")
     r = build(
         design, width_mm=width, depth_mm=depth, height_mm=height, shelves=shelves, back_panel=back
     )
@@ -216,13 +219,13 @@ def test_shelf_is_valid_for_all_parameters(
 
 
 def test_tall_shelf_gets_tip_protection() -> None:
-    r = build(templates()["shelf"].design, height_mm=2000, depth_mm=250)
+    r = build(fixture_design("shelf"), height_mm=2000, depth_mm=250)
     assert any(line.item_id == "wall_anchor_set" for line in r.bom)
     assert "TIP" in {n.code for n in r.notices}
 
 
 def test_outdoor_bench_uses_stainless_screws_and_no_glue() -> None:
-    r = build(templates()["garden_bench"].design)
+    r = build(fixture_design("garden_bench"))
     items = {line.item_id for line in r.bom}
     assert any(i.startswith("screw_a2_") for i in items)
     assert not any(i.startswith("screw_zn_") for i in items)
@@ -230,22 +233,20 @@ def test_outdoor_bench_uses_stainless_screws_and_no_glue() -> None:
 
 
 def test_bench_without_backrest_is_cheaper() -> None:
-    design = templates()["garden_bench"].design
+    design = fixture_design("garden_bench")
     assert build(design, backrest=False).costs.material.max < build(design).costs.material.max
 
 
 def test_change_parameter_by_falls_back_to_design_default() -> None:
-    design = templates()["workbench"].design
-    inputs = ProjectInputs(title="t", pack_id="design", params={}, design=design)
+    design = fixture_design("workbench")
+    inputs = ProjectInputs(title="t", params={}, design=design)
     changed = apply_to_inputs(inputs, ChangeParameterBy(name="width_mm", delta=300))
     assert changed.params["width_mm"] == 1800
 
 
 def test_replace_design_keeps_valid_parameters() -> None:
-    design = templates()["shelf"].design
-    inputs = ProjectInputs(
-        title="t", pack_id="design", params={"width_mm": 1300, "shelves": 4}, design=design
-    )
+    design = fixture_design("shelf")
+    inputs = ProjectInputs(title="t", params={"width_mm": 1300, "shelves": 4}, design=design)
     narrower = design.model_copy(
         update={
             "params": [
@@ -259,8 +260,8 @@ def test_replace_design_keeps_valid_parameters() -> None:
 
 
 def test_replace_design_drops_stale_ai_explanations() -> None:
-    design = templates()["shelf"].design
-    inputs = ProjectInputs(title="t", pack_id="design", params={}, design=design)
+    design = fixture_design("shelf")
+    inputs = ProjectInputs(title="t", params={}, design=design)
     inputs = apply_to_inputs(inputs, AddNote(text="Lamellen aus Kantholz", origin=Origin.AI))
     inputs = apply_to_inputs(inputs, AddNote(text="Bitte in Grün", origin=Origin.USER))
     replaced = apply_to_inputs(inputs, ReplaceDesign(design=design))
@@ -420,7 +421,7 @@ def test_sheet_planning() -> None:
 
 
 def test_solids_match_cut_list_quantities() -> None:
-    r = build(templates()["workbench"].design, castors=True)
+    r = build(fixture_design("workbench"), castors=True)
     pieces = sum(c.count for c in r.cut_list)
     castors = sum(1 for s in r.solids if s.name == "Lenkrolle")
     assert castors == 4
@@ -440,7 +441,7 @@ def test_bench_is_valid_for_all_parameters(
     length: int, seat: int, slats: int, backrest: bool, wood: str
 ) -> None:
     r = build(
-        templates()["garden_bench"].design,
+        fixture_design("garden_bench"),
         length_mm=length,
         seat_height_mm=seat,
         slats=slats,
@@ -462,7 +463,7 @@ def test_workbench_is_valid_for_all_parameters(
     width: int, depth: int, height: int, shelf: bool, castors: bool
 ) -> None:
     r = build(
-        templates()["workbench"].design,
+        fixture_design("workbench"),
         width_mm=width,
         depth_mm=depth,
         height_mm=height,
@@ -585,11 +586,10 @@ def test_wall_mounted_groups_may_be_separate() -> None:
         build({**two_wings, "support": "floor"})
 
 
-def test_window_shutter_template_matches_the_reported_case() -> None:
+def test_window_shutter_matches_the_reported_case() -> None:
     """31 × 38 cm, two wings of boards with hinges and a latch (docs: construction problem)."""
-    design = templates()["window_shutter"].design
+    design = fixture_design("window_shutter")
     r = build(design, width_mm=310, height_mm=380, wings=2, board_mm=18)
-    assert r.trust == "template"
     # Automatic board count: two boards of about 75 mm per 155 mm wing, not 49 mm battens
     assert {c.cross_section for c in r.cut_list} == {"18 × 75", "18 × 70"}
     names = " ".join(line.name for line in r.bom)
@@ -605,7 +605,8 @@ def test_window_shutter_template_matches_the_reported_case() -> None:
     assert len(boards) == 4
     # Two wings of 153.5 mm with a 3 mm joint: the right wing starts at 156.5 mm
     assert boards[2] == pytest.approx(156.5, abs=0.1)
-    assert not any(n.severity == "warning" for n in r.notices)
+    # Only the AI-draft label every design carries (ADR-0008), no engine warning.
+    assert [n.code for n in r.notices if n.severity == "warning"] == ["AI_DRAFT"]
 
 
 @settings(max_examples=40, deadline=None)
@@ -620,7 +621,7 @@ def test_window_shutter_is_valid_for_all_parameters(
     width: int, height: int, wings: int, board_mm: int, wood: str
 ) -> None:
     """With the automatic board count every size builds, with hinges for each wing."""
-    design = templates()["window_shutter"].design
+    design = fixture_design("window_shutter")
     r = build(design, width_mm=width, height_mm=height, wings=wings, board_mm=board_mm, wood=wood)
     assert r.key_figures["Außenmaße (B × T × H)"].startswith(f"{width} ×")
     assert sum(1 for s in r.solids if s.name == "Ladenband") == 2 * wings
@@ -628,8 +629,8 @@ def test_window_shutter_is_valid_for_all_parameters(
 
 
 def test_window_shutter_in_pine_warns_about_outdoor_use() -> None:
-    """Pine is a valid wish for the template; the engine only adds a durability hint."""
-    design = templates()["window_shutter"].design
+    """Pine is a valid wish for the shutter; the engine only adds a durability hint."""
+    design = fixture_design("window_shutter")
     r = build(design, width_mm=310, height_mm=380, wings=2, wood="pine")
     assert {line.name for line in r.bom if "Kiefer" in line.name}
     assert r.notices
