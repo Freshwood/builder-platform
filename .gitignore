@@ -43,3 +43,6 @@ var/
 # Claude Code: personal settings and agent worktrees (shared config in .claude/ is committed)
 .claude/settings.local.json
 .claude/worktrees/
+
+# BDD (playwright-bdd generated specs)
+.features-gen/

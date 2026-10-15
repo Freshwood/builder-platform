@@ -1,0 +1,178 @@
+{
+  "object_type": "Hochbeet",
+  "summary": "Hochbeet aus Brettern",
+  "use": "outdoor",
+  "support": "floor",
+  "params": [
+    {
+      "name": "length_mm",
+      "label": "Länge (mm)",
+      "kind": "length",
+      "default": 2000,
+      "min": 800,
+      "max": 3000
+    },
+    {
+      "name": "width_mm",
+      "label": "Breite (mm)",
+      "kind": "length",
+      "default": 1000,
+      "min": 500,
+      "max": 1500
+    },
+    {
+      "name": "height_mm",
+      "label": "Höhe (mm)",
+      "kind": "length",
+      "default": 800,
+      "min": 435,
+      "max": 1015
+    },
+    {
+      "name": "wood",
+      "label": "Holzart",
+      "kind": "choice",
+      "default": "douglas",
+      "options": [
+        {
+          "value": "douglas",
+          "label": "Douglasie"
+        },
+        {
+          "value": "larch",
+          "label": "Lärche"
+        }
+      ]
+    }
+  ],
+  "parts": [
+    {
+      "id": "post",
+      "name": "Eckpfosten",
+      "material": "square_{wood}_70x70",
+      "size": [
+        70,
+        70,
+        "round(height_mm / 145) * 145"
+      ],
+      "at": [
+        "28 + (i % 2) * (length_mm - 126)",
+        "28 + (i // 2) * (width_mm - 126)",
+        0
+      ],
+      "repeat": {
+        "count": 4
+      }
+    },
+    {
+      "id": "wall_front",
+      "name": "Seitenbrett lang",
+      "material": "board_{wood}_28x145",
+      "size": [
+        "length_mm",
+        28,
+        145
+      ],
+      "at": [
+        0,
+        0,
+        "i * 145"
+      ],
+      "repeat": {
+        "count": "round(height_mm / 145)"
+      }
+    },
+    {
+      "id": "wall_back",
+      "name": "Seitenbrett lang",
+      "material": "board_{wood}_28x145",
+      "size": [
+        "length_mm",
+        28,
+        145
+      ],
+      "at": [
+        0,
+        "width_mm - 28",
+        "i * 145"
+      ],
+      "repeat": {
+        "count": "round(height_mm / 145)"
+      }
+    },
+    {
+      "id": "wall_left",
+      "name": "Seitenbrett kurz",
+      "material": "board_{wood}_28x145",
+      "size": [
+        28,
+        "width_mm - 56",
+        145
+      ],
+      "at": [
+        0,
+        28,
+        "i * 145"
+      ],
+      "repeat": {
+        "count": "round(height_mm / 145)"
+      }
+    },
+    {
+      "id": "wall_right",
+      "name": "Seitenbrett kurz",
+      "material": "board_{wood}_28x145",
+      "size": [
+        28,
+        "width_mm - 56",
+        145
+      ],
+      "at": [
+        "length_mm - 28",
+        28,
+        "i * 145"
+      ],
+      "repeat": {
+        "count": "round(height_mm / 145)"
+      }
+    }
+  ],
+  "hardware": [],
+  "variants": [
+    {
+      "key": "douglas",
+      "name": "Douglasie",
+      "description": "Douglasie – günstiger, gut witterungsbeständig",
+      "overrides": {
+        "wood": "douglas"
+      }
+    },
+    {
+      "key": "larch",
+      "name": "Lärche",
+      "description": "Lärche – sehr witterungsbeständig",
+      "overrides": {
+        "wood": "larch"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "title": "Pfosten stellen",
+      "text": "Stelle die vier Eckpfosten auf eine ebene, gut verdichtete Fläche.",
+      "parts": [
+        "post"
+      ]
+    },
+    {
+      "title": "Bretter anschrauben",
+      "text": "Schraube die Bretter Lage für Lage von außen an die Pfosten, zuerst die langen, dann die kurzen Seiten.",
+      "parts": [
+        "wall_front",
+        "wall_back",
+        "wall_left",
+        "wall_right"
+      ]
+    }
+  ]
+}

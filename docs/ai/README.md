@@ -1,7 +1,7 @@
 # AI layer: how prompts, agents and their changes stay traceable
 
 This directory is the single place for everything that steers the LLM and for the evidence
-behind it. Architecture decision: [ADR-0006](../architecture/adr/0006-token-budget-und-modell-routing.md).
+behind it. Architecture decision: [ADR-0006](../architecture/adr/archiv/0006-token-budget-und-modell-routing.md).
 
 | What | Where |
 |---|---|

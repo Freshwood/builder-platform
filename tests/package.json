@@ -1,0 +1,20 @@
+{
+  "name": "@homeworking/bdd",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bddgen": "bddgen",
+    "test": "bddgen && playwright test",
+    "test:backend": "bddgen && playwright test --project=backend",
+    "test:frontend": "bddgen && playwright test --project=frontend",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "~1.63.0",
+    "@types/node": "^24.0.0",
+    "playwright-bdd": "~9.2.1",
+    "typescript": "~5.9.0"
+  }
+}

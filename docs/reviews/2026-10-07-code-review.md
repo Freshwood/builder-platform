@@ -1,6 +1,6 @@
 # Code-Review 2026-10-07: Token-Verbrauch, Modellwahl, UI-Performance, AI-first
 
-Umsetzung und Entscheidungen: [ADR-0006](../architecture/adr/0006-token-budget-und-modell-routing.md).
+Umsetzung und Entscheidungen: [ADR-0006](../architecture/adr/archiv/0006-token-budget-und-modell-routing.md).
 Jede Aussage unten ist durch einen Test oder eine reproduzierbare Messung belegt (Spalte „Beleg“).
 Gemessen wird offline und deterministisch mit `task bench`, ohne API-Kosten. Die Tokenzahlen sind
 Schätzungen (Zeichen / 3,2). Die Differenzen zwischen zwei Messungen sind exakt.

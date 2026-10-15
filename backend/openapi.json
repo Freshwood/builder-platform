@@ -1,0 +1,4198 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Homeworking API",
+    "description": "Bauvorhaben als veränderbares, berechenbares Projektmodell.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Health",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Me",
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notices": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Notices",
+        "operationId": "notices",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalNotices"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Projects",
+        "operationId": "list_projects",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectListEntry"
+                  },
+                  "type": "array",
+                  "title": "Response List Projects"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create Project",
+        "operationId": "create_project",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Get Project",
+        "operationId": "get_project",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Delete Project",
+        "operationId": "delete_project",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/commands": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Execute Command",
+        "operationId": "execute_command",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/undo": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Undo",
+        "operationId": "undo",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/history": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "History",
+        "operationId": "history",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HistoryEntry"
+                  },
+                  "title": "Response History"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/versions": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Versions",
+        "description": "Every log entry is a version that can be viewed and restored (newest first).",
+        "operationId": "versions",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VersionEntry"
+                  },
+                  "title": "Response Versions"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/versions/{seq}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Get Version",
+        "description": "Read-only view of the project as it was after version ``seq``.",
+        "operationId": "get_version",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "seq",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/versions/{seq}/restore": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Restore Version",
+        "operationId": "restore_version",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "seq",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/drawings/{view}.svg": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Drawing",
+        "operationId": "drawing",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "view",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "View"
+            }
+          },
+          {
+            "name": "seq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "image/svg+xml": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/document.pdf": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Document",
+        "operationId": "document",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "seq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/pdf": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/export": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Export",
+        "operationId": "export",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Export"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Chat",
+        "operationId": "chat",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/chat": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Project Chat",
+        "description": "Chat messages of a project (Vercel AI UI message format), oldest first.",
+        "operationId": "project_chat",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Project Chat"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddNote": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "add_note",
+            "title": "Type",
+            "default": "add_note"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/Origin",
+            "default": "user"
+          },
+          "note_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Note Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "AddNote",
+        "description": "Attach a note. Id and timestamp live in the command so that replay is deterministic."
+      },
+      "AssemblyDesign": {
+        "properties": {
+          "object_type": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Object Type",
+            "description": "German, e.g. 'Wandregal'"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Summary",
+            "description": "One German sentence; may contain {param} placeholders"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "object",
+              "building"
+            ],
+            "title": "Category",
+            "default": "object"
+          },
+          "use": {
+            "type": "string",
+            "enum": [
+              "indoor",
+              "outdoor"
+            ],
+            "title": "Use",
+            "default": "indoor"
+          },
+          "support": {
+            "type": "string",
+            "enum": [
+              "floor",
+              "wall"
+            ],
+            "title": "Support",
+            "description": "floor: stands on z=0; wall: back side (max y) is fixed to a wall",
+            "default": "floor"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/Origin",
+            "default": "ai"
+          },
+          "params": {
+            "items": {
+              "$ref": "#/components/schemas/DesignParam"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Params"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/PartSpec"
+            },
+            "type": "array",
+            "maxItems": 120,
+            "minItems": 1,
+            "title": "Parts"
+          },
+          "joints": {
+            "items": {
+              "$ref": "#/components/schemas/JointSpec"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Joints"
+          },
+          "hardware": {
+            "items": {
+              "$ref": "#/components/schemas/HardwareSpec"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Hardware"
+          },
+          "auto_screws": {
+            "type": "boolean",
+            "title": "Auto Screws",
+            "description": "Derive screws from contact faces",
+            "default": true
+          },
+          "finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish",
+            "description": "Catalog item id of an oil/glaze, or null"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/DesignStep"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Steps"
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/DesignVariant"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Variants"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "object_type",
+          "summary",
+          "params",
+          "parts"
+        ],
+        "title": "AssemblyDesign",
+        "description": "A complete parametric design of a buildable object.\n\nCoordinates in mm: x = width (right), y = depth (back), z = height (up), floor z = 0.\nNumeric fields (size, at, start, end, section, points, count, quantity, when, deg) take a\nnumber or an arithmetic expression over parameters and the repeat variable, e.g.\n'width_mm - 2 * 18' or\n'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round,\nfloor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
+      },
+      "BomLine": {
+        "properties": {
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "spec": {
+            "type": "string",
+            "title": "Spec"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "unit_price": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "price_source": {
+            "type": "string",
+            "enum": [
+              "estimate",
+              "user"
+            ],
+            "title": "Price Source",
+            "description": "estimate = catalog guide price (range), user = price entered by the user",
+            "default": "estimate"
+          },
+          "used_share": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Share",
+            "description": "Share of the purchased quantity this project uses (e.g. 0.12 of a screw pack); None = all of it"
+          },
+          "search_query": {
+            "type": "string",
+            "title": "Search Query",
+            "description": "Search text to look the product up at retailers",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "position",
+          "item_id",
+          "name",
+          "spec",
+          "quantity",
+          "unit",
+          "unit_price",
+          "total"
+        ],
+        "title": "BomLine"
+      },
+      "Callout": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "callout",
+            "title": "Kind",
+            "default": "callout"
+          },
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          },
+          "bx": {
+            "type": "number",
+            "title": "Bx"
+          },
+          "by": {
+            "type": "number",
+            "title": "By"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "bx",
+          "by",
+          "text"
+        ],
+        "title": "Callout",
+        "description": "Position bubble at (bx, by) with a leader line to the target point (x, y)."
+      },
+      "ChangeParameterBy": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "change_parameter_by",
+            "title": "Type",
+            "default": "change_parameter_by"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "delta": {
+            "type": "integer",
+            "title": "Delta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "delta"
+        ],
+        "title": "ChangeParameterBy",
+        "description": "Change a numeric parameter relatively, e.g. ``width_mm`` by +500."
+      },
+      "ChoiceOption": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,40}$",
+            "title": "Value"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "ChoiceOption"
+      },
+      "ChoiceSpec": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "ChoiceSpec"
+      },
+      "CommandRequest": {
+        "properties": {
+          "command": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SetParameters"
+              },
+              {
+                "$ref": "#/components/schemas/ChangeParameterBy"
+              },
+              {
+                "$ref": "#/components/schemas/SelectVariant"
+              },
+              {
+                "$ref": "#/components/schemas/Rename"
+              },
+              {
+                "$ref": "#/components/schemas/SetRegion"
+              },
+              {
+                "$ref": "#/components/schemas/AddNote"
+              },
+              {
+                "$ref": "#/components/schemas/ReplaceDesign"
+              },
+              {
+                "$ref": "#/components/schemas/SetPrice"
+              }
+            ],
+            "title": "Command",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "add_note": "#/components/schemas/AddNote",
+                "change_parameter_by": "#/components/schemas/ChangeParameterBy",
+                "rename": "#/components/schemas/Rename",
+                "replace_design": "#/components/schemas/ReplaceDesign",
+                "select_variant": "#/components/schemas/SelectVariant",
+                "set_parameters": "#/components/schemas/SetParameters",
+                "set_price": "#/components/schemas/SetPrice",
+                "set_region": "#/components/schemas/SetRegion"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "command"
+        ],
+        "title": "CommandRequest"
+      },
+      "CommandResponse": {
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectModel"
+          },
+          "can_undo": {
+            "type": "boolean",
+            "title": "Can Undo"
+          },
+          "seq": {
+            "type": "integer",
+            "title": "Seq",
+            "description": "Command log position of this state (changes on every edit)"
+          },
+          "diff": {
+            "$ref": "#/components/schemas/ModelDiff"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project",
+          "can_undo",
+          "seq",
+          "diff"
+        ],
+        "title": "CommandResponse"
+      },
+      "Component": {
+        "properties": {
+          "guid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Guid"
+          },
+          "ifc_type": {
+            "type": "string",
+            "title": "Ifc Type"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "material_id": {
+            "type": "string",
+            "title": "Material Id"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Profile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "length_mm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "description": "Length in millimetres"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length Mm"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "guid",
+          "ifc_type",
+          "role",
+          "name",
+          "material_id"
+        ],
+        "title": "Component",
+        "description": "A physical part of the construction. ``ifc_type`` eases a later IFC export."
+      },
+      "ConstructionResult": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "effective_params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Effective Params"
+          },
+          "key_figures": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Key Figures"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/Component"
+            },
+            "type": "array",
+            "title": "Components"
+          },
+          "bom": {
+            "items": {
+              "$ref": "#/components/schemas/BomLine"
+            },
+            "type": "array",
+            "title": "Bom"
+          },
+          "cut_list": {
+            "items": {
+              "$ref": "#/components/schemas/CutLine"
+            },
+            "type": "array",
+            "title": "Cut List"
+          },
+          "stock_plan": {
+            "items": {
+              "$ref": "#/components/schemas/StockPlan"
+            },
+            "type": "array",
+            "title": "Stock Plan"
+          },
+          "fill_layers": {
+            "items": {
+              "$ref": "#/components/schemas/FillLayer"
+            },
+            "type": "array",
+            "title": "Fill Layers"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/Tool"
+            },
+            "type": "array",
+            "title": "Tools"
+          },
+          "costs": {
+            "$ref": "#/components/schemas/CostSummary"
+          },
+          "drawings": {
+            "items": {
+              "$ref": "#/components/schemas/Drawing"
+            },
+            "type": "array",
+            "title": "Drawings"
+          },
+          "instructions": {
+            "items": {
+              "$ref": "#/components/schemas/InstructionStep"
+            },
+            "type": "array",
+            "title": "Instructions"
+          },
+          "notices": {
+            "items": {
+              "$ref": "#/components/schemas/Notice"
+            },
+            "type": "array",
+            "title": "Notices"
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/VariantSummary"
+            },
+            "type": "array",
+            "title": "Variants"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "param_specs": {
+            "items": {
+              "$ref": "#/components/schemas/ParamSpec"
+            },
+            "type": "array",
+            "title": "Param Specs"
+          },
+          "solids": {
+            "items": {
+              "$ref": "#/components/schemas/Solid"
+            },
+            "type": "array",
+            "title": "Solids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summary",
+          "effective_params",
+          "key_figures",
+          "components",
+          "bom",
+          "cut_list",
+          "stock_plan",
+          "fill_layers",
+          "tools",
+          "costs",
+          "drawings",
+          "instructions",
+          "notices",
+          "variants",
+          "provenance"
+        ],
+        "title": "ConstructionResult",
+        "description": "Everything the engine derives from the inputs."
+      },
+      "CostSummary": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "tools_optional": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "material_used": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cost of what the project actually consumes (opened packs counted pro rata)"
+          },
+          "user_priced": {
+            "type": "integer",
+            "title": "User Priced",
+            "description": "Number of BOM lines priced by the user",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "material",
+          "tools_optional",
+          "note"
+        ],
+        "title": "CostSummary"
+      },
+      "CreateProjectRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "design": {
+            "$ref": "#/components/schemas/AssemblyDesign",
+            "description": "The one-off design of this project (ADR-0008)"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Region"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "design"
+        ],
+        "title": "CreateProjectRequest"
+      },
+      "CutLine": {
+        "properties": {
+          "part": {
+            "type": "string",
+            "title": "Part"
+          },
+          "material": {
+            "type": "string",
+            "title": "Material"
+          },
+          "cross_section": {
+            "type": "string",
+            "title": "Cross Section"
+          },
+          "length_mm": {
+            "type": "integer",
+            "title": "Length Mm",
+            "description": "Length in millimetres"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "width_mm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "description": "Length in millimetres"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width Mm",
+            "description": "Second cut dimension for sheet parts"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position",
+            "description": "Position number in drawings"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "Contour, cutouts, end cuts or tenons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "part",
+          "material",
+          "cross_section",
+          "length_mm",
+          "count"
+        ],
+        "title": "CutLine"
+      },
+      "Cutout": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rect",
+              "ellipse",
+              "polygon"
+            ],
+            "title": "Kind",
+            "default": "rect"
+          },
+          "at": {
+            "prefixItems": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "At",
+            "default": [
+              0,
+              0
+            ]
+          },
+          "size": {
+            "prefixItems": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Size",
+            "default": [
+              0,
+              0
+            ]
+          },
+          "points": {
+            "items": {
+              "prefixItems": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Cutout",
+        "description": "Hole in (u, v): rect/ellipse by at and size, polygon by points."
+      },
+      "DesignParam": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label",
+            "description": "German label for the UI"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "length",
+              "count",
+              "angle",
+              "bool",
+              "choice"
+            ],
+            "title": "Kind"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Default"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ChoiceOption"
+            },
+            "type": "array",
+            "title": "Options",
+            "description": "Only for kind=choice, e.g. wood species"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "kind",
+          "default"
+        ],
+        "title": "DesignParam",
+        "description": "A user-adjustable parameter. Lengths are millimetres and should end in ``_mm``."
+      },
+      "DesignStep": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 800,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "parts": {
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,39}$"
+            },
+            "type": "array",
+            "title": "Parts",
+            "description": "Part ids newly mounted in this step (each part in one step); the engine adds parts, screws and hardware per step"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "text"
+        ],
+        "title": "DesignStep"
+      },
+      "DesignVariant": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Description"
+          },
+          "overrides": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Overrides"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "description",
+          "overrides"
+        ],
+        "title": "DesignVariant"
+      },
+      "Dimension": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "dimension",
+            "title": "Kind",
+            "default": "dimension"
+          },
+          "x1": {
+            "type": "number",
+            "title": "X1"
+          },
+          "y1": {
+            "type": "number",
+            "title": "Y1"
+          },
+          "x2": {
+            "type": "number",
+            "title": "X2"
+          },
+          "y2": {
+            "type": "number",
+            "title": "Y2"
+          },
+          "offset": {
+            "type": "number",
+            "title": "Offset"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x1",
+          "y1",
+          "x2",
+          "y2",
+          "offset",
+          "text"
+        ],
+        "title": "Dimension",
+        "description": "Linear dimension between two points, drawn ``offset`` mm away from the measured line."
+      },
+      "Drawing": {
+        "properties": {
+          "view": {
+            "type": "string",
+            "title": "View"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "scale_hint": {
+            "type": "string",
+            "title": "Scale Hint"
+          },
+          "min_x": {
+            "type": "number",
+            "title": "Min X"
+          },
+          "min_y": {
+            "type": "number",
+            "title": "Min Y"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height"
+          },
+          "primitives": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Rect"
+                },
+                {
+                  "$ref": "#/components/schemas/Line"
+                },
+                {
+                  "$ref": "#/components/schemas/Dimension"
+                },
+                {
+                  "$ref": "#/components/schemas/Label"
+                },
+                {
+                  "$ref": "#/components/schemas/Polygon"
+                },
+                {
+                  "$ref": "#/components/schemas/Callout"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "kind",
+                "mapping": {
+                  "callout": "#/components/schemas/Callout",
+                  "dimension": "#/components/schemas/Dimension",
+                  "label": "#/components/schemas/Label",
+                  "line": "#/components/schemas/Line",
+                  "polygon": "#/components/schemas/Polygon",
+                  "rect": "#/components/schemas/Rect"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Primitives"
+          },
+          "legend": {
+            "items": {
+              "$ref": "#/components/schemas/LegendEntry"
+            },
+            "type": "array",
+            "title": "Legend"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "view",
+          "title",
+          "description",
+          "scale_hint",
+          "min_x",
+          "min_y",
+          "width",
+          "height"
+        ],
+        "title": "Drawing"
+      },
+      "Fill": {
+        "type": "string",
+        "enum": [
+          "none",
+          "wood",
+          "wood_end",
+          "steel",
+          "membrane",
+          "ground"
+        ],
+        "title": "Fill"
+      },
+      "FillLayer": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "thickness_mm": {
+            "type": "integer",
+            "title": "Thickness Mm",
+            "description": "Length in millimetres"
+          },
+          "volume_l": {
+            "type": "integer",
+            "title": "Volume L"
+          },
+          "purchase": {
+            "type": "boolean",
+            "title": "Purchase"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "thickness_mm",
+          "volume_l",
+          "purchase"
+        ],
+        "title": "FillLayer"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HardwareSpec": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Item"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "When"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item",
+          "quantity"
+        ],
+        "title": "HardwareSpec",
+        "description": "Explicit hardware, e.g. hinges, castors or brackets. Screws are added automatically."
+      },
+      "HistoryEntry": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "command": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Command"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "actor",
+          "command",
+          "engine_version",
+          "created_at"
+        ],
+        "title": "HistoryEntry"
+      },
+      "InstructionStep": {
+        "properties": {
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/Origin",
+            "default": "engine"
+          },
+          "details": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Details",
+            "description": "Concrete sub-steps in working order (what to buy/cut, which parts, which screws)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "number",
+          "title",
+          "text"
+        ],
+        "title": "InstructionStep"
+      },
+      "JointSpec": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "tenon",
+              "half_lap",
+              "notch"
+            ],
+            "title": "Kind"
+          },
+          "part": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Part"
+          },
+          "into": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Into"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "part",
+          "into"
+        ],
+        "title": "JointSpec",
+        "description": "Carpentry joint between all touching or overlapping instances of two parts."
+      },
+      "Label": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "label",
+            "title": "Kind",
+            "default": "label"
+          },
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "anchor": {
+            "type": "string",
+            "enum": [
+              "start",
+              "middle",
+              "end"
+            ],
+            "title": "Anchor",
+            "default": "start"
+          },
+          "size": {
+            "type": "string",
+            "enum": [
+              "small",
+              "normal"
+            ],
+            "title": "Size",
+            "default": "normal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "text"
+        ],
+        "title": "Label"
+      },
+      "LegalNotices": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "ai_disclosure": {
+            "type": "string",
+            "title": "Ai Disclosure"
+          },
+          "document_notices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Document Notices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "ai_disclosure",
+          "document_notices"
+        ],
+        "title": "LegalNotices"
+      },
+      "LegendEntry": {
+        "properties": {
+          "tone": {
+            "type": "string",
+            "title": "Tone"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tone",
+          "label"
+        ],
+        "title": "LegendEntry"
+      },
+      "Line": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "line",
+            "title": "Kind",
+            "default": "line"
+          },
+          "x1": {
+            "type": "number",
+            "title": "X1"
+          },
+          "y1": {
+            "type": "number",
+            "title": "Y1"
+          },
+          "x2": {
+            "type": "number",
+            "title": "X2"
+          },
+          "y2": {
+            "type": "number",
+            "title": "Y2"
+          },
+          "stroke": {
+            "$ref": "#/components/schemas/Stroke",
+            "default": "thin"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x1",
+          "y1",
+          "x2",
+          "y2"
+        ],
+        "title": "Line"
+      },
+      "MeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "is_guest": {
+            "type": "boolean",
+            "title": "Is Guest"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "is_guest"
+        ],
+        "title": "MeResponse"
+      },
+      "ModelDiff": {
+        "properties": {
+          "params": {
+            "items": {
+              "$ref": "#/components/schemas/ValueChange"
+            },
+            "type": "array",
+            "title": "Params"
+          },
+          "key_figures": {
+            "items": {
+              "$ref": "#/components/schemas/ValueChange"
+            },
+            "type": "array",
+            "title": "Key Figures"
+          },
+          "quantities": {
+            "items": {
+              "$ref": "#/components/schemas/QuantityChange"
+            },
+            "type": "array",
+            "title": "Quantities"
+          },
+          "material_cost_before": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "string",
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material Cost Before"
+          },
+          "material_cost_after": {
+            "prefixItems": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Material Cost After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "params",
+          "key_figures",
+          "quantities",
+          "material_cost_before",
+          "material_cost_after"
+        ],
+        "title": "ModelDiff"
+      },
+      "Money": {
+        "properties": {
+          "min": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Min"
+          },
+          "max": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Max"
+          },
+          "currency": {
+            "type": "string",
+            "const": "EUR",
+            "title": "Currency",
+            "default": "EUR"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "min",
+          "max"
+        ],
+        "title": "Money"
+      },
+      "Note": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/Origin"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origin",
+          "text"
+        ],
+        "title": "Note",
+        "description": "Free text attached to a project, e.g. an explanation written by the agent."
+      },
+      "Notice": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "rule_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "severity",
+          "message"
+        ],
+        "title": "Notice"
+      },
+      "Origin": {
+        "type": "string",
+        "enum": [
+          "user",
+          "engine",
+          "ai"
+        ],
+        "title": "Origin",
+        "description": "Who produced a piece of content (relevant for AI Act Art. 50 labelling)."
+      },
+      "ParamSpec": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "length",
+              "count",
+              "angle",
+              "bool",
+              "choice",
+              "number"
+            ],
+            "title": "Kind"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ChoiceSpec"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "kind"
+        ],
+        "title": "ParamSpec",
+        "description": "UI metadata of an adjustable parameter of the design."
+      },
+      "PartSpec": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "description": "German part name, e.g. 'Seitenteil'"
+          },
+          "material": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Material",
+            "description": "Catalog item id or made-to-order lumber 'lumber_<species>_<thickness>x<width>' (any species, any section, e.g. 'lumber_douglas_18x96'). May contain {param} placeholders for choice parameters, e.g. 'lumber_{wood}_18x96'."
+          },
+          "size": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size",
+            "description": "Box: extent along x, y, z in mm"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At",
+            "description": "Box: minimum corner (x, y, z) before rotation"
+          },
+          "rotate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rotation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "start": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start",
+            "description": "Member: centre of one end"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ],
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "facing": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facing",
+            "description": "Member thickness direction"
+          },
+          "cuts": {
+            "prefixItems": [
+              {
+                "type": "string",
+                "enum": [
+                  "square",
+                  "level",
+                  "plumb",
+                  "corner"
+                ]
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "square",
+                  "level",
+                  "plumb",
+                  "corner"
+                ]
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Cuts",
+            "default": [
+              "square",
+              "square"
+            ]
+          },
+          "shape": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Shape"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cutouts": {
+            "items": {
+              "$ref": "#/components/schemas/Cutout"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Cutouts"
+          },
+          "repeat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Repeat"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "When",
+            "description": "Include the part only if this evaluates truthy"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "material"
+        ],
+        "title": "PartSpec"
+      },
+      "Polygon": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "polygon",
+            "title": "Kind",
+            "default": "polygon"
+          },
+          "points": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "tone": {
+            "type": "string",
+            "title": "Tone"
+          },
+          "shade": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Shade",
+            "default": 1.0
+          },
+          "holes": {
+            "items": {
+              "items": {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Holes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "points",
+          "tone"
+        ],
+        "title": "Polygon",
+        "description": "Filled face of a projected solid. ``tone`` names a material colour, ``shade`` 0..1 its light."
+      },
+      "Profile": {
+        "properties": {
+          "thickness_mm": {
+            "type": "integer",
+            "title": "Thickness Mm",
+            "description": "Length in millimetres"
+          },
+          "width_mm": {
+            "type": "integer",
+            "title": "Width Mm",
+            "description": "Length in millimetres"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thickness_mm",
+          "width_mm"
+        ],
+        "title": "Profile",
+        "description": "Rectangular cross-section."
+      },
+      "ProjectInputs": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "design": {
+            "$ref": "#/components/schemas/AssemblyDesign",
+            "description": "Free-form parametric design; every project is a one-off (ADR-0004, ADR-0008)"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Params"
+          },
+          "variant_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Key"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Region"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/Note"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "prices": {
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+            },
+            "type": "object",
+            "title": "Prices",
+            "description": "Unit prices in EUR entered by the user, keyed by BOM item id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "design",
+          "params"
+        ],
+        "title": "ProjectInputs",
+        "description": "The part of the project that commands change."
+      },
+      "ProjectListEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "updated_at"
+        ],
+        "title": "ProjectListEntry"
+      },
+      "ProjectModel": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 2,
+            "title": "Schema Version",
+            "default": 2
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/ProjectInputs"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ConstructionResult"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "inputs",
+          "result"
+        ],
+        "title": "ProjectModel",
+        "description": "Single source of truth of a construction project."
+      },
+      "ProjectView": {
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectModel"
+          },
+          "can_undo": {
+            "type": "boolean",
+            "title": "Can Undo"
+          },
+          "seq": {
+            "type": "integer",
+            "title": "Seq",
+            "description": "Command log position of this state (changes on every edit)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project",
+          "can_undo",
+          "seq"
+        ],
+        "title": "ProjectView"
+      },
+      "Provenance": {
+        "properties": {
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "design_version": {
+            "type": "string",
+            "title": "Design Version"
+          },
+          "catalog_version": {
+            "type": "string",
+            "title": "Catalog Version"
+          },
+          "catalog_as_of": {
+            "type": "string",
+            "title": "Catalog As Of"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleRef"
+            },
+            "type": "array",
+            "title": "Rules"
+          },
+          "computed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Computed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "engine_version",
+          "design_version",
+          "catalog_version",
+          "catalog_as_of",
+          "rules",
+          "computed_at"
+        ],
+        "title": "Provenance"
+      },
+      "QuantityChange": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "before": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Before"
+          },
+          "after": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "name",
+          "unit",
+          "before",
+          "after"
+        ],
+        "title": "QuantityChange"
+      },
+      "Rect": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "rect",
+            "title": "Kind",
+            "default": "rect"
+          },
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          },
+          "w": {
+            "type": "number",
+            "title": "W"
+          },
+          "h": {
+            "type": "number",
+            "title": "H"
+          },
+          "stroke": {
+            "$ref": "#/components/schemas/Stroke",
+            "default": "outline"
+          },
+          "fill": {
+            "$ref": "#/components/schemas/Fill",
+            "default": "none"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "title": "Rect"
+      },
+      "Region": {
+        "type": "string",
+        "enum": [
+          "BW",
+          "BY",
+          "BE",
+          "BB",
+          "HB",
+          "HH",
+          "HE",
+          "MV",
+          "NI",
+          "NW",
+          "RP",
+          "SL",
+          "SN",
+          "ST",
+          "SH",
+          "TH"
+        ],
+        "title": "Region",
+        "description": "German federal states; building regulations differ per state."
+      },
+      "Rename": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "rename",
+            "title": "Type",
+            "default": "rename"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "Rename"
+      },
+      "Repeat": {
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Count"
+          },
+          "var": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Var",
+            "default": "i"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "count"
+        ],
+        "title": "Repeat",
+        "description": "Repeat a part ``count`` times; ``var`` (0-based index) is usable in its expressions."
+      },
+      "ReplaceDesign": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "replace_design",
+            "title": "Type",
+            "default": "replace_design"
+          },
+          "design": {
+            "$ref": "#/components/schemas/AssemblyDesign"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "design"
+        ],
+        "title": "ReplaceDesign",
+        "description": "Replace the free-form design; keeps valid params and user notes, drops AI explanations."
+      },
+      "Rotation": {
+        "properties": {
+          "axis": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y",
+              "z"
+            ],
+            "title": "Axis"
+          },
+          "deg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Deg"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "axis",
+          "deg"
+        ],
+        "title": "Rotation",
+        "description": "Rotation about an axis through the part's ``at`` point (right-hand rule)."
+      },
+      "RuleRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "norm_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Norm Reference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "title"
+        ],
+        "title": "RuleRef",
+        "description": "A versioned engineering rule of thumb used by the engine (provenance)."
+      },
+      "SelectVariant": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "select_variant",
+            "title": "Type",
+            "default": "select_variant"
+          },
+          "variant_key": {
+            "type": "string",
+            "title": "Variant Key"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "variant_key"
+        ],
+        "title": "SelectVariant"
+      },
+      "SetParameters": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "set_parameters",
+            "title": "Type",
+            "default": "set_parameters"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "minProperties": 1,
+            "title": "Values"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "title": "SetParameters",
+        "description": "Set one or more parameters to absolute values (lengths in mm)."
+      },
+      "SetPrice": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "set_price",
+            "title": "Type",
+            "default": "set_price"
+          },
+          "item_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Item Id"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item_id"
+        ],
+        "title": "SetPrice",
+        "description": "Set the user's own unit price for a BOM item (EUR); ``None`` returns to the guide price."
+      },
+      "SetRegion": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "set_region",
+            "title": "Type",
+            "default": "set_region"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Region"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "region"
+        ],
+        "title": "SetRegion"
+      },
+      "Severity": {
+        "type": "string",
+        "enum": [
+          "info",
+          "warning",
+          "critical"
+        ],
+        "title": "Severity"
+      },
+      "Shape": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rect",
+              "rounded",
+              "ellipse",
+              "triangle",
+              "arch",
+              "cloud",
+              "polygon"
+            ],
+            "title": "Kind"
+          },
+          "radius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Radius"
+          },
+          "apex": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apex"
+          },
+          "bumps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 12.0,
+                "minimum": 2.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bumps"
+          },
+          "points": {
+            "items": {
+              "prefixItems": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "Shape",
+        "description": "Outline on the face across the thinnest size; (u, v) in mm from the minimum corner, u\nalong the first remaining axis in x, y, z order (members: along the length)."
+      },
+      "Solid": {
+        "properties": {
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "part_id": {
+            "type": "string",
+            "title": "Part Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "material": {
+            "type": "string",
+            "title": "Material"
+          },
+          "tone": {
+            "type": "string",
+            "title": "Tone"
+          },
+          "size": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Size"
+          },
+          "at": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "At"
+          },
+          "rotation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SolidRotation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mesh": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SolidMesh"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "position",
+          "part_id",
+          "name",
+          "material",
+          "tone",
+          "size",
+          "at"
+        ],
+        "title": "Solid",
+        "description": "A placed part for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner.\n\nPlain boxes are described by ``size``, ``at`` and ``rotation``; shaped, cut or angled parts\ncarry an engine-computed ``mesh`` (then ``size``/``at`` are their bounding box)."
+      },
+      "SolidMesh": {
+        "properties": {
+          "vertices": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array",
+              "maxItems": 3,
+              "minItems": 3
+            },
+            "type": "array",
+            "title": "Vertices"
+          },
+          "triangles": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 3,
+              "minItems": 3
+            },
+            "type": "array",
+            "title": "Triangles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "vertices",
+          "triangles"
+        ],
+        "title": "SolidMesh",
+        "description": "Triangle mesh in world coordinates for parts that are not plain boxes."
+      },
+      "SolidRotation": {
+        "properties": {
+          "axis": {
+            "type": "string",
+            "enum": [
+              "x",
+              "y",
+              "z"
+            ],
+            "title": "Axis"
+          },
+          "deg": {
+            "type": "number",
+            "title": "Deg"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "axis",
+          "deg"
+        ],
+        "title": "SolidRotation"
+      },
+      "StockPlan": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "stock_length_mm": {
+            "type": "integer",
+            "title": "Stock Length Mm",
+            "description": "Length in millimetres"
+          },
+          "stock_count": {
+            "type": "integer",
+            "title": "Stock Count"
+          },
+          "waste_mm": {
+            "type": "integer",
+            "title": "Waste Mm",
+            "description": "Length in millimetres"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "bars": {
+            "items": {
+              "items": {
+                "type": "integer",
+                "description": "Length in millimetres"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Bars",
+            "description": "Cut piece lengths per purchased bar (linear stock)"
+          },
+          "utilization_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Utilization Pct"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item_id",
+          "stock_length_mm",
+          "stock_count",
+          "waste_mm"
+        ],
+        "title": "StockPlan",
+        "description": "How cut pieces are distributed over purchased stock lengths."
+      },
+      "Stroke": {
+        "type": "string",
+        "enum": [
+          "outline",
+          "thin",
+          "hidden",
+          "center",
+          "membrane"
+        ],
+        "title": "Stroke"
+      },
+      "Tool": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": true
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Tool"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValueChange": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "before",
+          "after"
+        ],
+        "title": "ValueChange"
+      },
+      "VariantSummary": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "overrides": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Overrides"
+          },
+          "material_cost": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "is_selected": {
+            "type": "boolean",
+            "title": "Is Selected"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "description",
+          "overrides",
+          "material_cost",
+          "is_selected"
+        ],
+        "title": "VariantSummary"
+      },
+      "VersionEntry": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "German description of the change"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "material_cost": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "string",
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material Cost",
+            "description": "Material cost range (EUR) of the project after this change"
+          },
+          "construction": {
+            "type": "boolean",
+            "title": "Construction",
+            "description": "Whether the change replaced the construction"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "label",
+          "actor",
+          "created_at",
+          "construction",
+          "current"
+        ],
+        "title": "VersionEntry"
+      }
+    }
+  }
+}

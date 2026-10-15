@@ -30,7 +30,7 @@ Dadurch kann dieselbe zugrunde liegende Projektdatenstruktur schrittweise von DI
 # Aktueller Schwerpunkt (2026-10-14)
 
 Diese drei Leitsätze haben Vorrang vor allen folgenden Schritten. Wo ältere Abschnitte ihnen
-widersprechen, gelten die Leitsätze ([ADR-0008](docs/architecture/adr/0008-unikate-statt-packs.md)).
+widersprechen, gelten die Leitsätze ([ADR-0008](docs/architecture/adr/archiv/0008-unikate-statt-packs.md)).
 
 ## 1. Jedes Projekt ist ein Unikat
 
@@ -532,7 +532,7 @@ Dadurch wird die Plattform für Partner wertvoll.
 ## Community-Bibliothek, Forks und Marktplatz (Ausblick)
 
 Jedes Projekt hat einen vollständigen Versionsverlauf, und jedes KI-Ergebnis ist gespeichert
-([ADR-0005](docs/architecture/adr/0005-versionen-und-gespeicherte-ki-laeufe.md)). Darauf lässt sich
+([ADR-0005](docs/architecture/adr/archiv/0005-versionen-und-gespeicherte-ki-laeufe.md)). Darauf lässt sich
 eine Community aufbauen:
 
 ```text
@@ -1211,12 +1211,12 @@ Der Rest ist die Evolution dieses Projekts zu einer universellen Bauplattform.
 ## Anpassungen für Phase I
 
 1. **Schritt 1 und 2 zusammengezogen:** Projektmodell und Command-Log gibt es ab dem ersten Release
-   ([ADR-0002](docs/architecture/adr/0002-projektmodell-und-command-log.md)).
+   ([ADR-0002](docs/architecture/adr/archiv/0002-projektmodell-und-command-log.md)).
 2. **Schritt 3 von Anfang an:** Mengen und Kosten kommen aus der deterministischen Engine.
 3. ~~Erstes Construction Pack ist das Hochbeet.~~ *Überholt am 2026-10-14:* Packs und Vorlagen
    sind entfernt. Jeder Entwurf entsteht frei über das generische Bauteilmodell
-   ([ADR-0004](docs/architecture/adr/0004-freie-entwuerfe-bauteilmodell.md),
-   [ADR-0008](docs/architecture/adr/0008-unikate-statt-packs.md)).
+   ([ADR-0004](docs/architecture/adr/archiv/0004-freie-entwuerfe-bauteilmodell.md),
+   [ADR-0008](docs/architecture/adr/archiv/0008-unikate-statt-packs.md)).
 4. **Der Agent mutiert nur über typisierte Commands.** Daraus ergibt sich die Provenance aus Schritt 9
    von Beginn an.
 5. **Bauteile bekommen stabile GUIDs und IFC-nahe Typen.** Damit ist Schritt 7 später nur ein Adapter.

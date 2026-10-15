@@ -6,10 +6,10 @@
 Vision und Schritte stehen in der [ROADMAP](ROADMAP.md). Dieses Repository enthält **Phase I**:
 die private DIY-Agent-Plattform mit Projektmodell und deterministischer Engine.
 
-**Jedes Projekt ist ein Unikat** ([ADR-0008](docs/architecture/adr/0008-unikate-statt-packs.md)):
+**Jedes Projekt ist ein Unikat** ([ADR-0008](docs/architecture/adr/archiv/0008-unikate-statt-packs.md)):
 Es gibt keine Construction Packs und keine Vorlagen. Das LLM entwirft für jede Anfrage ein
 eigenes Bauteilmodell aus Holz, Platten und Beschlägen
-([ADR-0004](docs/architecture/adr/0004-freie-entwuerfe-bauteilmodell.md)), die Engine prüft und
+([ADR-0004](docs/architecture/adr/archiv/0004-freie-entwuerfe-bauteilmodell.md)), die Engine prüft und
 berechnet es.
 
 Dabei rechnet das LLM nicht: Es beschreibt nur Bauteile (Material, Maß,
@@ -55,9 +55,9 @@ FastAPI-Monolith ─────────────────────
 PostgreSQL (JSONB-Dokument + Command-Log)
 ```
 
-Entscheidungen: [ADR-0001](docs/architecture/adr/0001-modularer-monolith.md) ·
-[ADR-0002](docs/architecture/adr/0002-projektmodell-und-command-log.md) ·
-[ADR-0003](docs/architecture/adr/0003-llm-gateway.md) · Compliance: [docs/compliance](docs/compliance/README.md)
+Entscheidungen: [ADR-0001](docs/architecture/adr/archiv/0001-modularer-monolith.md) ·
+[ADR-0002](docs/architecture/adr/archiv/0002-projektmodell-und-command-log.md) ·
+[ADR-0003](docs/architecture/adr/archiv/0003-llm-gateway.md) · Compliance: [docs/compliance](docs/compliance/README.md)
 
 ## Schnellstart
 
@@ -103,7 +103,7 @@ Ohne LLM (`LLM_MODE=test`) entwirft der Offline-Planer nur ein Hochbeet und ein 
 „Regal 80 × 30 × 180 cm mit 5 Böden“. Echte Entwürfe brauchen ein Modell, das zuverlässig lange,
 verschachtelte Werkzeug-Argumente erzeugt (Klasse Claude Sonnet, Mistral Medium 3.5 oder
 vergleichbar); für Maßänderungen, Preise und Rückfragen genügt ein kleines Modell. Optional
-übernimmt `LLM_MODEL_FAST` diese Routine-Turns, und `LLM_MODEL` bleibt für Entwürfe ([ADR-0006](docs/architecture/adr/0006-token-budget-und-modell-routing.md)).
+übernimmt `LLM_MODEL_FAST` diese Routine-Turns, und `LLM_MODEL` bleibt für Entwürfe ([ADR-0006](docs/architecture/adr/archiv/0006-token-budget-und-modell-routing.md)).
 `AGENT_TOTAL_TOKENS_LIMIT` (Standard 1 000 000) begrenzt einen Chat-Turn inklusive
 Korrekturrunden.
 

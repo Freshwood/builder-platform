@@ -1,6 +1,8 @@
 packages:
   - apps/web
+  - frontend
   - packages/api-client
+  - tests
 
 # Supply-chain cooldown: only install versions published at least 7 days ago (minutes).
 minimumReleaseAge: 10080
