@@ -177,6 +177,34 @@ def _parse_json_string(value: Any) -> Any:
 JsonTolerant = BeforeValidator(_parse_json_string)
 
 
+# Tool arguments that models wrongly write into the design object.
+_NESTABLE = ("explanation",)
+
+
+def hoist_nested_arguments(args: dict[str, Any], tool_def: ToolDefinition) -> dict[str, Any]:
+    """Move a tool argument the model nested into ``design`` back to the top level.
+
+    Models put ``explanation`` (an argument of save_design) inside the design object; the
+    design schema forbids unknown keys, so the whole call failed with ``extra_forbidden``.
+    Only keys that are top-level parameters of the tool are moved; a value given at the top
+    level wins over the nested one.
+    """
+    design = args.get("design")
+    if isinstance(design, str):
+        try:
+            design = parse_json(design)
+        except ValueError:
+            return args
+    if not isinstance(design, dict):
+        return args
+    params = tool_def.parameters_json_schema.get("properties", {})
+    nested = [key for key in _NESTABLE if key in design and key in params]
+    if not nested:
+        return args
+    rest = {k: v for k, v in design.items() if k not in nested}
+    return {**{key: design[key] for key in nested}, **args, "design": rest}
+
+
 @dataclass
 class RepairToolArgs(AbstractCapability[Any]):
     """Repair the raw JSON of a tool call before pydantic-ai validates it.
@@ -196,13 +224,17 @@ class RepairToolArgs(AbstractCapability[Any]):
         args: str | dict[str, Any],
         handler: WrapToolValidateHandler,
     ) -> dict[str, Any]:
-        if not isinstance(args, str) or not args.strip():
-            return await handler(args)
-        try:
-            parsed = parse_json(args)
-        except ValueError as exc:
-            raise ModelRetry(str(exc)) from None
-        return await handler(parsed if isinstance(parsed, dict) else args)
+        if isinstance(args, str) and args.strip():
+            try:
+                parsed = parse_json(args)
+            except ValueError as exc:
+                raise ModelRetry(str(exc)) from None
+            if not isinstance(parsed, dict):
+                return await handler(args)
+            args = parsed
+        if isinstance(args, dict):
+            args = hoist_nested_arguments(args, tool_def)
+        return await handler(args)
 
     @classmethod
     def get_serialization_name(cls) -> str | None:

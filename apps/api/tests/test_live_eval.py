@@ -126,13 +126,13 @@ async def test_accepted_design_meeting_the_intent_is_a_success(container: Contai
 async def test_rejected_attempts_are_counted_and_the_run_still_succeeds(
     container: Container,
 ) -> None:
-    # Attempt 01 of the case: an extra key in the design, rejected before the tool runs.
-    model = scripted([("save_design", _attempt_args(1)), ("save_design", golden_args())])
+    # Attempt 02 of the case: an undeclared name in a when condition, rejected by the engine.
+    model = scripted([("save_design", _attempt_args(2)), ("save_design", golden_args())])
     record = await run_case(container, podium_case(), model, prices=PRICES)
 
     assert record.success
     assert (record.attempts, record.rejected) == (2, 1)
-    assert record.outcomes == {"invalid_args": 1, "accepted": 1}
+    assert record.outcomes == {"engine_rejected": 1, "accepted": 1}
     assert record.requests == 3
 
 
@@ -582,7 +582,7 @@ def test_dry_run_lists_the_plan_and_the_worst_case_cost_without_running(
     assert PODIUM in out
     assert MODEL_NAME in out
     # 3 runs * 200k tokens * 4 USD per million (the dearer output price)
-    assert "Worst-case cost: 2.40 USD" in out
+    assert "Worst-case cost: 12.00 USD" in out
     assert not (tmp_path / "evals").exists()
 
 

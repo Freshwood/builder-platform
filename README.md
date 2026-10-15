@@ -104,7 +104,7 @@ Ohne LLM (`LLM_MODE=test`) entwirft der Offline-Planer nur ein Hochbeet und ein 
 verschachtelte Werkzeug-Argumente erzeugt (Klasse Claude Sonnet, Mistral Medium 3.5 oder
 vergleichbar); für Maßänderungen, Preise und Rückfragen genügt ein kleines Modell. Optional
 übernimmt `LLM_MODEL_FAST` diese Routine-Turns, und `LLM_MODEL` bleibt für Entwürfe ([ADR-0006](docs/architecture/adr/0006-token-budget-und-modell-routing.md)).
-`AGENT_TOTAL_TOKENS_LIMIT` (Standard 200 000) begrenzt einen Chat-Turn inklusive
+`AGENT_TOTAL_TOKENS_LIMIT` (Standard 1 000 000) begrenzt einen Chat-Turn inklusive
 Korrekturrunden.
 
 Prompts, Tool-Definitionen und Routing sind versioniert und per Fingerprint jedem gespeicherten

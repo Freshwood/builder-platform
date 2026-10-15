@@ -37,7 +37,9 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.2
     # Free-form designs need a few repair rounds and long tool arguments (ADR-0004).
     agent_request_limit: int = 12
-    agent_total_tokens_limit: int = 200_000
+    # Counts input (incl. cached) and output of all requests of a turn; reasoning models used
+    # 200K in seven requests of a kids' podium design (run 3289388f).
+    agent_total_tokens_limit: int = 1_000_000
 
     @field_validator("cors_origins", mode="before")
     @classmethod

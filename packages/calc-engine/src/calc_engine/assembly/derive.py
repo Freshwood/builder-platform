@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import math
 import re
 from collections import defaultdict
@@ -346,6 +347,25 @@ def _screw_count(contact: Contact) -> int:
     if long_side < SCREW_SPACING_MM - 50:
         return 2
     return max(2, math.ceil(long_side / SCREW_SPACING_MM) + 1)
+
+
+_SCREW_TEXT = re.compile(r"schraub|screw", re.IGNORECASE)
+
+
+def _is_screw(text: str, item: CatalogItem | None) -> bool:
+    """A hardware entry that names screws (catalog id or free text)."""
+    return item.kind == "screw" if item is not None else bool(_SCREW_TEXT.search(text))
+
+
+def _unknown_hardware(text: str, catalog: Catalog) -> str:
+    """Reject a hardware entry and name the nearest designable fitting."""
+    message = f"Beschlag '{text}' gibt es nicht im Katalog"
+    fittings = [i for i in catalog.items if i.designable and i.kind == "piece"]
+    by_label = {i.id: i.id for i in fittings} | {i.name: i.id for i in fittings}
+    close = difflib.get_close_matches(text, list(by_label), n=1, cutoff=0.5)
+    if close:
+        return f"{message} – meintest du '{by_label[close[0]]}'? (IDs siehe list_materials)"
+    return f"{message} (IDs siehe list_materials)"
 
 
 def _missing_hardware(
@@ -879,8 +899,11 @@ def build_design(design: AssemblyDesign, params: dict[str, ParamValue], catalog:
         if not is_included(spec.when, params):
             continue
         item = catalog.find(spec.item)
+        if design.auto_screws and _is_screw(spec.item, item):
+            # Screws are derived from the contact faces below; a listed one would count twice.
+            continue
         if item is None or not item.designable or item.kind != "piece":
-            errors.append(f"Beschlag '{spec.item}' gibt es nicht im Katalog (siehe list_materials)")
+            errors.append(_unknown_hardware(spec.item, catalog))
             continue
         quantity = math.ceil(resolve_quantity(spec.quantity, params) - 1e-9)
         if quantity > 500:

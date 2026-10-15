@@ -574,6 +574,26 @@ def test_hardware_named_in_steps_must_be_in_bom() -> None:
     assert "hinge_strap_200" in errors
 
 
+def test_listed_screws_are_left_to_the_engine() -> None:
+    """Regression podest_kinder_modenschau_es_so_art_2: free-text screws under hardware."""
+    base = shutter_wing()
+    listed = shutter_wing(
+        hardware=[
+            *base["hardware"],
+            {"item": "Schrauben 4×40 mm", "quantity": 24},
+            {"item": "screw_a2_4x40_200", "quantity": 1},
+        ]
+    )
+    assert build(listed).bom == build(base).bom
+
+
+def test_unknown_hardware_names_the_nearest_fitting() -> None:
+    design = shutter_wing(hardware=[{"item": "hinge_strap200", "quantity": 2}])
+    with pytest.raises(DesignRejectedError) as exc:
+        build(design)
+    assert "meintest du 'hinge_strap_200'?" in " ".join(exc.value.errors)
+
+
 def test_wall_mounted_groups_may_be_separate() -> None:
     wing = shutter_wing()
     second = [

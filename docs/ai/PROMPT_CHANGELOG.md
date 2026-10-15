@@ -12,6 +12,24 @@ offline token benchmark (`task bench`). Every stored agent run carries `prompt_v
 
 ## 2026-10-14.1 (fingerprint `417fa06d546c2a92`, routing version 2)
 
+Runtime change without a fingerprint change (regression case
+`podest_kinder_modenschau_es_so_art_2`, run 3289388f, upstage/solar-pro4): the kids' podium turn
+aborted with `UsageLimitExceeded` (207,638 > 200,000 tokens) before request 8. The superseded
+designs were already stubbed, but every repair round's thinking (~3K tokens) was resent, so the
+input grew 8K → 32K tokens per request. The sixth design was geometrically valid and failed only
+on free-text screws under `hardware`.
+
+- `history.py`: in the current turn only the latest response keeps its thinking.
+- `args.py`: `explanation` written into the `design` object is moved to the `save_design` argument
+  (the same `extra_forbidden` cost a request in `podium_kids_catwalk`, whose attempt 01 is now
+  accepted).
+- Engine: screws listed under `hardware` are ignored when `auto_screws` is on (the engine derives
+  them); other unknown fittings name the nearest catalog id.
+- `AGENT_TOTAL_TOKENS_LIMIT` default 200,000 → 1,000,000 (maintainer's decision): reasoning
+  models use most of the budget for repair rounds.
+
+Offline benchmark: unchanged (`free_design` 48,563), the offline model writes no thinking.
+
 Product direction (ROADMAP.md, "Aktueller Schwerpunkt (2026-10-14)", ADR-0008): every project
 is a one-off. A construction pack or a curated template makes every result look the same, so
 the agent now designs every project itself from the customer's brief, and the engine checks

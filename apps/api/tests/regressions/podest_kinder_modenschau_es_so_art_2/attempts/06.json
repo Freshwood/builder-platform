@@ -1,0 +1,433 @@
+{
+  "tool": "save_design",
+  "tool_call_id": "call_ea6d2a42178b4ff88e056b5c",
+  "outcome": "engine_rejected",
+  "accepted": false,
+  "errors": [
+    "Beschlag 'Schrauben 4×40 mm' gibt es nicht im Katalog (siehe list_materials)",
+    "Beschlag 'Schrauben 4×50 mm' gibt es nicht im Katalog (siehe list_materials)"
+  ],
+  "raw_args": "{\"design\": \"{\\\"object_type\\\": \\\"Catwalk-Podest\\\", \\\"summary\\\": \\\"Ein 2000×1000×400 mm starkes Podest mit vier 70×70 mm Beinen, zwei Längs- und zwei Querträgern aus 44×69 mm Rahmenholz und einer 18 mm OSB-Oberfläche – für Kinder-Modenschauen im Innenraum.\\\", \\\"params\\\": [{\\\"name\\\": \\\"length_mm\\\", \\\"label\\\": \\\"Länge\\\", \\\"kind\\\": \\\"length\\\", \\\"default\\\": 2000, \\\"min\\\": 500, \\\"max\\\": 2000}, {\\\"name\\\": \\\"width_mm\\\", \\\"label\\\": \\\"Breite\\\", \\\"kind\\\": \\\"length\\\", \\\"default\\\": 1000, \\\"min\\\": 400, \\\"max\\\": 1200}, {\\\"name\\\": \\\"height_mm\\\", \\\"label\\\": \\\"Höhe (Gesamthöhe)\\\", \\\"kind\\\": \\\"length\\\", \\\"default\\\": 400, \\\"min\\\": 300, \\\"max\\\": 500}, {\\\"name\\\": \\\"leg_section\\\", \\\"label\\\": \\\"Bein-Querschnitt\\\", \\\"kind\\\": \\\"choice\\\", \\\"default\\\": \\\"70x70\\\", \\\"options\\\": [{\\\"label\\\": \\\"70×70 mm\\\", \\\"value\\\": \\\"70x70\\\"}, {\\\"label\\\": \\\"44×69 mm\\\", \\\"value\\\": \\\"44x69\\\"}, {\\\"label\\\": \\\"44×44 mm\\\", \\\"value\\\": \\\"44x44\\\"}]}, {\\\"name\\\": \\\"surface_type\\\", \\\"label\\\": \\\"Oberfläche\\\", \\\"kind\\\": \\\"choice\\\", \\\"default\\\": \\\"osb\\\", \\\"options\\\": [{\\\"label\\\": \\\"OSB-Platte 18 mm\\\", \\\"value\\\": \\\"osb\\\"}, {\\\"label\\\": \\\"Bretter Fichte 18×96\\\", \\\"value\\\": \\\"boards\\\"}, {\\\"label\\\": \\\"Multiplex Birke 18 mm\\\", \\\"value\\\": \\\"plywood\\\"}]}], \\\"parts\\\": [{\\\"id\\\": \\\"bein_vl\\\", \\\"name\\\": \\\"Bein vorne links\\\", \\\"material\\\": \\\"square_spruce_70x70\\\", \\\"size\\\": [\\\"70\\\", \\\"70\\\", \\\"height_mm - 18 - 44\\\"], \\\"at\\\": [\\\"0\\\", \\\"0\\\", \\\"0\\\"]}, {\\\"id\\\": \\\"bein_vr\\\", \\\"name\\\": \\\"Bein vorne rechts\\\", \\\"material\\\": \\\"square_spruce_70x70\\\", \\\"size\\\": [\\\"70\\\", \\\"70\\\", \\\"height_mm - 18 - 44\\\"], \\\"at\\\": [\\\"length_mm - 70\\\", \\\"0\\\", \\\"0\\\"]}, {\\\"id\\\": \\\"bein_hl\\\", \\\"name\\\": \\\"Bein hinten links\\\", \\\"material\\\": \\\"square_spruce_70x70\\\", \\\"size\\\": [\\\"70\\\", \\\"70\\\", \\\"height_mm - 18 - 44\\\"], \\\"at\\\": [\\\"0\\\", \\\"width_mm - 70\\\", \\\"0\\\"]}, {\\\"id\\\": \\\"bein_hr\\\", \\\"name\\\": \\\"Bein hinten rechts\\\", \\\"material\\\": \\\"square_spruce_70x70\\\", \\\"size\\\": [\\\"70\\\", \\\"70\\\", \\\"height_mm - 18 - 44\\\"], \\\"at\\\": [\\\"length_mm - 70\\\", \\\"width_mm - 70\\\", \\\"0\\\"]}, {\\\"id\\\": \\\"traeger_v\\\", \\\"name\\\": \\\"Längsträger vorne\\\", \\\"material\\\": \\\"frame_spruce_44x69\\\", \\\"size\\\": [\\\"length_mm\\\", \\\"69\\\", \\\"44\\\"], \\\"at\\\": [\\\"0\\\", \\\"0\\\", \\\"height_mm - 18 - 44\\\"]}, {\\\"id\\\": \\\"traeger_h\\\", \\\"name\\\": \\\"Längsträger hinten\\\", \\\"material\\\": \\\"frame_spruce_44x69\\\", \\\"size\\\": [\\\"length_mm\\\", \\\"69\\\", \\\"44\\\"], \\\"at\\\": [\\\"0\\\", \\\"width_mm - 69\\\", \\\"height_mm - 18 - 44\\\"]}, {\\\"id\\\": \\\"quer_vl\\\", \\\"name\\\": \\\"Querträger vorne\\\", \\\"material\\\": \\\"frame_spruce_44x69\\\", \\\"size\\\": [\\\"69\\\", \\\"width_mm\\\", \\\"44\\\"], \\\"at\\\": [\\\"0\\\", \\\"0\\\", \\\"height_mm - 18 - 44\\\"]}, {\\\"id\\\": \\\"quer_hr\\\", \\\"name\\\": \\\"Querträger hinten\\\", \\\"material\\\": \\\"frame_spruce_44x69\\\", \\\"size\\\": [\\\"69\\\", \\\"width_mm\\\", \\\"44\\\"], \\\"at\\\": [\\\"length_mm - 69\\\", \\\"0\\\", \\\"height_mm - 18 - 44\\\"]}, {\\\"id\\\": \\\"oberflaeche\\\", \\\"name\\\": \\\"Oberfläche\\\", \\\"material\\\": \\\"osb_18\\\", \\\"size\\\": [\\\"length_mm\\\", \\\"width_mm\\\", \\\"18\\\"], \\\"at\\\": [\\\"0\\\", \\\"0\\\", \\\"height_mm - 18\\\"]}], \\\"steps\\\": [{\\\"title\\\": \\\"Beine und Rahmen\\\", \\\"text\\\": \\\"Die vier 70×70 mm Beine an den Ecken aufstellen (jeweils 338 mm hoch bei 400 mm Gesamthöhe). Die beiden Längsträger (44×69 mm, 2000 mm) auf die vorderen und hinteren Beine legen und von der Längsseite mit Schrauben fixieren. Die Querträger (44×69 mm, 1000 mm) auf die linken und rechten Beine legen und von der Querseite mit Schrauben fixieren. Die Querträger überschneiden die Längsträger in der Mitte – dort wird eine Half-Lap-Verbindung hergestellt. Alles bündig und winklig prüfen.\\\", \\\"parts\\\": [\\\"bein_vl\\\", \\\"bein_vr\\\", \\\"bein_hl\\\", \\\"bein_hr\\\", \\\"traeger_v\\\", \\\"traeger_h\\\", \\\"quer_vl\\\", \\\"quer_hr\\\"]}, {\\\"title\\\": \\\"Oberfläche\\\", \\\"text\\\": \\\"Die 18 mm OSB-Platte (2000×1000 mm) auf die Träger legen, mittig ausrichten und von unten mit Schrauben an die Träger fixieren. Die Platte liegt flach auf, die Schrauben kommen von unten durch die Träger in die Platte.\\\", \\\"parts\\\": [\\\"oberflaeche\\\"]}], \\\"support\\\": \\\"floor\\\", \\\"use\\\": \\\"indoor\\\", \\\"finish\\\": \\\"finish_hardwax_750\\\", \\\"joints\\\": [{\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"traeger_v\\\", \\\"into\\\": \\\"quer_vl\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"traeger_v\\\", \\\"into\\\": \\\"quer_hr\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"traeger_h\\\", \\\"into\\\": \\\"quer_vl\\\"}, {\\\"kind\\\": \\\"half_lap\\\", \\\"part\\\": \\\"traeger_h\\\", \\\"into\\\": \\\"quer_hr\\\"}], \\\"hardware\\\": [{\\\"item\\\": \\\"Schrauben 4×40 mm\\\", \\\"quantity\\\": \\\"24\\\"}, {\\\"item\\\": \\\"Schrauben 4×50 mm\\\", \\\"quantity\\\": \\\"12\\\"}], \\\"variants\\\": [{\\\"key\\\": \\\"boards\\\", \\\"name\\\": \\\"Mit Brettern\\\", \\\"description\\\": \\\"Oberfläche aus einzelnen Fichtenbrettern (18×96 mm) statt OSB-Platte – natürlicher Look, etwas mehr Pflege.\\\", \\\"overrides\\\": {\\\"surface_type\\\": \\\"boards\\\"}}, {\\\"key\\\": \\\"plywood\\\", \\\"name\\\": \\\"Mit Multiplex\\\", \\\"description\\\": \\\"Oberfläche aus Multiplex Birke 18 mm – sehr stabil, glatte Oberfläche, etwas teurer.\\\", \\\"overrides\\\": {\\\"surface_type\\\": \\\"plywood\\\"}}, {\\\"key\\\": \\\"lower\\\", \\\"name\\\": \\\"Niedriger (30 cm)\\\", \\\"description\\\": \\\"Podest auf 300 mm Gesamthöhe reduziert – für jüngere Kinder oder flachere Bühnen.\\\", \\\"overrides\\\": {\\\"height_mm\\\": 300}}]}\", \"explanation\": \"Bauweise: Das Podest ist ein einfacher Rahmen aus vier Eckbeinen und zwei Längs- sowie zwei Querträgern. Diese Z-Verstrebung (Längs- und Querträger bilden zusammen ein Gitter) verhindert, dass sich das Podest seitlich verbiegt oder kippt – wichtig, wenn Kinder darauf laufen. Die Beine stehen direkt unter den Trägern, sodass die Last senkrecht in den Boden abgeleitet wird.\\n\\nMaterial und Holzart: Die Beine und Träger sind aus Fichte (Rahmenholz 44×69 mm und Quadrat 70×70 mm). Fichte ist leicht, preiswert und für Indoor-Einsätze völlig ausreichend. Die 70×70 mm Beine geben genug Steifigkeit bei 40 cm Höhe. Als Alternative für mehr Stabilität oder höhere Lasten könnte man Douglasie oder KVH verwenden – das ist schwerer und teurer, aber stabiler.\\n\\nVerbindungen: Die Träger liegen auf den Beinen und werden von der jeweils längeren Seite her mit Schrauben fixiert (Längsträger von vorne/hinten, Querträger von links/rechts). So wird jede Verbindung von der Seite her zugänglich und die Schraubenköpfe liegen flach. Die Oberfläche wird von unten angeschraubt, damit oben keine Schraubenköpfe hervorragen.\\n\\nBeschläge: Es werden 24 Schrauben 4×40 mm für die Träger-Bein-Verbindungen und 12 Schrauben 4×50 mm für die Oberflächenbefestigung verwendet. Keine zusätzlichen Beschläge nötig – das Podest steht frei auf dem Boden.\\n\\nOberfläche und Haltbarkeit: Die OSB-Platte (18 mm) ist flach und stabile Oberfläche, gut für Indoor. Sie wird mit Hartwachsöl (finish_hardwax_750) behandelt, was sie leicht pflegefähig macht und Kratzer abmildernd wirkt. Die Platte liegt bündig auf den Trägern, es gibt keine Überstände. Bei Bedarf könnte man auch Bretter (Fichte 18×96) oder Multiplex Birke 18 mm verwenden – Bretter sehen natürlicher aus, Multiplex ist stabiler und hat eine glattere Oberfläche.\\n\\nAnnahmen aus dem Steckbrief: Das Podest steht frei auf dem Boden (keine Wandbefestigung), wird drinnen verwendet (kein Witterungsanforderungen). Die Höhe von 400 mm liegt in deinem Bereich 30–50 cm. Länge 2000 mm, Breite 1000 mm – beide am Maximum deiner Vorgaben. Die Gesamthöhe inklusive 18 mm Oberfläche ist 400 mm, die Beine sind 338 mm hoch. Maße sind auf mm genau; bei Bedarf kannst du Länge, Breite oder Höhe anpassen.\"}",
+  "design": {
+    "use": "indoor",
+    "parts": [
+      {
+        "at": [
+          "0",
+          "0",
+          "0"
+        ],
+        "id": "bein_vl",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Bein vorne links",
+        "size": [
+          "70",
+          "70",
+          "height_mm - 18 - 44"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "square_spruce_70x70"
+      },
+      {
+        "at": [
+          "length_mm - 70",
+          "0",
+          "0"
+        ],
+        "id": "bein_vr",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Bein vorne rechts",
+        "size": [
+          "70",
+          "70",
+          "height_mm - 18 - 44"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "square_spruce_70x70"
+      },
+      {
+        "at": [
+          "0",
+          "width_mm - 70",
+          "0"
+        ],
+        "id": "bein_hl",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Bein hinten links",
+        "size": [
+          "70",
+          "70",
+          "height_mm - 18 - 44"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "square_spruce_70x70"
+      },
+      {
+        "at": [
+          "length_mm - 70",
+          "width_mm - 70",
+          "0"
+        ],
+        "id": "bein_hr",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Bein hinten rechts",
+        "size": [
+          "70",
+          "70",
+          "height_mm - 18 - 44"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "square_spruce_70x70"
+      },
+      {
+        "at": [
+          "0",
+          "0",
+          "height_mm - 18 - 44"
+        ],
+        "id": "traeger_v",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Längsträger vorne",
+        "size": [
+          "length_mm",
+          "69",
+          "44"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "frame_spruce_44x69"
+      },
+      {
+        "at": [
+          "0",
+          "width_mm - 69",
+          "height_mm - 18 - 44"
+        ],
+        "id": "traeger_h",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Längsträger hinten",
+        "size": [
+          "length_mm",
+          "69",
+          "44"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "frame_spruce_44x69"
+      },
+      {
+        "at": [
+          "0",
+          "0",
+          "height_mm - 18 - 44"
+        ],
+        "id": "quer_vl",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Querträger vorne",
+        "size": [
+          "69",
+          "width_mm",
+          "44"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "frame_spruce_44x69"
+      },
+      {
+        "at": [
+          "length_mm - 69",
+          "0",
+          "height_mm - 18 - 44"
+        ],
+        "id": "quer_hr",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Querträger hinten",
+        "size": [
+          "69",
+          "width_mm",
+          "44"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "frame_spruce_44x69"
+      },
+      {
+        "at": [
+          "0",
+          "0",
+          "height_mm - 18"
+        ],
+        "id": "oberflaeche",
+        "end": null,
+        "cuts": [
+          "square",
+          "square"
+        ],
+        "name": "Oberfläche",
+        "size": [
+          "length_mm",
+          "width_mm",
+          "18"
+        ],
+        "when": null,
+        "shape": null,
+        "start": null,
+        "facing": null,
+        "repeat": null,
+        "rotate": null,
+        "cutouts": [],
+        "section": null,
+        "material": "osb_18"
+      }
+    ],
+    "steps": [
+      {
+        "text": "Die vier 70×70 mm Beine an den Ecken aufstellen (jeweils 338 mm hoch bei 400 mm Gesamthöhe). Die beiden Längsträger (44×69 mm, 2000 mm) auf die vorderen und hinteren Beine legen und von der Längsseite mit Schrauben fixieren. Die Querträger (44×69 mm, 1000 mm) auf die linken und rechten Beine legen und von der Querseite mit Schrauben fixieren. Die Querträger überschneiden die Längsträger in der Mitte – dort wird eine Half-Lap-Verbindung hergestellt. Alles bündig und winklig prüfen.",
+        "parts": [
+          "bein_vl",
+          "bein_vr",
+          "bein_hl",
+          "bein_hr",
+          "traeger_v",
+          "traeger_h",
+          "quer_vl",
+          "quer_hr"
+        ],
+        "title": "Beine und Rahmen"
+      },
+      {
+        "text": "Die 18 mm OSB-Platte (2000×1000 mm) auf die Träger legen, mittig ausrichten und von unten mit Schrauben an die Träger fixieren. Die Platte liegt flach auf, die Schrauben kommen von unten durch die Träger in die Platte.",
+        "parts": [
+          "oberflaeche"
+        ],
+        "title": "Oberfläche"
+      }
+    ],
+    "finish": "finish_hardwax_750",
+    "joints": [
+      {
+        "into": "quer_vl",
+        "kind": "half_lap",
+        "part": "traeger_v"
+      },
+      {
+        "into": "quer_hr",
+        "kind": "half_lap",
+        "part": "traeger_v"
+      },
+      {
+        "into": "quer_vl",
+        "kind": "half_lap",
+        "part": "traeger_h"
+      },
+      {
+        "into": "quer_hr",
+        "kind": "half_lap",
+        "part": "traeger_h"
+      }
+    ],
+    "origin": "ai",
+    "params": [
+      {
+        "max": 2000.0,
+        "min": 500.0,
+        "kind": "length",
+        "name": "length_mm",
+        "label": "Länge",
+        "default": 2000,
+        "options": []
+      },
+      {
+        "max": 1200.0,
+        "min": 400.0,
+        "kind": "length",
+        "name": "width_mm",
+        "label": "Breite",
+        "default": 1000,
+        "options": []
+      },
+      {
+        "max": 500.0,
+        "min": 300.0,
+        "kind": "length",
+        "name": "height_mm",
+        "label": "Höhe (Gesamthöhe)",
+        "default": 400,
+        "options": []
+      },
+      {
+        "max": null,
+        "min": null,
+        "kind": "choice",
+        "name": "leg_section",
+        "label": "Bein-Querschnitt",
+        "default": "70x70",
+        "options": [
+          {
+            "label": "70×70 mm",
+            "value": "70x70"
+          },
+          {
+            "label": "44×69 mm",
+            "value": "44x69"
+          },
+          {
+            "label": "44×44 mm",
+            "value": "44x44"
+          }
+        ]
+      },
+      {
+        "max": null,
+        "min": null,
+        "kind": "choice",
+        "name": "surface_type",
+        "label": "Oberfläche",
+        "default": "osb",
+        "options": [
+          {
+            "label": "OSB-Platte 18 mm",
+            "value": "osb"
+          },
+          {
+            "label": "Bretter Fichte 18×96",
+            "value": "boards"
+          },
+          {
+            "label": "Multiplex Birke 18 mm",
+            "value": "plywood"
+          }
+        ]
+      }
+    ],
+    "summary": "Ein 2000×1000×400 mm starkes Podest mit vier 70×70 mm Beinen, zwei Längs- und zwei Querträgern aus 44×69 mm Rahmenholz und einer 18 mm OSB-Oberfläche – für Kinder-Modenschauen im Innenraum.",
+    "support": "floor",
+    "category": "object",
+    "hardware": [
+      {
+        "item": "Schrauben 4×40 mm",
+        "note": null,
+        "when": null,
+        "quantity": "24"
+      },
+      {
+        "item": "Schrauben 4×50 mm",
+        "note": null,
+        "when": null,
+        "quantity": "12"
+      }
+    ],
+    "variants": [
+      {
+        "key": "boards",
+        "name": "Mit Brettern",
+        "overrides": {
+          "surface_type": "boards"
+        },
+        "description": "Oberfläche aus einzelnen Fichtenbrettern (18×96 mm) statt OSB-Platte – natürlicher Look, etwas mehr Pflege."
+      },
+      {
+        "key": "plywood",
+        "name": "Mit Multiplex",
+        "overrides": {
+          "surface_type": "plywood"
+        },
+        "description": "Oberfläche aus Multiplex Birke 18 mm – sehr stabil, glatte Oberfläche, etwas teurer."
+      },
+      {
+        "key": "lower",
+        "name": "Niedriger (30 cm)",
+        "overrides": {
+          "height_mm": 300
+        },
+        "description": "Podest auf 300 mm Gesamthöhe reduziert – für jüngere Kinder oder flachere Bühnen."
+      }
+    ],
+    "auto_screws": true,
+    "object_type": "Catwalk-Podest"
+  }
+}

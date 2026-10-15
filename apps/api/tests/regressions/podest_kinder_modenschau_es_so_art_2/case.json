@@ -1,0 +1,83 @@
+{
+  "id": "podest_kinder_modenschau_es_so_art_2",
+  "title": "Kinder-Podest: Token-Budget in der Reparaturschleife erschöpft",
+  "origin": {
+    "kind": "agent_run",
+    "ref": "3289388f-3426-4f90-a902-7b07c28ec8ff",
+    "date": "2026-10-14"
+  },
+  "failure_class": "engine_loop",
+  "brief": "Erstelle mir ein Podest für Kinder für eine Modenschau. Es soll so eine Art Tribüne für ein Catwalk sein. Es soll maximal 2 Meter lang sein und 1 Meter breit. Es wird drinnen aufgestellt. Die Oberfläche kann aus einzelnen Bretter oder als Platte erstellt werden. Es soll zwischen 30cm und 50cm hoch sein",
+  "expect": {
+    "envelope": {
+      "max_length_mm": 2000,
+      "max_width_mm": 1000
+    },
+    "use": "indoor",
+    "support": "floor",
+    "features": [
+      {
+        "walkable_top": {
+          "min_coverage": 0.9,
+          "min_height_mm": 300,
+          "max_height_mm": 500
+        }
+      },
+      "standing_stable",
+      "choice_param:surface=boards|panel"
+    ],
+    "note": "maximal 2 m x 1 m, drinnen, Oberfläche aus Brettern oder Platte, 30–50 cm hoch"
+  },
+  "attempts": [
+    {
+      "file": "attempts/01.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "Bauteile 'traeger_v[0]' (Längsträger vorne) und 'quer_vl[0]'",
+        "durchdringen sich"
+      ]
+    },
+    {
+      "file": "attempts/02.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "Bauteile 'traeger_v[0]' (Längsträger vorne) und"
+      ]
+    },
+    {
+      "file": "attempts/03.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "Bauteil 'quer_vl[0]' (Querträger vorne): Maße 44 × 862 × 44"
+      ]
+    },
+    {
+      "file": "attempts/04.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "Bauteile 'traeger_v[0]' (Längsträger vorne) und"
+      ]
+    },
+    {
+      "file": "attempts/05.json",
+      "expect_outcome": "engine_rejected",
+      "errors_contain": [
+        "Bauteile 'traeger_v[0]' (Längsträger vorne) und"
+      ]
+    },
+    {
+      "file": "attempts/06.json",
+      "expect_outcome": "accepted"
+    }
+  ],
+  "golden": {
+    "design": "golden.json",
+    "params": {
+      "length_mm": 2000,
+      "deck_boards": 8,
+      "height_mm": 350,
+      "surface": "boards"
+    }
+  },
+  "notes": "Lauf 3289388f (trace d8b15dfc), Modell upstage/solar-pro4, Prompt 2026-10-14.1: Abbruch mit UsageLimitExceeded (207 638 > 200 000 Tokens) vor Anfrage 8. Ursachen: (1) das Thinking jeder Reparaturrunde (~3K Tokens) wurde bei jeder weiteren Anfrage mitgeschickt, Input 8K -> 32K; (2) 01 scheiterte an 'explanation' im design-Objekt; (3) 06 war geometrisch gültig und scheiterte nur an Freitext-Schrauben unter hardware, die die Engine ohnehin selbst ableitet. Fixes: history.py kürzt Thinking im laufenden Turn, args.py zieht design.explanation hoch, derive.py ignoriert Schrauben unter hardware (auto_screws), Limit 1 000 000. Golden-Design wie podium_kids_catwalk (gleicher Brief)."
+}

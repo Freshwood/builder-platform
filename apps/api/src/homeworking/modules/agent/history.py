@@ -6,7 +6,10 @@ and example designs from all earlier turns. The model only needs:
 - earlier turns: what was asked, which tools ran and what came out, but not the bulky
   arguments (designs) or lookups (catalog, current design); it can fetch them again;
 - the current turn: everything, except designs that a later attempt has superseded (their
-  engine errors stay, so the model still sees what it already fixed).
+  engine errors stay, so the model still sees what it already fixed) and the thinking of all
+  but the latest response. Reasoning models write ~3K tokens of thinking per repair round;
+  resent on every request it exhausted the token budget (regression
+  podest_kinder_modenschau_es_so_art_2).
 
 Pydantic AI keeps the processed history for the rest of the run, so superseded designs are
 stubbed in the stored model/UI messages too. Provenance does not suffer: every submitted
@@ -60,11 +63,11 @@ def _stub_design_call(part: ToolCallPart, stub: str) -> ToolCallPart:
 
 
 def _compact_response(
-    message: ModelResponse, *, earlier: bool, keep_call_id: str | None
+    message: ModelResponse, *, earlier: bool, keep_thinking: bool, keep_call_id: str | None
 ) -> ModelResponse:
     parts: list[ModelResponsePart] = []
     for part in message.parts:
-        if earlier and isinstance(part, ThinkingPart):
+        if not keep_thinking and isinstance(part, ThinkingPart):
             continue
         if (
             isinstance(part, ToolCallPart)
@@ -98,11 +101,21 @@ def _last_design_call(messages: list[ModelMessage]) -> str | None:
 def compact_history(messages: list[ModelMessage]) -> list[ModelMessage]:
     start = _turn_start(messages)
     keep = _last_design_call(messages[start:])
+    last_response = max(
+        (i for i, m in enumerate(messages) if isinstance(m, ModelResponse)), default=-1
+    )
     out: list[ModelMessage] = []
     for index, message in enumerate(messages):
         earlier = index < start
         if isinstance(message, ModelResponse):
-            out.append(_compact_response(message, earlier=earlier, keep_call_id=keep))
+            out.append(
+                _compact_response(
+                    message,
+                    earlier=earlier,
+                    keep_thinking=index == last_response and not earlier,
+                    keep_call_id=keep,
+                )
+            )
         elif earlier:
             out.append(_compact_request(message))
         else:

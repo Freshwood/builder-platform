@@ -79,8 +79,11 @@ async def test_bare_expressions_are_recorded_verbatim_and_repaired(settings: Set
 
 
 async def test_extra_key_inside_design_is_recorded_as_invalid_args(settings: Settings) -> None:
-    """The real bug: "explanation" inside design fails validation before the tool body runs."""
-    args = {"title": "Regal", "design": {**shelf(), "explanation": "Warum so?"}}
+    """An unknown key inside design fails validation before the tool body runs.
+
+    ("explanation" was the real bug; args.py now moves it to the tool argument.)
+    """
+    args = {"title": "Regal", "design": {**shelf(), "remark": "Warum so?"}}
     async with run_calls(
         settings, [("save_design", args), ("save_design", {"design": shelf()})]
     ) as deps:
@@ -90,7 +93,7 @@ async def test_extra_key_inside_design_is_recorded_as_invalid_args(settings: Set
     assert invalid["accepted"] is False
     assert invalid["design"] is None
     assert invalid["raw_args"] == args
-    assert any("design.explanation" in e and "extra_forbidden" in e for e in invalid["errors"])
+    assert any("design.remark" in e and "extra_forbidden" in e for e in invalid["errors"])
     assert accepted["outcome"] == "accepted"
     json.dumps(deps.design_attempts)
 

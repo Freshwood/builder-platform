@@ -18,8 +18,7 @@
   "attempts": [
     {
       "file": "attempts/01.json",
-      "expect_outcome": "invalid_args",
-      "errors_contain": ["design.explanation", "extra_forbidden"],
+      "expect_outcome": "accepted",
       "synthetic": true
     },
     {
@@ -38,5 +37,5 @@
     "design": "golden.json",
     "params": {"length_mm": 2000, "deck_boards": 8, "height_mm": 350, "surface": "boards"}
   },
-  "notes": "bug.md enthält keine Roh-Argumente; alle Versuche sind rekonstruiert (synthetic). 01 gibt den gemeldeten Fehler wieder (zusätzlicher Schlüssel 'explanation' in design). 02 erzeugt die gemeldeten '2 Punkte' (Unbekannter Name 'surface_type' für top_boards und top_panel), indem das when auf einen nicht deklarierten Parameter zeigt. Ob der echte Lauf genau das tat, ist unbekannt. 03 schreibt den Textparameter in when konsistent und wird heute akzeptiert: die im Bericht vermutete Ursache (Textparameter im when) lässt sich mit dem aktuellen Code NICHT reproduzieren, 03 hält fest, dass es funktioniert. Das Golden-Design (golden.json) ist auch das PODIUM des Corpus (packages/calc-engine/tests/corpus_designs.py): die Breite ist eine Anzahl 125-mm-Deckbretter, damit Bretter- und Plattenvariante exakt gleich breit sind."
+  "notes": "bug.md enthält keine Roh-Argumente; alle Versuche sind rekonstruiert (synthetic). 01 gibt den gemeldeten Fehler wieder (zusätzlicher Schlüssel 'explanation' in design); seit args.hoist_nested_arguments (Fall podest_kinder_modenschau_es_so_art_2) wird er hochgezogen und 01 akzeptiert. 02 erzeugt die gemeldeten '2 Punkte' (Unbekannter Name 'surface_type' für top_boards und top_panel), indem das when auf einen nicht deklarierten Parameter zeigt. Ob der echte Lauf genau das tat, ist unbekannt. 03 schreibt den Textparameter in when konsistent und wird heute akzeptiert: die im Bericht vermutete Ursache (Textparameter im when) lässt sich mit dem aktuellen Code NICHT reproduzieren, 03 hält fest, dass es funktioniert. Das Golden-Design (golden.json) ist auch das PODIUM des Corpus (packages/calc-engine/tests/corpus_designs.py): die Breite ist eine Anzahl 125-mm-Deckbretter, damit Bretter- und Plattenvariante exakt gleich breit sind."
 }

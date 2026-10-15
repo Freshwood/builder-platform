@@ -75,6 +75,16 @@ def test_current_turn_keeps_only_the_latest_design_and_all_errors() -> None:
     assert _args(compacted[9])["design"] == DESIGN
 
 
+def test_current_turn_keeps_only_the_latest_thinking() -> None:
+    """Run 3289388f: ~3K tokens of thinking per repair round, all resent, exhausted the budget."""
+    messages = _conversation()
+    messages[7] = ModelResponse(parts=[ThinkingPart("alt"), *messages[7].parts])
+    messages[9] = ModelResponse(parts=[ThinkingPart("neu"), *messages[9].parts])
+    compacted = compact_history(messages)
+    assert not any(isinstance(p, ThinkingPart) for p in compacted[7].parts)
+    assert [p.content for p in compacted[9].parts if isinstance(p, ThinkingPart)] == ["neu"]
+
+
 def test_compaction_does_not_change_the_input() -> None:
     messages = _conversation()
     compact_history(messages)

@@ -8,9 +8,14 @@ import pytest
 from design_fixtures import fixture_design
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
+from pydantic_ai.tools import ToolDefinition
 
 from homeworking.bootstrap import build_container
-from homeworking.modules.agent.args import parse_json, quote_bare_expressions
+from homeworking.modules.agent.args import (
+    hoist_nested_arguments,
+    parse_json,
+    quote_bare_expressions,
+)
 from homeworking.modules.agent.tools import AgentDeps, build_agent
 from homeworking.settings import Settings
 
@@ -60,6 +65,31 @@ def test_surplus_brace_inside_a_list_is_still_dropped() -> None:
 def test_unrepairable_json_names_position_and_cause() -> None:
     with pytest.raises(ValueError, match=r"bei Zeichen 8.*Anführungszeichen"):
         parse_json('{"a": 1 "b": 2}')
+
+
+SAVE_DESIGN = ToolDefinition(
+    name="save_design",
+    parameters_json_schema={"properties": {"design": {}, "explanation": {}}},
+)
+
+
+def test_explanation_nested_in_the_design_is_hoisted() -> None:
+    """Kids' podium run 3289388f: "explanation" inside the design string, extra_forbidden."""
+    raw = parse_json((FIXTURES / "podest_design_explanation.txt").read_text(encoding="utf-8"))
+    args = hoist_nested_arguments(raw, SAVE_DESIGN)
+    assert args["explanation"].strip()
+    assert "explanation" not in args["design"]
+    assert args["design"]["object_type"] == "Catwalk-Podest"
+
+
+def test_top_level_explanation_wins_and_other_keys_stay() -> None:
+    args = {"design": {"explanation": "innen", "summary": "s"}, "explanation": "oben"}
+    assert hoist_nested_arguments(args, SAVE_DESIGN) == {
+        "design": {"summary": "s"},
+        "explanation": "oben",
+    }
+    other = ToolDefinition(name="x", parameters_json_schema={"properties": {"design": {}}})
+    assert hoist_nested_arguments(args, other) is args
 
 
 def _design_with_bare_expression() -> str:
