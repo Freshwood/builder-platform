@@ -282,3 +282,19 @@ func TestReplaceDesignKeepsValidParamsAndUserNotes(t *testing.T) {
 		t.Fatalf("params = %v", out.Params.Map())
 	}
 }
+
+func TestReplaceInputsDoesNotAliasTheCommand(t *testing.T) {
+	cmd := model.ReplaceInputs{Inputs: model.ProjectInputs{
+		Title:  "Alt",
+		Design: design(t),
+		Params: params("width_mm", 800),
+	}}
+	out, err := model.ApplyToInputs(&model.ProjectInputs{Title: "Neu", Design: design(t)}, cmd, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out.Params.Set("width_mm", model.IntValue(1))
+	if got, _ := cmd.Inputs.Params.Get("width_mm"); !reflect.DeepEqual(got, model.IntValue(800)) {
+		t.Fatalf("command params changed through the result: %v", got)
+	}
+}

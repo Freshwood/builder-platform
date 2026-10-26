@@ -255,6 +255,8 @@ func ApplyToInputs(inputs *ProjectInputs, command Command, variantOverrides map[
 			Design: c.Design,
 			Params: c.Params.Clone(),
 			Region: c.Region,
+			Notes:  []Note{},
+			Prices: Dict[decimal.Decimal]{},
 		}, nil
 	}
 	if inputs == nil {
@@ -318,7 +320,8 @@ func ApplyToInputs(inputs *ProjectInputs, command Command, variantOverrides map[
 			out.Prices.Set(c.ItemID, *c.UnitPrice)
 		}
 	case ReplaceInputs:
-		return c.Inputs, nil
+		// A copy, so that changing the result never reaches into the logged command.
+		return c.Inputs.Clone(), nil
 	case Undo:
 		return ProjectInputs{}, commandErr("Undo must be resolved via EffectiveCommands()")
 	default:

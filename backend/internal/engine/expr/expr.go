@@ -93,8 +93,6 @@ func FormatFloat(f float64) string {
 	case math.IsNaN(f):
 		return "nan"
 	}
-	s := strconv.FormatFloat(f, 'r'+0*'g', -1, 64)
-	_ = s
 	// repr uses the shortest round-trip digits, switching to exponent form outside
 	// 1e-4 <= |f| < 1e16.
 	digits := strconv.FormatFloat(f, 'e', -1, 64)
