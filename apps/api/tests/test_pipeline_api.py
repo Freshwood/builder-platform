@@ -314,7 +314,8 @@ async def test_modules_give_up_after_the_repair_rounds() -> None:
 
 async def test_an_invalid_module_answer_is_asked_again_from_the_start() -> None:
     broken = {"module": "body", "parts": []}  # a module needs at least one part
-    pipeline, seen = _module_pipeline(broken, broken, None)
+    # One run allows two output retries, so three invalid answers fail it.
+    pipeline, seen = _module_pipeline(broken, broken, broken, None)
     result = await pipeline.modules(SPEC, _skeleton())
     assert len(result.repairs) == 1
     assert "fehlt" in result.repairs[0]["body"][0]
@@ -484,12 +485,13 @@ async def test_a_second_skeleton_error_ends_the_design(monkeypatch: pytest.Monke
 
 
 async def test_skeleton_output_the_model_cannot_deliver_counts_as_a_failed_attempt() -> None:
-    # {} violates the schema twice (the framework retries once), then a valid answer follows.
-    pipeline, seen = _pipeline({}, {}, _good())
+    # {} violates the schema three times (the framework retries twice), then a valid answer.
+    pipeline, seen = _pipeline({}, {}, {}, _good())
     result = await pipeline.skeleton(SPEC)
     assert len(result.attempts) == 1
     assert "Ausgabe unbrauchbar" in result.attempts[0][0]
-    assert len(seen) == 3
+    assert len(seen) == 4
+    assert "Ausgabe unbrauchbar" in result.attempts[0][0]
 
 
 async def test_module_prompt_describes_bool_parameters() -> None:

@@ -110,6 +110,10 @@ class AgentDeps:
     # Pipeline runs of this turn: every run costs a design's worth of tokens, so a failing
     # brief is not retried blindly (``MAX_PLAN_RUNS``).
     plan_runs: int = 0
+    # Whether ``save_design`` may create a project. Off with a real model: a live run showed it
+    # falling back to the old one-call design loop (7 attempts, 134K tokens) when the pipeline
+    # failed. The offline model drafts its canned designs with it, so tests keep it on.
+    save_design_creates: bool = True
     # The model may call several tools in parallel; project writes must run one after another,
     # otherwise they race for the next command sequence number.
     write_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -708,6 +712,12 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
         """
         design = design.model_copy(update={"origin": Origin.AI})
         target = _target(ctx, new_project)
+        if target is None and not ctx.deps.save_design_creates:
+            return _fail(
+                ctx,
+                "use_plan_design",
+                "Neue Projekte planst du mit plan_design; save_design ist nur zum Umbauen.",
+            )
         async with ctx.deps.write_lock:
             try:
                 outcome = await _save_design(ctx, target, design, title, params)

@@ -225,3 +225,48 @@ async def test_a_failing_brief_is_not_planned_again_and_again() -> None:
     assert len(runs) == 2  # the third call is refused without a pipeline run
     outcomes = [a["outcome"] for a in deps.design_attempts]
     assert outcomes == ["engine_rejected", "engine_rejected", "plan_limit"]
+
+
+async def test_save_design_cannot_create_when_the_pipeline_owns_new_designs() -> None:
+    from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
+    from pydantic_ai.models.function import AgentInfo, FunctionModel
+
+    from homeworking.modules.agent.offline import offline_designs
+    from homeworking.modules.agent.tools import AgentDeps, build_agent
+
+    shelf = next(d for d in offline_designs() if d.key == "shelf")
+    calls = {"n": 0}
+
+    def script(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        calls["n"] += 1
+        if calls["n"] > 1:
+            return ModelResponse(parts=[TextPart("ok")])
+        design = shelf.design.model_dump(mode="json", exclude_defaults=True)
+        return ModelResponse(
+            parts=[ToolCallPart("save_design", {"design": design, "title": "Regal"})]
+        )
+
+    deps = AgentDeps(
+        owner_id=None,  # type: ignore[arg-type]
+        projects=None,  # type: ignore[arg-type]
+        project_id=None,
+        trace_id="t",
+        save_design_creates=False,
+    )
+    await build_agent(FunctionModel(script)).run("Regal", deps=deps)
+    assert [a["outcome"] for a in deps.design_attempts] == ["use_plan_design"]
+
+
+async def test_the_customers_wording_reaches_the_pipeline(client: httpx.AsyncClient) -> None:
+    from construction_model.pipeline import Spec
+    from homeworking.api.planner import ChatPlanner
+
+    container = client._transport.app.state.container  # type: ignore[attr-defined]
+    planner = ChatPlanner(container, None, None, "Schrank aus Leimholz mit 3 Fächern")  # type: ignore[arg-type]
+    spec = Spec(description="Schrank")
+    merged = planner._with_wording(spec)
+    assert merged.description == "Schrank\nWortlaut des Kunden: Schrank aus Leimholz mit 3 Fächern"
+    # Nothing to add when the brief already contains the words.
+    assert planner._with_wording(Spec(description="Schrank aus Leimholz mit 3 Fächern")) == Spec(
+        description="Schrank aus Leimholz mit 3 Fächern"
+    )

@@ -1,0 +1,275 @@
+{
+  "schema_version": 1,
+  "label": "pipeline-v3-stage-off",
+  "date": "2026-10-28",
+  "prompt_version": "2026-10-28.5",
+  "prompt_fingerprint": "d1a105f6fbee5b28",
+  "routing_version": "2",
+  "settings": {
+    "llm_mode": "openai",
+    "offline": false,
+    "models": {
+      "designer": "~deepseek/deepseek-v4-flash-latest",
+      "fast": "~deepseek/deepseek-v4-flash-latest"
+    },
+    "model_role": null,
+    "runs": 1,
+    "request_limit": 12,
+    "total_tokens_limit": 1000000,
+    "temperature": 0.2,
+    "reasoning": "low",
+    "max_output_tokens": 12000,
+    "budget_usd": 5.0
+  },
+  "aborted": null,
+  "overall": {
+    "runs": 3,
+    "successes": 0,
+    "success_rate": 0.0,
+    "pass_at_1": 0.0,
+    "pass_any": false,
+    "pass_all": false,
+    "accepted_runs": 0,
+    "mean_attempts": 5.0,
+    "mean_rejected": 5.0,
+    "mean_requests": 7.0,
+    "mean_duration_s": 179.462,
+    "intent_violation_runs": 0,
+    "view_violation_runs": 0,
+    "error_runs": 1,
+    "input_tokens": 285293,
+    "output_tokens": 49424,
+    "stage_input_tokens": 224514,
+    "stage_output_tokens": 28007,
+    "cost_usd": null,
+    "mean_cost_usd": null,
+    "unpriced_requests": 69,
+    "cases": 3,
+    "cases_pass_all": 0,
+    "cases_pass_any": 0
+  },
+  "cases": {
+    "podium_kids_catwalk": {
+      "failure_class": "engine_loop",
+      "brief": "Erstelle mir ein Podest für Kinder für eine Modenschau. Es soll so eine Art Tribüne für ein Catwalk sein. Es soll maximal 2 Meter lang sein und 1 Meter breit. Es wird drinnen aufgestellt. Die Oberfläche kann aus einzelnen Bretter oder als Platte erstellt werden",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 6.0,
+        "mean_rejected": 6.0,
+        "mean_requests": 8.0,
+        "mean_duration_s": 142.521,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "input_tokens": 103431,
+        "output_tokens": 12396,
+        "stage_input_tokens": 86065,
+        "stage_output_tokens": 8146,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 26
+      },
+      "runs": [
+        {
+          "case": "podium_kids_catwalk",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": false,
+          "success": false,
+          "attempts": 6,
+          "rejected": 6,
+          "outcomes": {
+            "engine_rejected": 2,
+            "no_project": 1,
+            "plan_limit": 3
+          },
+          "requests": 8,
+          "input_tokens": 103431,
+          "output_tokens": 12396,
+          "cache_read_tokens": 66560,
+          "stages": {
+            "skeleton": {
+              "runs": 2,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 4260,
+              "output_tokens": 1318
+            },
+            "modules": {
+              "runs": 2,
+              "failed": 2,
+              "requests": 16,
+              "input_tokens": 81805,
+              "output_tokens": 6828
+            }
+          },
+          "stage_input_tokens": 86065,
+          "stage_output_tokens": 8146,
+          "cost_usd": null,
+          "unpriced_requests": 26,
+          "duration_s": 142.521,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Ich habe das Podest jetzt fünfmal entworfen, aber die Planungs-Engine lehnt den Entwurf jedes Mal ab – die Bauteile lassen sich für diese Konstruktion (Kasten/Deck aus Platten oder Bretter mit Rahmen) nicht ohne Überlappungen oder Lücken platzieren. Entweder überlappen das Deck und die Abschlusskanten, oder die Füße erreichen das Deck nicht flächig.\n\nDamit ich es passend neu aufgleisen kann, zwei kurze Fragen:\n\n1. **Trittfläche:** Sollen es einzelne **Bretter** (Fichte, z. B. 18×146) sein oder eine **durchgehende Platte** (OSB/Multiplex)?\n2. **Höhe:** Steht die **300 mm** fest, oder darf ich sie anpassen (z. B. auf 250 oder 400 mm), damit eine stabilere Standardkonstruktion passt?\n\nFalls dir beides egal ist, lege ich als konstruktionssicherste Variante einen stabilen Rahmen aus Kanthölzern mit Deck aufliegend fest und probiere das direkt neu.",
+          "error": null
+        }
+      ]
+    },
+    "tonie_cloud_shelf": {
+      "failure_class": "args_syntax",
+      "brief": "Tonieregal mit Wolke, Fichte, an der Wand",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 7.0,
+        "mean_rejected": 7.0,
+        "mean_requests": 9.0,
+        "mean_duration_s": 170.286,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "input_tokens": 126129,
+        "output_tokens": 13135,
+        "stage_input_tokens": 105750,
+        "stage_output_tokens": 14686,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 33
+      },
+      "runs": [
+        {
+          "case": "tonie_cloud_shelf",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": false,
+          "success": false,
+          "attempts": 7,
+          "rejected": 7,
+          "outcomes": {
+            "engine_rejected": 2,
+            "use_plan_design": 1,
+            "plan_limit": 3,
+            "no_project": 1
+          },
+          "requests": 9,
+          "input_tokens": 126129,
+          "output_tokens": 13135,
+          "cache_read_tokens": 99840,
+          "stages": {
+            "skeleton": {
+              "runs": 3,
+              "failed": 0,
+              "requests": 5,
+              "input_tokens": 16146,
+              "output_tokens": 10490
+            },
+            "modules": {
+              "runs": 3,
+              "failed": 3,
+              "requests": 19,
+              "input_tokens": 89604,
+              "output_tokens": 4196
+            }
+          },
+          "stage_input_tokens": 105750,
+          "stage_output_tokens": 14686,
+          "cost_usd": null,
+          "unpriced_requests": 33,
+          "duration_s": 170.286,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Die Engine had mit dem Entwurf weiterhin Probleme – konkret fällt es ihr schwer, die Wolkendecke sauber als oberen Abschluss über die vollen seitlichen Wangen zu setzen, ohne dass sich Bauteile überlappen.\n\nDamit wir vorankommen, hier zwei Wege – sag mir, was dir lieber ist:\n\n1. **Zweistufig bauen:** Zuerst plane ich das saubere, stabile Wandregal aus Fichte (zwei Wangen, zwei bis drei Regalböden, ohne Rückwand). Die dekorative Wolke füge ich danach als eigenen Aufsatz obendrauf hinzu. So klappt es sicher.\n\n2. **Einfacherer oberer Abschluss:** Statt einer durchgehenden Wolke bekommt das Regal oben eine einzelne, klar abgesetzte Wolkenschablone, die auf dem obersten Boden aufliegt und nur dort befestigt wird (nicht zwischen den Wangen).\n\nEine Frage hätte ich noch, damit der Entwurf sauber wird: Für wie breit soll ich die **Wolke** auslegen – über die volle Regalbreite (ca. 620 mm) oder als zentrierter, etwas schmalerer Deko-Aufsatz? Bei „egal\" plane ich sie zentriert über die volle Breite.",
+          "error": null
+        }
+      ]
+    },
+    "window_shutter_reported": {
+      "failure_class": "intent_mismatch",
+      "brief": "Ich möchte Fensterläden für mein Kinderbaumhaus bauen. Die Fensterrahmen sind schon gebaut. Die Fensterläden hätten die Maße Außenbefestigung Breite 31cm Höhe 38cm. Erstelle mir eine Zeichnung dafür. Ich wollte Kinderfensterläden aus Bretter haben.",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 2.0,
+        "mean_rejected": 2.0,
+        "mean_requests": 4.0,
+        "mean_duration_s": 225.578,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 1,
+        "input_tokens": 55733,
+        "output_tokens": 23893,
+        "stage_input_tokens": 32699,
+        "stage_output_tokens": 5175,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 10
+      },
+      "runs": [
+        {
+          "case": "window_shutter_reported",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": false,
+          "success": false,
+          "attempts": 2,
+          "rejected": 2,
+          "outcomes": {
+            "engine_rejected": 1,
+            "no_project": 1
+          },
+          "requests": 4,
+          "input_tokens": 55733,
+          "output_tokens": 23893,
+          "cache_read_tokens": 17408,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 5244,
+              "output_tokens": 782
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 4,
+              "input_tokens": 27455,
+              "output_tokens": 4393
+            }
+          },
+          "stage_input_tokens": 32699,
+          "stage_output_tokens": 5175,
+          "cost_usd": null,
+          "unpriced_requests": 10,
+          "duration_s": 225.578,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "",
+          "error": "UnexpectedModelBehavior: Model token limit (12000) exceeded before any response was generated. Increase the `max_tokens` model setting, or simplify the prompt to result in a shorter response that will fit within the limit."
+        }
+      ]
+    }
+  }
+}

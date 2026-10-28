@@ -213,6 +213,12 @@ tasks:
     cmds:
       - uv run python -m homeworking.modules.agent.live_eval {{.CLI_ARGS}}
 
+  pipeline:live:
+    desc: One brief through the pipeline stages with the real models, tokens and errors per stage (costs money; not part of CI)
+    deps: [install:py]
+    cmds:
+      - uv run python -m homeworking.modules.pipeline.live {{.CLI_ARGS}}
+
   e2e:
     desc: Browser end-to-end tests with accessibility checks (offline LLM)
     deps: [install:py, install:web]

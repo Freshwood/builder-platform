@@ -15,9 +15,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
-from pydantic_ai import Agent
+from pydantic_ai import Agent, capture_run_messages
 from pydantic_ai.exceptions import UnexpectedModelBehavior
-from pydantic_ai.messages import ModelMessage
+from pydantic_ai.messages import ModelMessage, ModelRequest, RetryPromptPart
 from pydantic_ai.models import Model
 
 from calc_engine.engine import DesignRejectedError, Engine, default_engine
@@ -167,8 +167,10 @@ def build_agents(
     """The stage agents; also used by ``provenance`` to capture exactly what a request carries."""
     return (
         Agent(intake, output_type=IntakeOutput, instructions=INTAKE, retries=1),
-        Agent(skeleton, output_type=Skeleton, instructions=SKELETON_PROMPT, retries=1),
-        Agent(modules, output_type=ModuleDesign, instructions=MODULES, retries=1),
+        # Two output retries: the model sees its schema errors in the same short run, which is
+        # cheaper than a new run (live run: one retry was often not enough).
+        Agent(skeleton, output_type=Skeleton, instructions=SKELETON_PROMPT, retries=2),
+        Agent(modules, output_type=ModuleDesign, instructions=MODULES, retries=2),
         Agent(docs, output_type=Documentation, instructions=DOCS, retries=1),
     )
 
@@ -180,6 +182,21 @@ def _spec_line(spec: Spec) -> str:
 def _word(model_text: str | None, default: str) -> str:
     text = (model_text or "").strip()
     return text if 0 < len(text) <= 200 else default
+
+
+def _why(messages: list[ModelMessage]) -> str:
+    """The schema errors the model was last told about (empty if there were none)."""
+    for message in reversed(messages):
+        if isinstance(message, ModelRequest):
+            for part in reversed(message.parts):
+                if isinstance(part, RetryPromptPart):
+                    content = part.content
+                    if isinstance(content, str):
+                        return content[:600]
+                    return "; ".join(
+                        f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in content[:6]
+                    )[:800]
+    return ""
 
 
 def _param_line(param: DesignParam) -> str:
@@ -298,12 +315,18 @@ class Pipeline:
                 + "\n".join(f"- {p}" for p in problems[:8])
             )
         for _ in range(SKELETON_ATTEMPTS):
-            try:
-                result = await self.skeleton_agent.run(prompt, message_history=history)
-            except UnexpectedModelBehavior as exc:
-                # Invalid output after the framework's own retry, or the output cap was hit.
-                failed.append([f"Ausgabe unbrauchbar: {str(exc)[:200]}"])
-                continue
+            with capture_run_messages() as captured:
+                try:
+                    result = await self.skeleton_agent.run(prompt, message_history=history)
+                except UnexpectedModelBehavior as exc:
+                    # Invalid output after the framework's retries, or the output cap was hit.
+                    # The call cost tokens; their number is unknown.
+                    usage.requests += 1
+                    why = _why(captured) or str(exc)[:200]
+                    failed.append([f"Ausgabe unbrauchbar: {why}"])
+                    if history is None:
+                        prompt = f"{prompt}\nDie letzte Antwort war ungültig: {why}"
+                    continue
             usage.add(self._skeleton_model.model_name, result.usage)
             skeleton = normalize(result.output, spec)
             problems = check_skeleton(skeleton, spec)
@@ -364,15 +387,18 @@ class Pipeline:
 
         async def run(module_id: str, prompt: str) -> None:
             async with gate:
-                try:
-                    result = await self.module_agent.run(
-                        prompt, message_history=histories.get(module_id)
-                    )
-                except UnexpectedModelBehavior as exc:
-                    failures[module_id] = str(exc)[:300]
-                    designs.pop(module_id, None)
-                    histories.pop(module_id, None)
-                    return
+                with capture_run_messages() as captured:
+                    try:
+                        result = await self.module_agent.run(
+                            prompt, message_history=histories.get(module_id)
+                        )
+                    except UnexpectedModelBehavior as exc:
+                        # The call cost tokens; their number is unknown.
+                        usage.requests += 1
+                        failures[module_id] = _why(captured) or str(exc)[:300]
+                        designs.pop(module_id, None)
+                        histories.pop(module_id, None)
+                        return
             usage.add(self._module_model.model_name, result.usage)
             failures.pop(module_id, None)
             designs[module_id] = result.output.model_copy(update={"module": module_id})
@@ -493,7 +519,7 @@ class Pipeline:
         stage that ran, failed ones too."""
 
         async def seen(usage: StageUsage, error: str | None = None) -> None:
-            if on_stage is not None and usage.requests:
+            if on_stage is not None and (usage.requests or error):
                 await on_stage(usage, error)
 
         stages: list[StageUsage] = []

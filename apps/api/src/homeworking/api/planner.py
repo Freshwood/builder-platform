@@ -27,10 +27,13 @@ log = logging.getLogger("homeworking.pipeline")
 class ChatPlanner:
     """``DesignPlanner`` for one chat turn."""
 
-    def __init__(self, container: Container, owner_id: UUID, chat_id: str | None) -> None:
+    def __init__(
+        self, container: Container, owner_id: UUID, chat_id: str | None, user_text: str = ""
+    ) -> None:
         self._container = container
         self._owner_id = owner_id
         self._chat_id = chat_id
+        self._user_text = user_text
 
     async def _record(self, usage: StageUsage, error: str | None) -> None:
         await record_stage(
@@ -43,9 +46,18 @@ class ChatPlanner:
             chat_id=self._chat_id,
         )
 
+    def _with_wording(self, spec: Spec) -> Spec:
+        """Add the customer's own words: the chat model's brief tends to drop wishes such as the
+        material or the number of shelves (live run, regression briefs)."""
+        text = self._user_text.strip()
+        if not text or text in spec.description:
+            return spec
+        merged = f"{spec.description}\nWortlaut des Kunden: {text}"
+        return spec.model_copy(update={"description": merged[:2000]})
+
     async def plan(self, spec: Spec) -> PlannedDesign:
         try:
-            cleaned = clean_spec(spec)
+            cleaned = clean_spec(self._with_wording(spec))
         except HTTPException as exc:  # the safety gate refused the brief
             detail = exc.detail
             message = detail.get("message") if isinstance(detail, dict) else None

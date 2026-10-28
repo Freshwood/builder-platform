@@ -30,6 +30,8 @@ platform, DB or LLM code, and only `homeworking.api` may use `modules.agent` and
   `task regress:promote -- <slug>` turns a finished draft into a case.
 - `task eval:live`: live LLM evaluation of the regression briefs. Costs money, needs a key, not
   in CI.
+- `task pipeline:live -- --case <slug>`: one brief through the pipeline stages with the real models,
+  tokens and errors per stage, without the chat agent. Costs money, needs a key, not in CI.
 - `task prompt:lock`: record the prompt fingerprint after a prompt or tool change (agent and pipeline stages).
 - `task openapi`: regenerate `openapi.json` and the TS client after API model changes.
 - `task ci`: what CI runs.

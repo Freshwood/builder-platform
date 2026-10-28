@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "label": "pipeline-v4-diag",
+  "date": "2026-10-28",
+  "prompt_version": "2026-10-28.5",
+  "prompt_fingerprint": "d1a105f6fbee5b28",
+  "routing_version": "2",
+  "settings": {
+    "llm_mode": "openai",
+    "offline": false,
+    "models": {
+      "designer": "~deepseek/deepseek-v4-flash-latest",
+      "fast": "~deepseek/deepseek-v4-flash-latest"
+    },
+    "model_role": null,
+    "runs": 1,
+    "request_limit": 12,
+    "total_tokens_limit": 1000000,
+    "temperature": 0.2,
+    "reasoning": "low",
+    "max_output_tokens": 12000,
+    "budget_usd": 5.0
+  },
+  "aborted": null,
+  "overall": {
+    "runs": 1,
+    "successes": 0,
+    "success_rate": 0.0,
+    "pass_at_1": 0.0,
+    "pass_any": false,
+    "pass_all": false,
+    "accepted_runs": 0,
+    "mean_attempts": 6.0,
+    "mean_rejected": 6.0,
+    "mean_requests": 7.0,
+    "mean_duration_s": 725.699,
+    "intent_violation_runs": 0,
+    "view_violation_runs": 0,
+    "error_runs": 0,
+    "input_tokens": 94892,
+    "output_tokens": 12001,
+    "stage_input_tokens": 4295,
+    "stage_output_tokens": 13906,
+    "cost_usd": null,
+    "mean_cost_usd": null,
+    "unpriced_requests": 9,
+    "cases": 1,
+    "cases_pass_all": 0,
+    "cases_pass_any": 0
+  },
+  "cases": {
+    "tonie_cloud_shelf": {
+      "failure_class": "args_syntax",
+      "brief": "Tonieregal mit Wolke, Fichte, an der Wand",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 6.0,
+        "mean_rejected": 6.0,
+        "mean_requests": 7.0,
+        "mean_duration_s": 725.699,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "input_tokens": 94892,
+        "output_tokens": 12001,
+        "stage_input_tokens": 4295,
+        "stage_output_tokens": 13906,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 9
+      },
+      "runs": [
+        {
+          "case": "tonie_cloud_shelf",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": false,
+          "success": false,
+          "attempts": 6,
+          "rejected": 6,
+          "outcomes": {
+            "engine_rejected": 2,
+            "use_plan_design": 1,
+            "plan_limit": 3
+          },
+          "requests": 7,
+          "input_tokens": 94892,
+          "output_tokens": 12001,
+          "cache_read_tokens": 72448,
+          "stages": {
+            "skeleton": {
+              "runs": 2,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 4295,
+              "output_tokens": 13906
+            }
+          },
+          "stage_input_tokens": 4295,
+          "stage_output_tokens": 13906,
+          "cost_usd": null,
+          "unpriced_requests": 9,
+          "duration_s": 725.699,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Ich muss offen sein: Die Planungsinstanz konnte das Projekt auch in mehreren Vereinfachungen nicht zuverlässig erzeugen (selbst ein schlichtes Rechteckregal schlug fehl). Der Fehler liegt an der automatischen Entwurfserzeugung, nicht an deinen Angaben.\n\nBevor ich weiter probiere, kurz zwei Fragen, damit ich die Richtung anpasse:\n\n1. **Form:** Ist es dir wichtig, dass die Rückwand wirklich eine geschwungene Wolkenkontur hat, oder reicht dir eine gerade obere Kante mit einem wolkenförmigen Dekoelement davor/darauf?\n2. **Maße:** Hast du eine ungefähre Breite und Höhe im Kopf (derzeit nehme ich 580 × 420 × 140 mm), und wie viele Tonies sollen draufpassen?\n\nSobald ich weiß, wie weit ich vom Wunschbild abweichen darf, stelle ich einen passenden Entwurf zusammen.",
+          "error": null
+        }
+      ]
+    }
+  }
+}

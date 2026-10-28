@@ -25,6 +25,13 @@ deepseek-v4-flash for every role): 0 of 6 succeeded. Findings and what changed:
   the chat model (3 skeleton and modules runs in one turn). Now: every pipeline error becomes a
   `PlanFailedError`, a turn starts at most two pipeline runs (`MAX_PLAN_RUNS`), and errors that
   no module owns revise the skeleton once (`SKELETON_REVISIONS`).
+- Runtime, after the second run (`pipeline-v2`: all four briefs ended with a design, none met
+  its expectations): with a real model `save_design` can no longer create a project (it fell
+  back to the old one-call loop: 7 attempts, 134K tokens, 922 s); the customer's own wording is
+  appended to the brief the chat model wrote (`ChatPlanner`), because wishes such as the
+  material or the number of shelves got lost; skeleton and module agents allow two output
+  retries and a failed module is asked again with the schema errors it caused; every failed stage
+  run is stored with its error (`pipeline_stage` with `FAILED`, `stages.errors` in the eval).
 - Runtime, settings: the stages used the chat's reasoning effort (`low`) and output cap (12K).
   Measured output per design: skeleton 8-17K tokens, modules 14-24K, docs 3-6K, mostly
   reasoning; one run took 995 s. New `LLM_STAGE_REASONING` (default `minimal`) and

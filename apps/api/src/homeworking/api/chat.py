@@ -162,7 +162,8 @@ async def chat(request: Request, container: ContainerDep, user: UserDep) -> Resp
         projects=container.projects,
         project_id=project_id,
         trace_id=trace_id,
-        planner=ChatPlanner(container, user.id, chat_id),
+        planner=ChatPlanner(container, user.id, chat_id, last_text),
+        save_design_creates=container.settings.llm_mode == "test",
     )
     limits = UsageLimits(
         request_limit=container.settings.agent_request_limit,

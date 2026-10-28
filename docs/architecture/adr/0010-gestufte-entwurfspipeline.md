@@ -99,3 +99,26 @@ insgesamt deutlich unter 40K statt 100–150K.
   Anfrage (Präfix 2.697, für alle Module eines Entwurfs gleich) gegenüber 7.608 Token Präfix des
   bisherigen Entwurfsaufrufs bei jeder seiner 2 bis 8 Anfragen. Ob ein kleines Modell brauchbare
   Module liefert und wie viele Reparaturrunden es braucht, zeigt erst die Live-Evaluation.
+
+## Live-Lauf (2026-10-28)
+
+Sechs Regressions-Briefs, danach Wiederholungen einzelner Briefs, mit `task eval:live` und
+`task pipeline:live` (Berichte in `docs/ai/evals/`). Beide Rollen liefen auf
+deepseek-v4-flash, nicht auf solar-pro4. Jeder Lauf n = 1, die Zahlen sind Größenordnungen.
+
+- Erster Lauf: 0 von 6 erfolgreich, nur 2 endeten mit einem Entwurf. Gefunden und behoben:
+  `bool`-Parameter im Modul-Prompt, unbrauchbare Modellausgaben als Ausnahme statt Fehlversuch,
+  Chat-Modell plant ein scheiterndes Brief mehrfach, Rückfrage statt `plan_design`.
+- Zweiter Lauf (4 Briefs): alle enden mit einem Entwurf, keiner erfüllt die Erwartungen des
+  Falls (fehlender Auswahlparameter, Ebenen, Material, Maximalmaß). Etwa 73K statt 107K Token je
+  Entwurf. Die Eingabe der Stufen ist klein (Gerüst 2–6K, Module 8–9K, Doku 1,2K), die Ausgabe
+  groß (Module 14–29K, vor allem Denken).
+- `LLM_STAGE_REASONING=off`: Ausgabe der Module fällt auf 4–7K, aber die Module scheitern an der
+  Engine, drei Reparaturrunden, 190–230K Token Eingabe. Standard bleibt `minimal`.
+- Diagnose-Läufe: Das Modell liefert für Module teils keine Ausgabe („Please return text or
+  include your response in a tool call“) oder verletzt das Schema; ein Modul-Aufruf dauert dann
+  Minuten (490 s für sieben Anfragen). Der Fensterladen-Fall brauchte über den alten
+  `save_design`-Pfad 922 s und 166K Token; dieser Pfad ist mit echtem Modell jetzt gesperrt.
+- Offen: ob solar-pro4 für Module zuverlässiger ist, ob ein anderer Ausgabemodus (JSON im Prompt
+  statt Werkzeugaufruf) die leeren Antworten vermeidet, und warum der Intake-Aufruf 10,9K statt
+  0,8K Eingabe-Token meldet (die Offline-Messung sagt 0,8K).

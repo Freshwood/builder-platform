@@ -264,7 +264,8 @@ async def run_case(
         projects=container.projects,
         project_id=None,
         trace_id=f"eval-{case.id}",
-        planner=ChatPlanner(container, owner, None),  # new designs run through the pipeline
+        planner=ChatPlanner(container, owner, None, text),  # new designs run via the pipeline
+        save_design_creates=settings.llm_mode == "test",
     )
     started = time.perf_counter()
     try:
@@ -325,6 +326,8 @@ async def _add_stage_usage(
         )
         stage["runs"] += 1
         stage["failed"] += row.status != "completed"
+        if row.error:  # what the engine or the model objected to, to read failures
+            stage.setdefault("errors", []).append(row.error[:600])
         for key in ("requests", "input_tokens", "output_tokens"):
             stage[key] += int(usage.get(key) or 0)
         record.stage_input_tokens += int(usage.get("input_tokens") or 0)
