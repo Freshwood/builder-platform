@@ -10,6 +10,7 @@ anschließend in `ARCHITEKTUR.md` eingearbeitet.
 | Nr. | Titel | Datum |
 |---|---|---|
 | [0009](0009-neuanfang-go-backend-vite-spa.md) | Neuanfang mit Go-Backend, Vite-SPA und BDD-Szenarien | 2026-10-16 |
+| [0010](0010-gestufte-entwurfspipeline.md) | Gestufte Entwurfspipeline statt eines großen Aufrufs | 2026-10-28 |
 
 ## Archiv (in ARCHITEKTUR.md eingearbeitet)
 
