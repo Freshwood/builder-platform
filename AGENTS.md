@@ -8,7 +8,7 @@ them and derives everything else (BOM, cut list, costs, drawings, 3D model).
 
 | Path | What |
 |---|---|
-| `apps/api` | FastAPI modular monolith (`homeworking`). The chat agent lives in `modules/agent`, the staged design pipeline (intake, skeleton) in `modules/pipeline`, the HTTP layer in `api/`. |
+| `apps/api` | FastAPI modular monolith (`homeworking`). The chat agent lives in `modules/agent`, the staged design pipeline (intake, skeleton, modules, docs) in `modules/pipeline`, the HTTP layer in `api/`. |
 | `apps/web` | Next.js 16 + React 19 client (Vercel AI SDK `useChat`). See `apps/web/AGENTS.md`. |
 | `packages/construction-model` | Pure domain model: inputs, commands, diff, `AssemblyDesign`. |
 | `packages/calc-engine` | Deterministic engine for designs, catalog. No packs or templates: every project is a one-off design (ADR-0008). `pipeline/` holds the gap rules and the module merge of the staged design pipeline (ADR-0010). |

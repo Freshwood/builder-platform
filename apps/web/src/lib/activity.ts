@@ -25,6 +25,10 @@ const TOOL_LABELS: Record<string, Labels> = {
   get_project: { running: "Lese das Projekt …", done: "Projekt gelesen" },
   create_project: { running: "Berechne das Projekt …", done: "Projekt berechnet" },
   create_from_template: { running: "Berechne die Vorlage …", done: "Projekt berechnet" },
+  plan_design: {
+    running: "Plane die Konstruktion in Stufen: Gerüst, Module, Prüfung, Dokumentation …",
+    done: "Konstruktion geplant und berechnet",
+  },
   change_project: { running: "Berechne die Änderung …", done: "Änderung berechnet" },
   undo_last_change: { running: "Nehme die Änderung zurück …", done: "Änderung zurückgenommen" },
   add_explanation: { running: "Speichere die Erläuterung …", done: "Erläuterung gespeichert" },
@@ -167,7 +171,10 @@ export function planningStages(message: UIMessage | null): Stage[] {
     .filter((part): part is ToolPart => part !== null);
   const builders = tools.filter(
     (t) =>
-      DESIGN_TOOLS.has(t.name) || t.name === "create_project" || t.name === "create_from_template",
+      DESIGN_TOOLS.has(t.name) ||
+      t.name === "plan_design" ||
+      t.name === "create_project" ||
+      t.name === "create_from_template",
   );
   const last = builders.at(-1);
   const understood = Boolean(message?.parts.length);

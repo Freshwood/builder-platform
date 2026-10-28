@@ -20,6 +20,7 @@ from pydantic_ai.ui.vercel_ai.response_types import BaseChunk, ErrorChunk
 from pydantic_ai.usage import RunUsage, UsageLimits
 
 from homeworking.api.deps import ContainerDep, UserDep
+from homeworking.api.planner import ChatPlanner
 from homeworking.modules.agent.offline import fixed_text_model
 from homeworking.modules.agent.prompts import PROMPT_VERSION
 from homeworking.modules.agent.provenance import prompt_fingerprint
@@ -157,7 +158,11 @@ async def chat(request: Request, container: ContainerDep, user: UserDep) -> Resp
         agent=agent, run_input=run_input, accept=request.headers.get("accept"), sdk_version=7
     )
     deps = AgentDeps(
-        owner_id=user.id, projects=container.projects, project_id=project_id, trace_id=trace_id
+        owner_id=user.id,
+        projects=container.projects,
+        project_id=project_id,
+        trace_id=trace_id,
+        planner=ChatPlanner(container, user.id, chat_id),
     )
     limits = UsageLimits(
         request_limit=container.settings.agent_request_limit,

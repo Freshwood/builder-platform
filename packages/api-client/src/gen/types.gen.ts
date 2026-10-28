@@ -1046,6 +1046,31 @@ export type ModuleBrief = {
 };
 
 /**
+ * ModulesRequest
+ */
+export type ModulesRequest = {
+    spec: Spec;
+    skeleton: Skeleton;
+};
+
+/**
+ * ModulesResponse
+ */
+export type ModulesResponse = {
+    design: AssemblyDesign;
+    /**
+     * Repairs
+     */
+    repairs: number;
+    /**
+     * Usage
+     */
+    usage: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * Money
  */
 export type Money = {
@@ -2656,3 +2681,28 @@ export type SkeletonResponses = {
 };
 
 export type SkeletonResponse2 = SkeletonResponses[keyof SkeletonResponses];
+
+export type ModulesData = {
+    body: ModulesRequest;
+    path?: never;
+    query?: never;
+    url: '/api/pipeline/modules';
+};
+
+export type ModulesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ModulesError = ModulesErrors[keyof ModulesErrors];
+
+export type ModulesResponses = {
+    /**
+     * Successful Response
+     */
+    200: ModulesResponse;
+};
+
+export type ModulesResponse2 = ModulesResponses[keyof ModulesResponses];

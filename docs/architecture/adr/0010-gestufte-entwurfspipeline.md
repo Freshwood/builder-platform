@@ -74,10 +74,28 @@ insgesamt deutlich unter 40K statt 100–150K.
 ## Stand der Umsetzung (2026-10-28)
 
 - Umgesetzt: Verträge, Lückenregeln, Zusammenführen, Gerüst-Prüfung (`calc_engine.pipeline`),
-  Stufe 1 und 2 als Endpunkte `POST /api/pipeline/intake` und `/api/pipeline/skeleton`
+  Stufe 1 bis 3 als Endpunkte `POST /api/pipeline/intake`, `/skeleton` und `/modules`
   (`modules/pipeline`, eigene Prompts, Lock und Token-Budget), Fragen-Schritt im Planer.
-- Offen: Stufe 3 (Module), Anbindung des Gerüsts an den Chat, Stufe 5 (Dokumentation). Das Gerüst
-  wird heute nur über den Endpunkt erzeugt und gespeichert (`agent_runs`, `stage:skeleton`).
-- Gemessen (offline, Anfrageseite exakt): Intake 810, Gerüst 1.690 Token je Anfrage gegenüber
-  7.608 Token Präfix des bisherigen Entwurfsaufrufs. Ob ein kleines Modell brauchbare Module
-  liefert, zeigt erst die Live-Evaluation mit Stufe 3.
+- Stufe 3: Pro Modul ein Aufruf des kleinen Modells (höchstens 4 gleichzeitig) mit
+  Katalog-Kurzliste, Steckbrief, Parametern, eigener Box und den Nachbarboxen. Die Engine
+  verschiebt, führt zusammen und prüft; Fehler mit Bauteilnamen gehen nur an das besitzende Modul
+  (Bauteil-IDs in Modul-Schreibweise, höchstens zwei Reparaturrunden). Fehler ohne Bauteil beenden
+  die Stufe mit 422 (`skeleton`-Schlüssel). Ein Modul, dessen Ausgabe das Schema verletzt, wird
+  neu angefragt. Jeder Lauf steht in `agent_runs` (`stage:modules`, Rolle `fast`).
+- Stufe 5 und Neuentwurf im Chat: Das Chat-Werkzeug `plan_design(spec, title)` ersetzt
+  `save_design` für neue Projekte und für die komplette Neuplanung. Das Chat-Modell füllt nur
+  den Steckbrief; `Pipeline.design` führt Gerüst, Module und Dokumentation aus
+  (`api/planner.py` speichert jede Stufe in `agent_runs`, mit der Chat-ID). Die Dokumentation
+  (`docs.de.md`) liefert die Erklärung („Warum so?“) und die Texte der Bauschritte; die Engine
+  ordnet jedem Schritt die Teile seines Moduls zu und prüft ihn. Lehnt sie die Texte ab oder
+  fällt das Modell aus, bleiben Modultitel und -rolle als Schritt, die Erklärung bleibt leer: der
+  Entwurf hängt nie an der Dokumentation. `save_design` bleibt für strukturelle Umbauten.
+- Offen: Reparatur des Gerüsts bei Skeleton-Fehlern, strukturelle Umbauten über die Pipeline (dann
+  entfällt `save_design` und mit ihm rund 3,5K Token Präfix je Chat-Anfrage), Routing der
+  Neuentwurf-Züge auf das kleine Modell, Live-Evaluation. Der Offline-Chat plant Schränke, Podeste
+  und Ähnliches über die Pipeline (Plattenkorpus); Hochbeet und Regal nutzen weiter ihre
+  Beispielentwürfe über `save_design`.
+- Gemessen (offline, Anfrageseite exakt): Intake 810, Gerüst 1.690, je Modul 3.293 Token je
+  Anfrage (Präfix 2.697, für alle Module eines Entwurfs gleich) gegenüber 7.608 Token Präfix des
+  bisherigen Entwurfsaufrufs bei jeder seiner 2 bis 8 Anfragen. Ob ein kleines Modell brauchbare
+  Module liefert und wie viele Reparaturrunden es braucht, zeigt erst die Live-Evaluation.

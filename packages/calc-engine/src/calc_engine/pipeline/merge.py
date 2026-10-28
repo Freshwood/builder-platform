@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from calc_engine.engine import DesignRejectedError, Engine
 from construction_model.assembly import (
     AssemblyDesign,
+    DesignStep,
     Expr,
     HardwareSpec,
     JointSpec,
@@ -213,3 +214,34 @@ def check(
             result.design, attribute(exc.errors, result.part_module), result.part_module
         )
     return result
+
+
+def localize(errors: Iterable[str], module: str, part_module: Mapping[str, str]) -> list[str]:
+    """Rewrite merged part ids in engine messages back to the module's own ids, so that a module
+    repair sees the ids it wrote."""
+    prefix = f"{module}_"
+    own = sorted((p for p, owner in part_module.items() if owner == module), key=len, reverse=True)
+    if not own:
+        return list(errors)
+    rx = re.compile(r"(?<![a-z0-9_])(" + "|".join(re.escape(p) for p in own) + r")(?![a-z0-9_])")
+    return [rx.sub(lambda m: m.group(1).removeprefix(prefix), message) for message in errors]
+
+
+def module_steps(
+    skeleton: Skeleton,
+    design: AssemblyDesign,
+    part_module: Mapping[str, str],
+    texts: Mapping[str, tuple[str, str]] | None = None,
+) -> list[DesignStep]:
+    """One build step per module, in skeleton order, mounting exactly the module's parts.
+
+    ``texts`` maps a module id to (title, text) as the documentation stage worded it; modules
+    without wording get their title and role, so the result never depends on a model."""
+    steps: list[DesignStep] = []
+    for brief in skeleton.modules:
+        ids = [p.id for p in design.parts if part_module.get(p.id) == brief.id]
+        if not ids:
+            continue
+        title, text = (texts or {}).get(brief.id) or (brief.title, brief.role)
+        steps.append(DesignStep(title=title[:80], text=text[:800], parts=ids))
+    return steps

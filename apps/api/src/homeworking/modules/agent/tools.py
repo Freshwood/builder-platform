@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass, field
-from typing import Annotated, Any
+from typing import Annotated, Any, Protocol
 from uuid import UUID
 
 from pydantic import Field, ValidationError
@@ -17,6 +17,7 @@ from pydantic_ai.tools import ToolDefinition
 
 from calc_engine.catalog import Catalog
 from calc_engine.engine import DesignRejectedError
+from calc_engine.pipeline.gaps import is_ready
 from construction_model.assembly import AssemblyDesign
 from construction_model.commands import (
     AddNote,
@@ -31,6 +32,7 @@ from construction_model.commands import (
 )
 from construction_model.diff import ModelDiff
 from construction_model.model import Origin, ParamValue, ProjectModel
+from construction_model.pipeline import Spec
 from homeworking.modules.agent.args import JsonTolerant, RepairToolArgs
 from homeworking.modules.agent.history import process_history
 from homeworking.modules.agent.prompts import INSTRUCTIONS
@@ -51,7 +53,29 @@ AgentCommand = Annotated[
     JsonTolerant,
 ]
 DesignArg = Annotated[AssemblyDesign, JsonTolerant]
+SpecArg = Annotated[Spec, JsonTolerant]
 ParamsArg = Annotated[dict[str, ParamValue], JsonTolerant]
+
+
+class PlanFailedError(Exception):
+    """The staged pipeline could not deliver a design; ``errors`` are short German problems."""
+
+    def __init__(self, errors: list[str]) -> None:
+        super().__init__("; ".join(errors))
+        self.errors = errors
+
+
+@dataclass(frozen=True)
+class PlannedDesign:
+    design: AssemblyDesign
+    explanation: str | None
+
+
+class DesignPlanner(Protocol):
+    """Plans a new design in stages (ADR-0010). Implemented in the API layer, which owns the
+    pipeline, so that the agent does not depend on it."""
+
+    async def plan(self, spec: Spec) -> PlannedDesign: ...
 
 
 @dataclass
@@ -78,6 +102,8 @@ class AgentDeps:
     # Number of the model request in flight, ``None`` once it returned (a streamed request fails
     # while its events are read, outside the model-request hooks).
     request_open: int | None = None
+    # Plans new designs for ``plan_design``; without it the tool is unavailable.
+    planner: DesignPlanner | None = None
     # The model may call several tools in parallel; project writes must run one after another,
     # otherwise they race for the next command sequence number.
     write_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -592,6 +618,57 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
     def list_materials(ctx: RunContext[AgentDeps]) -> str:
         """Materials for free-form designs: catalog items and made-to-order lumber."""
         return materials_table(ctx.deps.projects.engine.catalog)
+
+    @agent.tool(retries=1)
+    async def plan_design(
+        ctx: RunContext[AgentDeps], spec: SpecArg, title: str, new_project: bool = False
+    ) -> dict[str, Any]:
+        """Plan a new project or plan the current one anew. Stages design it, the engine checks
+        it and writes the explanation and build steps; you only describe what is wanted.
+
+        Args:
+            spec: The brief with everything the customer said (lengths in mm).
+            title: Short German project title.
+            new_project: Only true if the user explicitly wants another, separate project.
+        """
+        if ctx.deps.planner is None:
+            return _fail(ctx, "no_planner", "Entwürfe sind derzeit nicht verfügbar.")
+        if not is_ready(spec):
+            return _fail(
+                ctx, "missing_size", "Für den Entwurf fehlen Maße (width_mm, depth_mm, height_mm)."
+            )
+        try:
+            planned = await ctx.deps.planner.plan(spec)
+        except PlanFailedError as exc:
+            _attempt(ctx, "engine_rejected", exc.errors)
+            return {
+                "error": "Der Entwurf ist nicht gelungen. Sag dem Nutzer kurz, woran es lag, "
+                "und biete an, es mit angepassten Angaben erneut zu versuchen.",
+                "errors": exc.errors[:8],
+            }
+        design = planned.design.model_copy(update={"origin": Origin.AI})
+        target = _target(ctx, new_project)
+        async with ctx.deps.write_lock:
+            try:
+                outcome = await _save_design(ctx, target, design, title, None)
+            except DesignRejectedError as exc:
+                _attempt(ctx, "engine_rejected", exc.errors, design)
+                return _design_rejected(exc)
+            except (CommandError, ProjectNotFoundError) as exc:
+                return _fail(
+                    ctx, _command_outcome(exc), f"Änderung nicht möglich: {exc}", design=design
+                )
+            _attempt(ctx, "accepted", [], design)
+            await _store_explanation(ctx, outcome.project.id, planned.explanation)
+        ctx.deps.project_id = outcome.project.id
+        ctx.deps.changed_projects.add(outcome.project.id)
+        reply: dict[str, Any] = {
+            "action": _action(target),
+            "project": project_summary(outcome.project),
+        }
+        if target is not None:
+            reply["diff"] = diff_summary(outcome.diff)
+        return reply
 
     @agent.tool(retries=3)
     async def save_design(

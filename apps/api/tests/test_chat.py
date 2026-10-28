@@ -2,8 +2,11 @@ import json
 
 import httpx
 import pytest
+from sqlalchemy import select
 
+from homeworking.db.schema import AgentRunRow
 from homeworking.modules.agent.offline import ToolCall, decide_for_user_text
+from homeworking.modules.pipeline.stages import SkeletonRejectedError, StageUsage
 
 
 def _message(text: str, message_id: str = "m1") -> dict:  # type: ignore[type-arg]
@@ -120,3 +123,51 @@ def test_offline_planner_only_drafts_what_it_knows() -> None:
     """Without a language model there are no templates to fall back on (ADR-0008)."""
     decision = decide_for_user_text("Werkbank 150 x 70 cm mit Rollen")
     assert isinstance(decision, str)
+
+
+async def test_chat_plans_a_new_design_through_the_pipeline(client: httpx.AsyncClient) -> None:
+    events = await _chat(client, "Ich brauche einen Schrank 80 x 40 x 100 cm, drinnen")
+    outputs = _tool_outputs(events)
+    assert outputs[0]["action"] == "created"
+    project = outputs[0]["project"]
+    assert project["params"]["width_mm"] == 800
+
+    stored = (await client.get(f"/api/projects/{project['project_id']}")).json()
+    design = stored["project"]["inputs"]["design"]
+    assert {p["id"] for p in design["parts"]} == {
+        "body_left",
+        "body_right",
+        "body_bottom",
+        "body_top",
+    }
+    assert [s["title"] for s in design["steps"]] == ["Korpus"]
+    notes = stored["project"]["inputs"]["notes"]
+    assert any("Korpus besteht aus Platten" in n["text"] for n in notes)
+
+    container = client._transport.app.state.container  # type: ignore[attr-defined]
+    async with container.sessions() as session:
+        runs = (await session.scalars(select(AgentRunRow))).all()
+    stages = sorted(r.routing_reason for r in runs if r.routing_reason.startswith("stage:"))
+    assert stages == ["stage:docs", "stage:modules", "stage:skeleton"]
+    assert {r.chat_id for r in runs} == {"c1"}
+
+
+async def test_planning_without_a_size_is_not_attempted(client: httpx.AsyncClient) -> None:
+    events = await _chat(client, "Ich brauche einen Schrank")
+    assert not _tool_outputs(events)
+
+
+async def test_a_rejected_plan_is_reported_to_the_model(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    container = client._transport.app.state.container  # type: ignore[attr-defined]
+
+    async def rejected(spec: object, *, on_stage: object = None) -> object:
+        raise SkeletonRejectedError(["Parameter 'x' fehlt"], StageUsage("skeleton"))
+
+    monkeypatch.setattr(container.pipeline, "design", rejected)
+    events = await _chat(client, "Ich brauche einen Schrank 80 x 40 x 100 cm")
+    (output,) = _tool_outputs(events)
+    assert "nicht gelungen" in output["error"]
+    assert output["errors"] == ["Parameter 'x' fehlt"]
+    assert (await client.get("/api/projects")).json() == []

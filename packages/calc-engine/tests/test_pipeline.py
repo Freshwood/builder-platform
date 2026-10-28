@@ -9,8 +9,15 @@ import pytest
 
 from calc_engine.engine import default_engine
 from calc_engine.pipeline.gaps import apply_updates, is_ready, open_questions
-from calc_engine.pipeline.merge import SKELETON, attribute, check, merge, shift
-from calc_engine.pipeline.skeleton import check_skeleton, finish_item, normalize
+from calc_engine.pipeline.materials import digest
+from calc_engine.pipeline.merge import SKELETON, attribute, check, localize, merge, shift
+from calc_engine.pipeline.skeleton import (
+    check_skeleton,
+    default_params,
+    finish_item,
+    module_box,
+    normalize,
+)
 from construction_model.assembly import AssemblyDesign
 from construction_model.model import ProjectInputs
 from construction_model.pipeline import ModuleBrief, ModuleDesign, Skeleton, Spec, SpecUpdates
@@ -258,3 +265,33 @@ def test_skeleton_problems_are_named_for_the_model() -> None:
 )
 def test_finish_item(finish: str | None, use: str, item: str | None) -> None:
     assert finish_item(finish, use) == item
+
+
+def test_engine_messages_are_rewritten_to_the_modules_own_ids() -> None:
+    owners = {"boards_shelf": "boards", "body_shelf": "body"}
+    text = "Bauteil 'boards_shelf' ragt in body_shelf; boards_shelf2 bleibt"
+    assert localize([text], "boards", owners) == [
+        "Bauteil 'shelf' ragt in body_shelf; boards_shelf2 bleibt"
+    ]
+    assert localize([text], "other", owners) == [text]
+
+
+def test_module_box_is_evaluated_at_the_default_parameters() -> None:
+    skeleton = _skeleton()
+    brief = skeleton.modules[0].model_copy(
+        update={"origin": (0, 0, "height_mm - 18"), "size": ("width_mm", 300, 18)}
+    )
+    params = default_params(skeleton)
+    origin, size = module_box(brief, params)
+    assert origin == (0, 0, int(params["height_mm"]) - 18)  # type: ignore[call-overload]
+    assert size == (int(params["width_mm"]), 300, 18)  # type: ignore[call-overload]
+
+
+def test_material_digest_lists_catalog_ids_without_prices() -> None:
+    text = digest(engine.catalog)
+    assert "plywood_birch_18" in text
+    assert "lumber_<holzart>_<stärke>x<breite>" in text
+    assert "larch" in text
+    assert "€" not in text
+    assert "finish_oil_outdoor_750" not in text  # the skeleton picks the finish
+    assert len(text) < 2_000

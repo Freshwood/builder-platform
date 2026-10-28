@@ -2,7 +2,8 @@
 
 They read the same prompt a real model gets and answer with the same output tool, so tests, E2E
 runs and local development need no API key. They are deliberately simple: intake reads a few
-German phrasings, the skeleton is one box module. They are never shown to a real model.
+German phrasings, the skeleton is one box module and a module is a plywood carcass. They are never
+shown to a real model.
 """
 
 from __future__ import annotations
@@ -64,8 +65,9 @@ def read_text(description: str) -> dict[str, Any]:
     return updates
 
 
-def _user_text(messages: list[ModelMessage]) -> str:
-    for message in reversed(messages):
+def _user_text(messages: list[ModelMessage], *, first: bool = False) -> str:
+    """The latest user prompt (or the first one: repair rounds append a prompt to the history)."""
+    for message in messages if first else reversed(messages):
         if isinstance(message, ModelRequest):
             for part in message.parts:
                 if isinstance(part, UserPromptPart) and isinstance(part.content, str):
@@ -138,3 +140,64 @@ def skeleton_model() -> FunctionModel:
         )
 
     return FunctionModel(respond, model_name="offline-skeleton")
+
+
+def _line(text: str, label: str) -> str | None:
+    for line in text.splitlines():
+        if line.startswith(label):
+            return line.removeprefix(label)
+    return None
+
+
+def _panel(
+    part_id: str, name: str, size: list[Any], at: list[Any], material: str = "plywood_birch_18"
+) -> dict[str, Any]:
+    return {"id": part_id, "name": name, "material": material, "size": size, "at": at}
+
+
+def module_model() -> FunctionModel:
+    """A carcass of four plywood panels filling the module box: sides, bottom and top."""
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        text = _user_text(messages, first=True)
+        brief: dict[str, Any] = json.loads(_line(text, "Modul: ") or "{}")
+        width, depth, height = (f"({v})" if isinstance(v, str) else str(v) for v in brief["size"])
+        thickness = 18
+        inner = f"{width} - {2 * thickness}"
+        parts = [
+            _panel("left", "Seitenteil links", [thickness, depth, height], [0, 0, 0]),
+            _panel(
+                "right", "Seitenteil rechts", [thickness, depth, height], [f"{width} - 18", 0, 0]
+            ),
+            _panel("bottom", "Boden", [inner, depth, thickness], [thickness, 0, 0]),
+            _panel("top", "Deckel", [inner, depth, thickness], [thickness, 0, f"{height} - 18"]),
+        ]
+        return _answer(info, {"module": brief["id"], "parts": parts})
+
+    return FunctionModel(respond, model_name="offline-modules")
+
+
+_EXPLANATION = (
+    "Der Korpus besteht aus Platten, weil sie formstabil und einfach zuzuschneiden sind.\n\n"
+    "Die Seitenteile stehen auf dem Boden und tragen Boden und Deckel; verschraubt wird von "
+    "außen durch die Seitenteile.\n\n"
+    "Die Annahmen stammen aus deinem Steckbrief; Maße und Material lassen sich leicht ändern."
+)
+
+
+def docs_model() -> FunctionModel:
+    """Generic explanation and one step per module, read from the ``- id (title): ...`` lines."""
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        text = _user_text(messages, first=True)
+        steps = [
+            {
+                "module": m.group(1),
+                "title": m.group(2),
+                "text": f"Montiere {m.group(2)}: bündig ausrichten, Diagonalen prüfen, verschrauben.",
+            }
+            for m in re.finditer(r"^- ([a-z][a-z0-9]*) \((.+?)\):", text, re.MULTILINE)
+        ]
+        return _answer(info, {"explanation": _EXPLANATION, "steps": steps})
+
+    return FunctionModel(respond, model_name="offline-docs")

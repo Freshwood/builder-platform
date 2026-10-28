@@ -40,20 +40,29 @@ def _metered(model: FunctionModel, meter: Meter) -> FunctionModel:
 
 
 async def measure() -> dict[str, Any]:
-    intake_meter, skeleton_meter = Meter(), Meter()
+    intake_meter, skeleton_meter, module_meter, docs_meter = Meter(), Meter(), Meter(), Meter()
     pipeline = Pipeline(
         Settings(llm_mode="test"),
         cast(Models, None),  # unused: both stage models are given
         SPECIES,
         intake_model=_metered(offline.intake_model(), intake_meter),
         skeleton_model=_metered(offline.skeleton_model(), skeleton_meter),
+        module_model=_metered(offline.module_model(), module_meter),
+        docs_model=_metered(offline.docs_model(), docs_meter),
     )
 
     spec = Spec(description=DESCRIPTION)
     assert open_questions(spec, SPECIES)
     result = await pipeline.intake(spec)
-    await pipeline.skeleton(result.spec)
-    return {"intake": intake_meter.totals(), "skeleton": skeleton_meter.totals()}
+    planned = await pipeline.skeleton(result.spec)
+    built = await pipeline.modules(result.spec, planned.skeleton)
+    await pipeline.document(result.spec, planned.skeleton, built)
+    return {
+        "intake": intake_meter.totals(),
+        "skeleton": skeleton_meter.totals(),
+        "modules": module_meter.totals(),
+        "docs": docs_meter.totals(),
+    }
 
 
 def main() -> None:

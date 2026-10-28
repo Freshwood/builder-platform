@@ -5,7 +5,8 @@ LLM. This keeps CI, E2E tests and local development free of API keys and network
 
 Like a real model it drafts the design itself and saves it with ``save_design``. It can only
 draft the few constructions in ``offline_designs/``; they stand in for what the LLM would write
-and are never shown to a real model (ADR-0008).
+and are never shown to a real model (ADR-0008). Boxy furniture (``_PLANNED``) goes to
+``plan_design``, i.e. through the staged pipeline with its offline stage models (ADR-0010).
 """
 
 from __future__ import annotations
@@ -61,6 +62,8 @@ _VARIANTS = {
     "langlebig": "durable",
     "komfort": "comfort",
 }
+# Furniture the offline pipeline stand-ins can plan (a plywood carcass), see ``_plan_call``.
+_PLANNED = ("schrank", "kommode", "podest", "truhe", "kiste")
 _OTHER_PROJECTS = ("terrasse", "carport", "gartenhaus", "schuppen", "zaun", "pergola", "schrank")
 _DIMS3 = re.compile(
     rf"{_NUM}\s*(?:{_UNIT})?\s*[x×*]\s*{_NUM}\s*(?:{_UNIT})?\s*[x×*]\s*{_NUM}\s*(?:{_UNIT})?",
@@ -186,6 +189,46 @@ def _design_params(design: AssemblyDesign, text: str) -> dict[str, Any]:
     return params
 
 
+def _plan_call(raw: str, text: str) -> ToolCall | None:
+    """Boxy furniture with dimensions goes through the staged pipeline (ADR-0010): the stand-in
+    only fills the brief, like a real model would."""
+    word = next((w for w in _PLANNED if w in text), None)
+    if word is None:
+        return None
+    if m := _DIMS3.search(text):
+        unit = m.group(6) or m.group(4) or m.group(2)
+        width, depth, height = (
+            _to_mm(m.group(1), m.group(2) or unit),
+            _to_mm(m.group(3), m.group(4) or unit),
+            _to_mm(m.group(5), unit),
+        )
+    elif m := _DIMS.search(text):
+        unit = m.group(4) or m.group(2)
+        width, depth, height = (
+            _to_mm(m.group(1), m.group(2) or unit),
+            _to_mm(m.group(3), unit),
+            800,
+        )
+    else:
+        return None
+    spec: dict[str, Any] = {
+        "description": raw[:2000],
+        "width_mm": width,
+        "depth_mm": depth,
+        "height_mm": height,
+    }
+    if re.search(r"drau(?:ß|ss)en|außen|garten|terrasse", text):
+        spec["use"] = "outdoor"
+    elif re.search(r"drinnen|\binnen\b|zimmer", text):
+        spec["use"] = "indoor"
+    if "an der wand" in text:
+        spec["support"] = "wall"
+    for word, key in _WOODS.items():
+        if word in text:
+            spec["wood"] = key
+    return ToolCall("plan_design", {"spec": spec, "title": word.capitalize()})
+
+
 def decide_for_user_text(raw: str) -> Decision:
     text = raw.lower()
     if re.search(r"rückgängig|rueckgaengig|undo", text):
@@ -237,6 +280,9 @@ def decide_for_user_text(raw: str) -> Decision:
             ToolCall("change_project", {"command": {"type": "set_parameters", "values": features}})
         ]
 
+    if (planned := _plan_call(raw, text)) is not None:
+        return [planned]
+
     if any(word in text for word in _OTHER_PROJECTS):
         return (
             "Das klingt nach einem spannenden Vorhaben! Im Offline-Modus kann ich nur ein Hochbeet "
@@ -266,9 +312,12 @@ def _format_tool_result(content: Any) -> str:
     project = content.get("project")
     if not project:
         return "Erledigt."
-    verb = {"created": "erstellt", "changed": "aktualisiert", "undone": "zurückgesetzt"}.get(
-        content.get("action", ""), "geladen"
-    )
+    verb = {
+        "created": "erstellt",
+        "replanned": "neu geplant",
+        "changed": "aktualisiert",
+        "undone": "zurückgesetzt",
+    }.get(content.get("action", ""), "geladen")
     figures = project.get("key_figures", {})
     lines = [f"Ich habe dein Projekt {verb}: {project['summary']}."]
     if "Innenmaß" in figures:

@@ -25,11 +25,13 @@ from uuid import uuid4
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
+from construction_model.assembly import AssemblyDesign
+from construction_model.pipeline import Spec
 from homeworking.bootstrap import Container, build_container
 from homeworking.modules.agent.metering import Meter, tokens, tool_definitions_json
 from homeworking.modules.agent.offline import offline_designs
 from homeworking.modules.agent.routing import route
-from homeworking.modules.agent.tools import AgentDeps, build_agent
+from homeworking.modules.agent.tools import AgentDeps, PlannedDesign, build_agent
 from homeworking.settings import Settings
 
 # A realistic "Warum so?" explanation (prompt rule 5 asks for 4-6 paragraphs).
@@ -117,6 +119,25 @@ def design_turn() -> list[Step]:
     return [_calls((TOOLS.design, {**args, "design": _valid_design()})), _text(FINAL_ANSWER)]
 
 
+def plan_turn() -> list[Step]:
+    """A new design through the staged pipeline: the chat model only writes the brief."""
+    spec = {
+        "description": "Regal 80 × 30 × 180 cm",
+        "width_mm": 800,
+        "depth_mm": 300,
+        "height_mm": 1800,
+        "use": "indoor",
+    }
+    return [_calls(("plan_design", {"spec": spec, "title": "Regal"})), _text(FINAL_ANSWER)]
+
+
+class StubPlanner:
+    """Stands in for the pipeline, whose stages are measured by ``modules/pipeline/bench.py``."""
+
+    async def plan(self, spec: Spec) -> PlannedDesign:
+        return PlannedDesign(AssemblyDesign.model_validate(_valid_design()), EXPLANATION)
+
+
 def change_turn(command: dict[str, Any]) -> list[Step]:
     return [
         _calls(("change_project", {"command": command})),
@@ -183,6 +204,9 @@ class Bench:
             )
 
         await self.turn("design_create", "Regal 80 × 30 × 180 cm", design_turn(), deps())
+        planned = deps()
+        planned.planner = StubPlanner()
+        await self.turn("plan_create", "Regal 80 × 30 × 180 cm", plan_turn(), planned)
 
         free = deps()
         # Follow-up turns get the stored model messages of earlier runs as history, like the

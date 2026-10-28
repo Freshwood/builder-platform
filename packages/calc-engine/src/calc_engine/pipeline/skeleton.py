@@ -108,3 +108,22 @@ def check_skeleton(skeleton: Skeleton, spec: Spec) -> list[str]:
     for module in skeleton.modules:
         errors += _module_errors(module, env)
     return errors
+
+
+def default_params(skeleton: Skeleton) -> dict[str, ParamValue]:
+    """The parameter values a design is checked and described with before the customer changes any."""
+    return {p.name: p.default for p in skeleton.params}
+
+
+def module_box(
+    module: ModuleBrief, params: Mapping[str, ParamValue]
+) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+    """Origin and size of a module's box in mm at the given parameter values.
+
+    Only for skeletons that passed :func:`check_skeleton`."""
+
+    def at(vec: tuple[Expr, Expr, Expr]) -> tuple[int, int, int]:
+        x, y, z = (round(evaluate_number(v, params)) for v in vec)
+        return x, y, z
+
+    return at(module.origin), at(module.size)

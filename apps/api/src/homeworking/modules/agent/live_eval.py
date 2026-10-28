@@ -37,6 +37,7 @@ from pydantic_ai.models import Model
 from pydantic_ai.usage import UsageLimits
 
 from calc_engine.assembly.intent import Expectation, evaluate, view_consistency
+from homeworking.api.planner import ChatPlanner
 from homeworking.bootstrap import Container, build_container
 from homeworking.modules.agent.prompts import PROMPT_VERSION
 from homeworking.modules.agent.provenance import prompt_fingerprint
@@ -252,7 +253,11 @@ async def run_case(
 
     owner = (await container.identity.create_guest()).id
     deps = AgentDeps(
-        owner_id=owner, projects=container.projects, project_id=None, trace_id=f"eval-{case.id}"
+        owner_id=owner,
+        projects=container.projects,
+        project_id=None,
+        trace_id=f"eval-{case.id}",
+        planner=ChatPlanner(container, owner, None),  # new designs run through the pipeline
     )
     started = time.perf_counter()
     try:

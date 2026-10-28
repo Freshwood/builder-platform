@@ -18,13 +18,16 @@ from homeworking.modules.agent.bench import run_bench
 # in 2026-10-14.1 (packs and templates removed: -1.6K prefix tokens), see
 # docs/ai/PROMPT_CHANGELOG.md. Before 2026-10-14.1: pack_create 19_500/10_300, template_create
 # 19_500/10_200, 60_000/13_600, 21_500/11_100, 23_000/11_900 and a 9_200 prefix.
+# Raised in 2026-10-28.4 (plan_design for new designs: +0.8K prefix tokens, save_design stays for
+# rebuilds), plan_create added; see docs/ai/PROMPT_CHANGELOG.md.
 BUDGET = {
-    "design_create": (17_500, 9_600),
-    "free_design": (50_000, 11_400),
-    "followup_1": (18_500, 9_700),
-    "followup_2": (20_000, 10_400),
+    "design_create": (18_600, 10_100),
+    "plan_create": (17_500, 9_200),
+    "free_design": (53_000, 11_900),
+    "followup_1": (19_600, 10_200),
+    "followup_2": (21_100, 11_000),
 }
-MAX_PREFIX_TOKENS = 7_800
+MAX_PREFIX_TOKENS = 8_500
 
 
 @pytest.fixture(scope="module")

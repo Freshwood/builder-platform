@@ -6,6 +6,7 @@ A design is no longer written in one LLM call. Four stages hand over small, vali
 2. skeleton    :class:`Spec` -> :class:`Skeleton` (parameters and modules, no geometry details)
 3. modules     one :class:`ModuleDesign` per module, in module-local coordinates
 4. merge       the engine joins skeleton and modules into one ``AssemblyDesign`` and checks it
+5. docs        the checked design -> :class:`Documentation` (explanation and build step texts)
 
 Every model forbids unknown fields. The LLM never produces a number that the engine derives; it
 only passes on what the customer said (``Spec``) or describes parts (``ModuleDesign``).
@@ -134,3 +135,18 @@ class ModuleDesign(_Frozen):
     parts: list[PartSpec] = Field(min_length=1, max_length=40)
     joints: list[JointSpec] = Field(default_factory=list, max_length=15)
     hardware: list[HardwareSpec] = Field(default_factory=list, max_length=10)
+
+
+class StepText(_Frozen):
+    """The wording of one build step; the engine assigns the module's parts to it."""
+
+    module: ModuleId
+    title: str = Field(min_length=1, max_length=80)
+    text: str = Field(min_length=1, max_length=800)
+
+
+class Documentation(_Frozen):
+    """What the documentation stage writes about a checked design. No numbers of its own."""
+
+    explanation: str = Field(min_length=1, max_length=4000, description='"Warum so?" paragraphs')
+    steps: list[StepText] = Field(default_factory=list, max_length=12)

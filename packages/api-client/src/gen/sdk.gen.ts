@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ChatData, ChatResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DocumentData, DocumentErrors, DocumentResponses, DrawingData, DrawingErrors, DrawingResponses, ExecuteCommandData, ExecuteCommandErrors, ExecuteCommandResponses, ExportData, ExportErrors, ExportResponses, GetProjectData, GetProjectErrors, GetProjectResponses, GetVersionData, GetVersionErrors, GetVersionResponses, HealthData, HealthResponses, HistoryData, HistoryErrors, HistoryResponses, IntakeData, IntakeErrors, IntakeResponses, ListProjectsData, ListProjectsResponses, MeData, MeResponses, NoticesData, NoticesResponses, ProjectChatData, ProjectChatErrors, ProjectChatResponses, RestoreVersionData, RestoreVersionErrors, RestoreVersionResponses, SkeletonData, SkeletonErrors, SkeletonResponses, UndoData, UndoErrors, UndoResponses, VersionsData, VersionsErrors, VersionsResponses } from './types.gen';
+import type { ChatData, ChatResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DocumentData, DocumentErrors, DocumentResponses, DrawingData, DrawingErrors, DrawingResponses, ExecuteCommandData, ExecuteCommandErrors, ExecuteCommandResponses, ExportData, ExportErrors, ExportResponses, GetProjectData, GetProjectErrors, GetProjectResponses, GetVersionData, GetVersionErrors, GetVersionResponses, HealthData, HealthResponses, HistoryData, HistoryErrors, HistoryResponses, IntakeData, IntakeErrors, IntakeResponses, ListProjectsData, ListProjectsResponses, MeData, MeResponses, ModulesData, ModulesErrors, ModulesResponses, NoticesData, NoticesResponses, ProjectChatData, ProjectChatErrors, ProjectChatResponses, RestoreVersionData, RestoreVersionErrors, RestoreVersionResponses, SkeletonData, SkeletonErrors, SkeletonResponses, UndoData, UndoErrors, UndoResponses, VersionsData, VersionsErrors, VersionsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -145,6 +145,20 @@ export const intake = <ThrowOnError extends boolean = false>(options: Options<In
  */
 export const skeleton = <ThrowOnError extends boolean = false>(options: Options<SkeletonData, ThrowOnError>): RequestResult<SkeletonResponses, SkeletonErrors, ThrowOnError> => (options.client ?? client).post<SkeletonResponses, SkeletonErrors, ThrowOnError>({
     url: '/api/pipeline/skeleton',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Modules
+ *
+ * Design every module of the skeleton, merge and check them with the engine.
+ */
+export const modules = <ThrowOnError extends boolean = false>(options: Options<ModulesData, ThrowOnError>): RequestResult<ModulesResponses, ModulesErrors, ThrowOnError> => (options.client ?? client).post<ModulesResponses, ModulesErrors, ThrowOnError>({
+    url: '/api/pipeline/modules',
     ...options,
     headers: {
         'Content-Type': 'application/json',

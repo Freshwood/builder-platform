@@ -1,35 +1,54 @@
-"""Stages 1 and 2 of the design pipeline (ADR-0010): intake and skeleton.
+"""Stages 1 to 5 of the design pipeline (ADR-0010): intake, skeleton, modules and docs.
 
-Both stages call a model without tools and with a short prompt; the engine decides everything
-that can be decided by rules (which questions are open, what the skeleton must satisfy). A stage
-returns its result together with the usage of every model request, because AI results cost money
-and every run is stored (see ``api/pipeline.py``).
+All stages call a model without tools and with a short prompt; the engine decides everything
+that can be decided by rules (which questions are open, what the skeleton must satisfy, whether
+the merged modules hold together). A stage returns its result together with the usage of every
+model request, because AI results cost money and every run is stored (see ``api/pipeline.py``).
 """
 
 from __future__ import annotations
 
+import asyncio
 import time
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models import Model
 
+from calc_engine.engine import DesignRejectedError, Engine, default_engine
 from calc_engine.pipeline.gaps import apply_updates, is_ready, open_questions
-from calc_engine.pipeline.skeleton import check_skeleton, normalize
-from construction_model.pipeline import Question, Skeleton, Spec, SpecUpdates
+from calc_engine.pipeline.materials import digest
+from calc_engine.pipeline.merge import SKELETON, check, localize, merge, module_steps
+from calc_engine.pipeline.skeleton import check_skeleton, default_params, module_box, normalize
+from construction_model.assembly import AssemblyDesign, DesignParam
+from construction_model.base import ParamValue
+from construction_model.pipeline import (
+    Documentation,
+    ModuleBrief,
+    ModuleDesign,
+    Question,
+    Skeleton,
+    Spec,
+    SpecUpdates,
+)
 from homeworking.modules.agent.model import Models
 from homeworking.modules.pipeline import offline
-from homeworking.modules.pipeline.prompts import INTAKE, SKELETON
+from homeworking.modules.pipeline.prompts import DOCS, INTAKE, MODULES
+from homeworking.modules.pipeline.prompts import SKELETON as SKELETON_PROMPT
 from homeworking.settings import Settings
 
 # Candidates handed to the intake model (what is still open); the customer sees at most 3.
 MAX_OPEN_FOR_MODEL = 6
 MAX_QUESTIONS = 3
 SKELETON_ATTEMPTS = 2
+# Repair rounds after the first module run; each re-runs only the modules the engine blames.
+MODULE_REPAIRS = 2
+MODULE_PARALLEL = 4
 
 
 class IntakeOutput(BaseModel):
@@ -89,13 +108,64 @@ class SkeletonResult:
     attempts: list[list[str]] = field(default_factory=list)  # engine problems per failed attempt
 
 
+class ModulesRejectedError(ValueError):
+    """The modules did not fit together within the repair rounds. ``errors`` maps a module id (or
+    ``skeleton``) to the engine's problems."""
+
+    def __init__(self, errors: dict[str, list[str]], usage: StageUsage) -> None:
+        super().__init__(
+            "Modules rejected: "
+            + "; ".join(f"{key}: {' / '.join(texts)}" for key, texts in errors.items())
+        )
+        self.errors = errors
+        self.usage = usage
+
+
+@dataclass
+class ModulesResult:
+    design: AssemblyDesign
+    modules: dict[str, ModuleDesign]
+    usage: StageUsage
+    repairs: list[dict[str, list[str]]] = field(default_factory=list)  # errors per repair round
+    part_module: dict[str, str] = field(default_factory=dict)  # merged part id -> module id
+
+
+@dataclass
+class DocsResult:
+    design: AssemblyDesign  # with the build steps
+    explanation: str | None
+    usage: StageUsage
+
+
+@dataclass
+class DesignResult:
+    """A complete design from the staged pipeline."""
+
+    design: AssemblyDesign
+    explanation: str | None
+    skeleton: Skeleton
+    stages: list[StageUsage]
+
+
+# Called after every stage of ``Pipeline.design`` with its usage and, if it failed, the error:
+# every stage run is stored, also failed ones (AI results cost money).
+StageRecorder = Callable[[StageUsage, str | None], Awaitable[None]]
+
+
 def build_agents(
-    intake: Model, skeleton: Model
-) -> tuple[Agent[None, IntakeOutput], Agent[None, Skeleton]]:
+    intake: Model, skeleton: Model, modules: Model, docs: Model
+) -> tuple[
+    Agent[None, IntakeOutput],
+    Agent[None, Skeleton],
+    Agent[None, ModuleDesign],
+    Agent[None, Documentation],
+]:
     """The stage agents; also used by ``provenance`` to capture exactly what a request carries."""
     return (
         Agent(intake, output_type=IntakeOutput, instructions=INTAKE, retries=1),
-        Agent(skeleton, output_type=Skeleton, instructions=SKELETON, retries=1),
+        Agent(skeleton, output_type=Skeleton, instructions=SKELETON_PROMPT, retries=1),
+        Agent(modules, output_type=ModuleDesign, instructions=MODULES, retries=1),
+        Agent(docs, output_type=Documentation, instructions=DOCS, retries=1),
     )
 
 
@@ -106,6 +176,25 @@ def _spec_line(spec: Spec) -> str:
 def _word(model_text: str | None, default: str) -> str:
     text = (model_text or "").strip()
     return text if 0 < len(text) <= 200 else default
+
+
+def _param_line(param: DesignParam) -> str:
+    if param.kind == "choice":
+        choices = "|".join(o.value for o in param.options)
+        return f"{param.name}={param.default} [{choices}]"
+    return f"{param.name}={param.default:g} ({param.min:g}–{param.max:g})"
+
+
+def _vec(values: tuple[int, int, int]) -> str:
+    return " x ".join(str(v) for v in values)
+
+
+def _repair_prompt(errors: list[str], origin: tuple[int, int, int]) -> str:
+    return (
+        "Die Engine lehnt das Modul ab. Korrigiere genau diese Fehler und liefere das "
+        "vollständige Modul erneut. Koordinaten in den Meldungen sind global; der Modulursprung "
+        f"liegt bei ({', '.join(str(v) for v in origin)}).\n" + "\n".join(f"- {e}" for e in errors)
+    )
 
 
 class Pipeline:
@@ -119,18 +208,30 @@ class Pipeline:
         *,
         intake_model: Model | None = None,
         skeleton_model: Model | None = None,
+        module_model: Model | None = None,
+        docs_model: Model | None = None,
+        engine: Engine | None = None,
     ) -> None:
         offline_mode = settings.llm_mode == "test"
-        # Small model for intake; the larger designer model plans the skeleton (ADR-0010).
+        # Small model for intake and modules; the larger designer model plans the skeleton
+        # (ADR-0010).
         self._intake_model: Model = intake_model or (
             offline.intake_model() if offline_mode else models.fast
         )
         self._skeleton_model: Model = skeleton_model or (
             offline.skeleton_model() if offline_mode else models.designer
         )
+        self._module_model: Model = module_model or (
+            offline.module_model() if offline_mode else models.fast
+        )
+        self._docs_model: Model = docs_model or (
+            offline.docs_model() if offline_mode else models.fast
+        )
         self._species = dict(species or {})
-        self.intake_agent, self.skeleton_agent = build_agents(
-            self._intake_model, self._skeleton_model
+        self._engine = engine or default_engine()
+        self._materials = digest(self._engine.catalog)
+        self.intake_agent, self.skeleton_agent, self.module_agent, self.docs_agent = build_agents(
+            self._intake_model, self._skeleton_model, self._module_model, self._docs_model
         )
 
     def _woods(self) -> str:
@@ -192,3 +293,202 @@ class Pipeline:
             )
         usage.duration_ms = round((time.perf_counter() - started) * 1000)
         raise SkeletonRejectedError(failed[-1], usage)
+
+    def _module_prompt(
+        self, spec: Spec, skeleton: Skeleton, module: ModuleBrief, params: Mapping[str, ParamValue]
+    ) -> str:
+        """Stable parts first (catalog, brief, parameters), then what is specific to the module."""
+        origin, size = module_box(module, params)
+        neighbours = []
+        for other in skeleton.modules:
+            if other.id == module.id:
+                continue
+            o_origin, o_size = module_box(other, params)
+            offset = (o_origin[0] - origin[0], o_origin[1] - origin[1], o_origin[2] - origin[2])
+            neighbours.append(
+                f"{other.id} ({other.title}): {other.role}; Box {_vec(o_size)} bei {_vec(offset)}"
+            )
+        head = f"Gerüst: {skeleton.object_type}, use={skeleton.use}, support={skeleton.support}" + (
+            f", finish={skeleton.finish}" if skeleton.finish else ""
+        )
+        own = module.model_dump_json(
+            include={"id", "title", "role", "size", "interfaces"}, exclude_defaults=True
+        )
+        return "\n".join(
+            [
+                self._materials,
+                _spec_line(spec),
+                head,
+                "Parameter: " + "; ".join(_param_line(p) for p in skeleton.params),
+                "Modul: " + own,
+                f"Box (Standardwerte): {_vec(size)}",
+                "Nachbarn: " + ("; ".join(neighbours) or "keine"),
+            ]
+        )
+
+    async def _run_modules(
+        self,
+        prompts: Mapping[str, str],
+        histories: dict[str, list[ModelMessage]],
+        designs: dict[str, ModuleDesign],
+        failures: dict[str, str],
+        usage: StageUsage,
+    ) -> None:
+        """One model call per module, a few at a time. A module the model cannot deliver in valid
+        form is left out; the merge reports it as missing and the next round asks again."""
+        gate = asyncio.Semaphore(MODULE_PARALLEL)
+
+        async def run(module_id: str, prompt: str) -> None:
+            async with gate:
+                try:
+                    result = await self.module_agent.run(
+                        prompt, message_history=histories.get(module_id)
+                    )
+                except UnexpectedModelBehavior as exc:
+                    failures[module_id] = str(exc)[:300]
+                    designs.pop(module_id, None)
+                    histories.pop(module_id, None)
+                    return
+            usage.add(self._module_model.model_name, result.usage)
+            failures.pop(module_id, None)
+            designs[module_id] = result.output.model_copy(update={"module": module_id})
+            histories[module_id] = result.all_messages()
+
+        await asyncio.gather(*(run(m, p) for m, p in prompts.items()))
+
+    async def modules(self, spec: Spec, skeleton: Skeleton) -> ModulesResult:
+        """Design every module, merge, let the engine check; re-run only the modules it blames.
+
+        The skeleton comes from the client in the API, so it is normalised and checked again."""
+        usage = StageUsage("modules")
+        started = time.perf_counter()
+        skeleton = normalize(skeleton, spec)
+        if problems := check_skeleton(skeleton, spec):
+            raise ModulesRejectedError({SKELETON: problems}, usage)
+        params = default_params(skeleton)
+        briefs = {m.id: m for m in skeleton.modules}
+        prompts = {m.id: self._module_prompt(spec, skeleton, m, params) for m in skeleton.modules}
+        designs: dict[str, ModuleDesign] = {}
+        histories: dict[str, list[ModelMessage]] = {}
+        failures: dict[str, str] = {}
+        repairs: list[dict[str, list[str]]] = []
+        errors: dict[str, list[str]] = {}
+        for attempt in range(MODULE_REPAIRS + 1):
+            await self._run_modules(prompts, histories, designs, failures, usage)
+            merged = await asyncio.to_thread(
+                lambda: check(self._engine, merge(skeleton, designs.values()), params)
+            )
+            errors = {
+                module: [*texts, *([failures[module]] if module in failures else [])]
+                for module, texts in merged.errors.items()
+            }
+            if merged.ok and merged.design is not None:
+                usage.duration_ms = round((time.perf_counter() - started) * 1000)
+                return ModulesResult(merged.design, designs, usage, repairs, merged.part_module)
+            repairs.append(errors)
+            if SKELETON in errors or attempt == MODULE_REPAIRS:
+                break
+            prompts = {}
+            for module, texts in errors.items():
+                local = [
+                    t.replace("siehe list_materials", "siehe Katalog")
+                    for t in localize(texts, module, merged.part_module)
+                ]
+                origin = module_box(briefs[module], params)[0]
+                if module in histories:
+                    prompts[module] = _repair_prompt(local, origin)
+                else:  # nothing usable came back: ask again from the start
+                    prompts[module] = (
+                        self._module_prompt(spec, skeleton, briefs[module], params)
+                        + "\nDie letzte Antwort war ungültig:\n"
+                        + "\n".join(f"- {t}" for t in local)
+                    )
+        usage.duration_ms = round((time.perf_counter() - started) * 1000)
+        raise ModulesRejectedError(errors, usage)
+
+    def _docs_prompt(self, spec: Spec, skeleton: Skeleton, built: ModulesResult) -> str:
+        """Compact facts of the checked design; the engine's derived data stays out of it."""
+        design = built.design
+        modules = []
+        for brief in skeleton.modules:
+            parts = [
+                f"{p.name} [{p.material}]"
+                for p in design.parts
+                if built.part_module.get(p.id) == brief.id
+            ]
+            modules.append(f"- {brief.id} ({brief.title}): {brief.role}; Teile: {', '.join(parts)}")
+        hardware = ", ".join(h.item for h in design.hardware) or "keine"
+        return "\n".join(
+            [
+                _spec_line(spec),
+                f"Objekt: {skeleton.object_type} – {skeleton.summary} "
+                f"(use={skeleton.use}, support={skeleton.support}"
+                + (f", finish={skeleton.finish}" if skeleton.finish else "")
+                + ")",
+                "Parameter: " + "; ".join(_param_line(p) for p in skeleton.params),
+                "Module:",
+                *modules,
+                "Beschläge: " + hardware,
+            ]
+        )
+
+    async def document(self, spec: Spec, skeleton: Skeleton, built: ModulesResult) -> DocsResult:
+        """Write the explanation and the build step texts of a checked design.
+
+        The design never depends on this stage: if the model fails, or the engine rejects the
+        steps it worded (e.g. a step names hardware the design does not have), the steps fall
+        back to module title and role, and a missing explanation stays empty."""
+        usage = StageUsage("docs")
+        started = time.perf_counter()
+        documentation: Documentation | None = None
+        try:
+            result = await self.docs_agent.run(self._docs_prompt(spec, skeleton, built))
+            usage.add(self._docs_model.model_name, result.usage)
+            documentation = result.output
+        except UnexpectedModelBehavior:
+            pass
+        worded = {s.module: (s.title, s.text) for s in documentation.steps} if documentation else {}
+        params = default_params(skeleton)
+        design = built.design
+        for texts in (worded, {}):
+            candidate = design.model_copy(
+                update={"steps": module_steps(skeleton, design, built.part_module, texts)}
+            )
+            try:
+                await asyncio.to_thread(self._engine.validate_design, candidate, params)
+            except DesignRejectedError:
+                continue
+            design = candidate
+            break
+        usage.duration_ms = round((time.perf_counter() - started) * 1000)
+        return DocsResult(design, documentation.explanation if documentation else None, usage)
+
+    async def design(self, spec: Spec, *, on_stage: StageRecorder | None = None) -> DesignResult:
+        """Skeleton, modules and documentation of a new design. Raises
+        :class:`SkeletonRejectedError` or :class:`ModulesRejectedError`; ``on_stage`` sees every
+        stage that ran, failed ones too."""
+
+        async def seen(usage: StageUsage, error: str | None = None) -> None:
+            if on_stage is not None and usage.requests:
+                await on_stage(usage, error)
+
+        try:
+            planned = await self.skeleton(spec)
+        except SkeletonRejectedError as exc:
+            await seen(exc.usage, str(exc))
+            raise
+        await seen(planned.usage)
+        try:
+            built = await self.modules(spec, planned.skeleton)
+        except ModulesRejectedError as exc:
+            await seen(exc.usage, str(exc))
+            raise
+        await seen(built.usage)
+        documented = await self.document(spec, planned.skeleton, built)
+        await seen(documented.usage)
+        return DesignResult(
+            documented.design,
+            documented.explanation,
+            planned.skeleton,
+            [planned.usage, built.usage, documented.usage],
+        )

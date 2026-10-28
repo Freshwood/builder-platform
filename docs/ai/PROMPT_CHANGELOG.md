@@ -10,6 +10,65 @@ Each entry names the version, the fingerprint, what changed and why, and the eff
 offline token benchmark (`task bench`). Every stored agent run carries `prompt_version` and
 `prompt_fingerprint`, so a result can be traced back to exactly one entry.
 
+## 2026-10-28.4 (agent, fingerprint `7384fcb1e8b62535`)
+
+New designs now run through the staged pipeline (ADR-0010) instead of one `save_design` call;
+the stage side is entry 2026-10-28.3 below.
+
+- New tool `plan_design(spec, title, new_project)`. The chat model only fills the brief (`Spec`,
+  lengths in mm); the API layer runs skeleton, modules, engine check and documentation and
+  returns the usual project summary. `save_design` stays for structural rebuilds (rule 13).
+- System prompt: rule 9 sends new projects to `plan_design`, rule 10 is now headed "Umbau-
+  Entwürfe", rule 14 names `plan_design` for re-planning, rule 5 says that `plan_design` writes
+  the explanation itself. The numbering of the rules is unchanged.
+- Routing is unchanged (`ROUTING_VERSION` 2). The agent depends on a `DesignPlanner` protocol;
+  `api/planner.py` owns the pipeline and stores every stage run with the chat id.
+
+## 2026-10-28.3 (stages, fingerprint `4840ba6854eacfb4`)
+
+Stage 5 of the staged design pipeline, used by `plan_design` (entry 2026-10-28.4 above).
+
+- New stage 5 `docs.de.md` with the `Documentation` output (explanation and one step text per
+  module). The engine assigns each module's parts to its step, validates the steps and falls
+  back to module title and role if the engine rejects the wording or the model fails; the
+  explanation stays empty then. Intake, skeleton and module prompts are unchanged.
+
+Offline measurement (`task bench`, `tests/test_stage_budget.py`; chat requests are estimates):
+
+| | before (2026-10-14.1) | after |
+|---|---:|---:|
+| Chat prefix per request | 7,608 | 8,371 (+763: `plan_design` 686, prompt +78) |
+| New design, chat side (`design_create` / `plan_create`) | 16,880 in, 1,170 out | 17,379 in, 142 out |
+| Docs request | – | 778 in |
+
+The chat side of a new design stays at two requests but no longer writes the design: its output
+drops from 1,170 to 142 tokens, and a repair no longer re-sends the 8K prefix (`free_design`:
+5 requests, 48.6K, now 52.4K because `save_design` remains for rebuilds). The design itself costs
+the stages: 1.7K skeleton (the 0.8K intake belongs to the planner question step), 3.3K per module and 0.8K documentation
+on the request side; modules and documentation run on the small model. The prefix grew because
+both `plan_design` and `save_design` are offered; removing `save_design` is only possible once
+rebuilds go through the pipeline, too. Real output sizes and repair rates need a live run.
+
+## 2026-10-28.2 (stages, fingerprint `f9c52dbd91ee58cf`)
+
+Stage 3 of the design pipeline (ADR-0010): `modules.de.md` and the `ModuleDesign` output schema,
+one small-model call per module of the skeleton. `STAGE_PROMPT_VERSION` covers all stages; the
+intake and skeleton prompts are unchanged, the chat agent's prompt and `PROMPT_VERSION` too.
+
+- A module call gets the catalog digest (`calc_engine.pipeline.materials`: ids and sizes, no
+  prices), the brief, the skeleton parameters, its own box and its neighbours' boxes. It designs
+  in module-local coordinates; the engine shifts and merges (`calc_engine.pipeline.merge`).
+- The engine checks the merged design. Errors that name a part go back to the owning module only,
+  with the module's own part ids; at most two repair rounds. Errors without a part (skeleton) end
+  the stage with a rejection.
+- No steps, explanation or prices in a module call; documentation becomes its own stage.
+
+Offline measurement (`tests/test_stage_budget.py`, request side exact, output a lower bound):
+3,293 input tokens per module request (prefix 2,697, of which the catalog digest is ~500). Calls
+of one design share this prefix, so a provider cache can serve it. A four-module design costs
+about 13K input tokens in modules plus 1.7K for the skeleton, against a 7.6K prefix on every
+request of the old design call (2 to 8+ requests). Real output sizes are not measured yet.
+
 ## 2026-10-28.1 (stages, fingerprint `c0a70f8a81c47d00`)
 
 New, separately versioned prompts for the staged design pipeline (ADR-0010): `intake.de.md`

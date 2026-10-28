@@ -818,6 +818,48 @@
           }
         }
       }
+    },
+    "/api/pipeline/modules": {
+      "post": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Modules",
+        "description": "Design every module of the skeleton, merge and check them with the engine.",
+        "operationId": "modules",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModulesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModulesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2677,6 +2719,46 @@
         ],
         "title": "ModuleBrief",
         "description": "A module of the skeleton: a part of the object that one small call designs on its own."
+      },
+      "ModulesRequest": {
+        "properties": {
+          "spec": {
+            "$ref": "#/components/schemas/Spec"
+          },
+          "skeleton": {
+            "$ref": "#/components/schemas/Skeleton"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "spec",
+          "skeleton"
+        ],
+        "title": "ModulesRequest"
+      },
+      "ModulesResponse": {
+        "properties": {
+          "design": {
+            "$ref": "#/components/schemas/AssemblyDesign"
+          },
+          "repairs": {
+            "type": "integer",
+            "title": "Repairs"
+          },
+          "usage": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Usage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "design",
+          "repairs",
+          "usage"
+        ],
+        "title": "ModulesResponse"
       },
       "Money": {
         "properties": {

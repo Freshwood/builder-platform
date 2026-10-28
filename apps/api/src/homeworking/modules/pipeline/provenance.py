@@ -36,7 +36,13 @@ def _capture(_messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
 async def stage_spec() -> dict[str, Any]:
     """Instructions and output schema of every stage exactly as a model request carries them."""
     model = FunctionModel(_capture)
-    agents = dict(zip(("intake", "skeleton"), build_agents(model, model), strict=True))
+    agents = dict(
+        zip(
+            ("intake", "skeleton", "modules", "docs"),
+            build_agents(model, model, model, model),
+            strict=True,
+        )
+    )
     spec: dict[str, Any] = {}
     for name, agent in agents.items():
         try:
