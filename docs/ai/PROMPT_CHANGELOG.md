@@ -10,6 +10,26 @@ Each entry names the version, the fingerprint, what changed and why, and the eff
 offline token benchmark (`task bench`). Every stored agent run carries `prompt_version` and
 `prompt_fingerprint`, so a result can be traced back to exactly one entry.
 
+## 2026-10-28.5 (agent, fingerprint `d1a105f6fbee5b28`)
+
+First live run of the pipeline (`docs/ai/evals/2026-10-28-pipeline-v1.md`, six regression briefs,
+deepseek-v4-flash for every role): 0 of 6 succeeded. Findings and what changed:
+
+- Prompt: rule 9 no longer says "nimm übliche an und sag es" but "frage nicht nach: nimm übliche
+  an, plane und nenne die Annahme". With a brief without dimensions the chat model asked a
+  question instead of calling `plan_design` (run `kinderpodest_run_615963ad`). The planner's
+  question step asks before the chat starts, so the chat should not ask again.
+- Runtime, no fingerprint change: a `bool` parameter crashed the module prompt (`TypeError`);
+  an unusable skeleton or module answer (`UnexpectedModelBehavior`, output cap) raised out of the
+  tool instead of counting as a failed attempt; a failing brief was planned again and again by
+  the chat model (3 skeleton and modules runs in one turn). Now: every pipeline error becomes a
+  `PlanFailedError`, a turn starts at most two pipeline runs (`MAX_PLAN_RUNS`), and errors that
+  no module owns revise the skeleton once (`SKELETON_REVISIONS`).
+- Runtime, settings: the stages used the chat's reasoning effort (`low`) and output cap (12K).
+  Measured output per design: skeleton 8-17K tokens, modules 14-24K, docs 3-6K, mostly
+  reasoning; one run took 995 s. New `LLM_STAGE_REASONING` (default `minimal`) and
+  `LLM_STAGE_MAX_OUTPUT_TOKENS` (default 16K) apply to the stage models only.
+
 ## 2026-10-28.4 (agent, fingerprint `7384fcb1e8b62535`)
 
 New designs now run through the staged pipeline (ADR-0010) instead of one `save_design` call;

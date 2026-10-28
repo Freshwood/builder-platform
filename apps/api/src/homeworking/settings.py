@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     llm_reasoning: Literal["off", "minimal", "low", "medium", "high"] = "low"
     # Output cap per model request: a complete design plus explanation needs ~6K tokens.
     llm_max_output_tokens: int = 12_000
+    # The pipeline stages (ADR-0010) fill a schema; thinking only costs time and tokens. A live
+    # run with ``llm_reasoning=low`` spent 8-17K output tokens on a skeleton and 14-24K on the
+    # modules of one design, mostly reasoning, and hit the 12K cap.
+    llm_stage_reasoning: Literal["off", "minimal", "low", "medium", "high"] = "minimal"
+    llm_stage_max_output_tokens: int = 16_000
     # Low temperature: designs must follow the schema and the user's brief, not be creative.
     llm_temperature: float = 0.2
     # Free-form designs need a few repair rounds and long tool arguments (ADR-0004).

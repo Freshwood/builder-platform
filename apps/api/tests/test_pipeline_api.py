@@ -8,6 +8,7 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from sqlalchemy import select
 
+from calc_engine.pipeline.merge import SKELETON
 from construction_model.pipeline import Skeleton, Spec
 from homeworking.db.schema import AgentRunRow
 from homeworking.modules.pipeline import offline
@@ -422,3 +423,85 @@ async def test_the_design_survives_an_unusable_documentation() -> None:
     (step,) = docs.design.steps
     assert (step.title, step.text) == ("Korpus", "Korpus")
     assert set(step.parts) == {p.id for p in docs.design.parts}
+
+
+async def test_a_skeleton_error_of_the_merge_revises_the_skeleton_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Errors no module owns go back to the skeleton stage, then all modules run again."""
+    skeleton_prompts: list[str] = []
+    answers = [_good(), _good()]
+
+    def plan(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        skeleton_prompts.append(str(messages[-1]))
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, answers.pop(0))])
+
+    pipeline = Pipeline(
+        Settings(llm_mode="test"),
+        None,  # type: ignore[arg-type]
+        {"spruce": "Fichte"},
+        skeleton_model=FunctionModel(plan, model_name="scripted"),
+    )
+    real = pipeline.modules
+    calls: list[int] = []
+
+    async def modules(spec: Spec, skeleton: Skeleton) -> Any:
+        calls.append(1)
+        if len(calls) == 1:
+            raise ModulesRejectedError(
+                {SKELETON: ["Der Entwurf ist zu hoch"]}, StageUsage("modules")
+            )
+        return await real(spec, skeleton)
+
+    monkeypatch.setattr(pipeline, "modules", modules)
+    seen: list[tuple[str, str | None]] = []
+
+    async def record(usage: StageUsage, error: str | None) -> None:
+        seen.append((usage.stage, error))
+
+    result = await pipeline.design(SPEC, on_stage=record)
+    assert len(calls) == 2
+    assert "Korrigiere genau diese Fehler" in skeleton_prompts[1]
+    assert "Der Entwurf ist zu hoch" in skeleton_prompts[1]
+    assert [s.stage for s in result.stages] == [
+        "skeleton",
+        "modules",
+        "skeleton",
+        "modules",
+        "docs",
+    ]
+
+
+async def test_a_second_skeleton_error_ends_the_design(monkeypatch: pytest.MonkeyPatch) -> None:
+    pipeline = Pipeline(Settings(llm_mode="test"), None, {"spruce": "Fichte"})  # type: ignore[arg-type]
+
+    async def modules(spec: Spec, skeleton: Skeleton) -> Any:
+        raise ModulesRejectedError({SKELETON: ["zu hoch"]}, StageUsage("modules", requests=2))
+
+    monkeypatch.setattr(pipeline, "modules", modules)
+    with pytest.raises(ModulesRejectedError):
+        await pipeline.design(SPEC)
+
+
+async def test_skeleton_output_the_model_cannot_deliver_counts_as_a_failed_attempt() -> None:
+    # {} violates the schema twice (the framework retries once), then a valid answer follows.
+    pipeline, seen = _pipeline({}, {}, _good())
+    result = await pipeline.skeleton(SPEC)
+    assert len(result.attempts) == 1
+    assert "Ausgabe unbrauchbar" in result.attempts[0][0]
+    assert len(seen) == 3
+
+
+async def test_module_prompt_describes_bool_parameters() -> None:
+    skeleton = Skeleton.model_validate(
+        {
+            **_good(),
+            "params": [
+                *_good()["params"],
+                {"name": "back_panel", "label": "Rückwand", "kind": "bool", "default": True},
+            ],
+        }
+    )
+    pipeline, seen = _module_pipeline()
+    await pipeline.modules(SPEC, skeleton)
+    assert "back_panel=True (bool)" in str(seen[0][0])

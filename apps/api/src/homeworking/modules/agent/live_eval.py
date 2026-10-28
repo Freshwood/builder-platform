@@ -31,14 +31,17 @@ from dataclasses import asdict, dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic_ai.models import Model
 from pydantic_ai.usage import UsageLimits
+from sqlalchemy import select
 
 from calc_engine.assembly.intent import Expectation, evaluate, view_consistency
 from homeworking.api.planner import ChatPlanner
 from homeworking.bootstrap import Container, build_container
+from homeworking.db.schema import AgentRunRow
 from homeworking.modules.agent.prompts import PROMPT_VERSION
 from homeworking.modules.agent.provenance import prompt_fingerprint
 from homeworking.modules.agent.routing import ROUTING_VERSION, Role, route
@@ -205,7 +208,11 @@ class RunRecord:
     input_tokens: int = 0
     output_tokens: int = 0
     cache_read_tokens: int = 0
-    cost_usd: float | None = None
+    # Pipeline stages run by ``plan_design`` (ADR-0010), per stage name: requests, tokens, status.
+    stages: dict[str, dict[str, Any]] = field(default_factory=dict)
+    stage_input_tokens: int = 0
+    stage_output_tokens: int = 0
+    cost_usd: float | None = None  # chat turn plus stages
     unpriced_requests: int = 0
     duration_s: float = 0.0
     intent_violations: list[str] = field(default_factory=list)
@@ -280,6 +287,7 @@ async def run_case(
     record.cost_usd, record.unpriced_requests = run_cost_usd(
         deps.requests, model.model_name, prices or {}
     )
+    await _add_stage_usage(container, owner, record, prices or {})
 
     if deps.project_id is not None:
         try:
@@ -294,6 +302,39 @@ async def run_case(
             record.view_violations = await _checked(lambda: view_consistency(project.result))
     record.success = record.accepted and not record.intent_violations and record.error is None
     return record
+
+
+async def _add_stage_usage(
+    container: Container, owner: UUID, record: RunRecord, prices: Prices
+) -> None:
+    """Stage runs stored by ``ChatPlanner`` during this turn: tokens per stage and their cost."""
+    async with container.sessions() as session:
+        rows = (
+            await session.scalars(
+                select(AgentRunRow).where(
+                    AgentRunRow.owner_id == owner, AgentRunRow.routing_reason.like("stage:%")
+                )
+            )
+        ).all()
+    for row in rows:
+        usage = dict(row.usage or {})
+        name = str(row.routing_reason).removeprefix("stage:")
+        stage = record.stages.setdefault(
+            name,
+            {"runs": 0, "failed": 0, "requests": 0, "input_tokens": 0, "output_tokens": 0},
+        )
+        stage["runs"] += 1
+        stage["failed"] += row.status != "completed"
+        for key in ("requests", "input_tokens", "output_tokens"):
+            stage[key] += int(usage.get(key) or 0)
+        record.stage_input_tokens += int(usage.get("input_tokens") or 0)
+        record.stage_output_tokens += int(usage.get("output_tokens") or 0)
+        price = price_for(str(usage.get("model") or row.model), prices)
+        if price is None:
+            record.unpriced_requests += int(usage.get("requests") or 0)
+            continue
+        cost = request_cost_usd(usage, price)
+        record.cost_usd = round((record.cost_usd or 0.0) + cost, 6)
 
 
 async def _checked(check: Any) -> list[str]:
@@ -371,6 +412,8 @@ def summarize(runs: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "error_runs": sum(1 for r in runs if r["error"]),
         "input_tokens": sum(r["input_tokens"] for r in runs),
         "output_tokens": sum(r["output_tokens"] for r in runs),
+        "stage_input_tokens": sum(r.get("stage_input_tokens", 0) for r in runs),
+        "stage_output_tokens": sum(r.get("stage_output_tokens", 0) for r in runs),
         "cost_usd": round(sum(costs), 6) if costs else None,
         "mean_cost_usd": round(sum(costs) / len(costs), 6) if costs else None,
         "unpriced_requests": sum(r["unpriced_requests"] for r in runs),

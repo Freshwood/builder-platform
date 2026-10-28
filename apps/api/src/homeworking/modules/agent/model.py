@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, Literal
 
 from pydantic_ai.models import Model
 from pydantic_ai.settings import ModelSettings
@@ -10,6 +11,8 @@ from pydantic_ai.settings import ModelSettings
 from homeworking.modules.agent.offline import offline_model
 from homeworking.modules.agent.routing import Role
 from homeworking.settings import Settings
+
+Effort = Literal["off", "minimal", "low", "medium", "high"]
 
 
 @dataclass(frozen=True)
@@ -27,10 +30,18 @@ class Models:
         return self.fast is not self.designer
 
 
-def build_model(settings: Settings, name: str | None = None) -> Model:
+def build_model(
+    settings: Settings,
+    name: str | None = None,
+    *,
+    reasoning_effort: Effort | None = None,
+    max_tokens: int | None = None,
+) -> Model:
     if settings.llm_mode == "test":
         return offline_model()
     name = name or settings.llm_model
+    effort = reasoning_effort or settings.llm_reasoning
+    max_tokens = max_tokens or settings.llm_max_output_tokens
     # The openai SDK takes seconds to import; only pay for it when it is actually used.
     from pydantic_ai.providers.openai import OpenAIProvider
 
@@ -46,15 +57,13 @@ def build_model(settings: Settings, name: str | None = None) -> Model:
         # Without an explicit reasoning request some models (e.g. Solar) write their thinking
         # into the answer text and stop without calling a tool.
         reasoning: OpenRouterReasoning = (
-            {"enabled": False}
-            if settings.llm_reasoning == "off"
-            else {"effort": settings.llm_reasoning}
+            {"enabled": False} if effort == "off" else {"effort": effort}
         )
         return OpenRouterModel(
             name,
             provider=provider,
             settings=OpenRouterModelSettings(
-                max_tokens=settings.llm_max_output_tokens,
+                max_tokens=max_tokens,
                 temperature=settings.llm_temperature,
                 openrouter_reasoning=reasoning,
                 # Explicit cache points for providers that need them (Anthropic, Gemini); the
@@ -70,17 +79,25 @@ def build_model(settings: Settings, name: str | None = None) -> Model:
     return OpenAIChatModel(
         name,
         provider=provider,
-        settings=ModelSettings(
-            max_tokens=settings.llm_max_output_tokens, temperature=settings.llm_temperature
-        ),
+        settings=ModelSettings(max_tokens=max_tokens, temperature=settings.llm_temperature),
     )
 
 
-def build_models(settings: Settings) -> Models:
-    designer = build_model(settings)
+def build_models(settings: Settings, *, stages: bool = False) -> Models:
+    """The chat models, or with ``stages`` the same models set up for the pipeline stages: little
+    reasoning and a higher output cap (structured output, no conversation)."""
+    options: dict[str, Any] = (
+        {
+            "reasoning_effort": settings.llm_stage_reasoning,
+            "max_tokens": settings.llm_stage_max_output_tokens,
+        }
+        if stages
+        else {}
+    )
+    designer = build_model(settings, **options)
     if settings.llm_mode == "test" or not settings.llm_model_fast:
         return Models(designer=designer, fast=designer)
     from pydantic_ai.models.fallback import FallbackModel
 
-    fast = build_model(settings, settings.llm_model_fast)
+    fast = build_model(settings, settings.llm_model_fast, **options)
     return Models(designer=designer, fast=FallbackModel(fast, designer))

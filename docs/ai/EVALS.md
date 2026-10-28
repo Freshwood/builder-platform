@@ -29,8 +29,9 @@ run, a throw-away SQLite database; nothing is written to `agent_runs`.
 | `view_violations` | `intent.view_consistency`: dimensions in the drawings agree with the solids. Reported, but not part of `success` |
 | **`success`** | `accepted` AND no intent violation AND the agent run did not fail (usage limit, provider error) |
 | `attempts` / `rejected` | entries of `AgentDeps.design_attempts`: every submitted design and every failed tool call; `rejected` = those that were not accepted (invalid arguments, engine rejection, ...). `outcomes` counts them by outcome. Fewer is better: each one is a repair round |
-| `requests`, tokens | model requests and provider-reported input/output/cache tokens |
-| `cost_usd` | see below |
+| `requests`, tokens | model requests and provider-reported input/output/cache tokens of the chat turn |
+| `stages`, `stage_input_tokens`, `stage_output_tokens` | what `plan_design` spent in the pipeline stages (skeleton, modules, docs; ADR-0010): runs, failed runs, requests and tokens per stage. Read from the stage runs the planner stores in the throw-away database |
+| `cost_usd` | chat turn plus stages, see below |
 | `duration_s` | wall clock of the agent turn |
 | `final_text` | the last assistant text (first 2000 characters), for reading failures |
 
@@ -40,7 +41,7 @@ attempts, rejected, requests and duration, cost.
 
 ### Cost
 
-From the usage the provider reports per request (`AgentDeps.requests`) and the list prices in
+From the usage the provider reports per request (`AgentDeps.requests`, and the stored stage runs) and the list prices in
 `docs/ai/models.json` (USD per 1M tokens): fresh input at `input`, cached input at `cache_read`,
 output at `output`. A model is matched by its id, or by the longest listed id that prefixes the
 answered name (dated variants). A model that is not in `models.json` has no cost (`n/a`, counted

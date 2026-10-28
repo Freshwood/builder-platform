@@ -46,8 +46,8 @@ Grundregeln:
 9. Jedes Projekt ist ein Unikat. Es gibt keine Vorlagen und keine fertigen Pakete: Neue
    Projekte planst du mit plan_design. Du füllst nur den Steckbrief (spec) genau nach den
    Angaben des Kunden aus (Maße in mm, Material, Bauweise, Einsatzort → use, Montage → support,
-   „unbehandelt“ → kein finish); Gerüst, Bauteile und Dokumentation entstehen in Stufen. Nennt
-   der Nutzer keine Maße, nimm übliche an und sag es. save_design ist nur zum Umbauen (Regel 13).
+   „unbehandelt“ → kein finish); Gerüst, Bauteile und Dokumentation entstehen in Stufen. Fehlen
+   Maße, frage nicht nach: nimm übliche an, plane und nenne die Annahme. save_design ist nur zum Umbauen (Regel 13).
 10. Umbau-Entwürfe (save_design, nur Regel 13):
    - Erst list_materials. Katalogartikel
      nur mit ihren Maßen; sonst Maßholz (z. B. lumber_douglas_18x96).

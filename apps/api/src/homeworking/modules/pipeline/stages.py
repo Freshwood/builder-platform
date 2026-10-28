@@ -49,6 +49,9 @@ SKELETON_ATTEMPTS = 2
 # Repair rounds after the first module run; each re-runs only the modules the engine blames.
 MODULE_REPAIRS = 2
 MODULE_PARALLEL = 4
+# Rounds in which the skeleton is revised because the merged modules fail on something no single
+# module owns (parameters, overall shape). Every round runs all modules again.
+SKELETON_REVISIONS = 1
 
 
 class IntakeOutput(BaseModel):
@@ -106,6 +109,7 @@ class SkeletonResult:
     skeleton: Skeleton
     usage: StageUsage
     attempts: list[list[str]] = field(default_factory=list)  # engine problems per failed attempt
+    messages: list[ModelMessage] = field(default_factory=list)  # the accepted run, for a repair
 
 
 class ModulesRejectedError(ValueError):
@@ -182,6 +186,8 @@ def _param_line(param: DesignParam) -> str:
     if param.kind == "choice":
         choices = "|".join(o.value for o in param.options)
         return f"{param.name}={param.default} [{choices}]"
+    if param.kind == "bool" or param.min is None or param.max is None:
+        return f"{param.name}={param.default} ({param.kind})"
     return f"{param.name}={param.default:g} ({param.min:g}–{param.max:g})"
 
 
@@ -271,21 +277,39 @@ class Pipeline:
         usage.duration_ms = round((time.perf_counter() - started) * 1000)
         return IntakeResult(spec, questions, usage)
 
-    async def skeleton(self, spec: Spec) -> SkeletonResult:
-        """Plan parameters and modules; one repair round with the engine's problems."""
+    async def skeleton(
+        self, spec: Spec, *, revise: tuple[SkeletonResult, list[str]] | None = None
+    ) -> SkeletonResult:
+        """Plan parameters and modules; one repair round with the engine's problems.
+
+        ``revise`` = an accepted skeleton and the problems the merged modules showed: the model
+        sees its own answer and these problems and plans again."""
         usage = StageUsage("skeleton")
         started = time.perf_counter()
         prompt = "\n".join([_spec_line(spec), self._woods()])
         failed: list[list[str]] = []
         history: list[ModelMessage] | None = None
+        if revise is not None:
+            previous, problems = revise
+            history = previous.messages
+            prompt = (
+                "Die Module passen mit diesem Gerüst nicht zusammen. Die Ursache liegt im Gerüst "
+                "(Parameter, Maße, Boxen). Korrigiere genau diese Fehler:\n"
+                + "\n".join(f"- {p}" for p in problems[:8])
+            )
         for _ in range(SKELETON_ATTEMPTS):
-            result = await self.skeleton_agent.run(prompt, message_history=history)
+            try:
+                result = await self.skeleton_agent.run(prompt, message_history=history)
+            except UnexpectedModelBehavior as exc:
+                # Invalid output after the framework's own retry, or the output cap was hit.
+                failed.append([f"Ausgabe unbrauchbar: {str(exc)[:200]}"])
+                continue
             usage.add(self._skeleton_model.model_name, result.usage)
             skeleton = normalize(result.output, spec)
             problems = check_skeleton(skeleton, spec)
             if not problems:
                 usage.duration_ms = round((time.perf_counter() - started) * 1000)
-                return SkeletonResult(skeleton, usage, failed)
+                return SkeletonResult(skeleton, usage, failed, result.all_messages())
             failed.append(problems)
             history = result.all_messages()
             prompt = "Die Engine lehnt das Gerüst ab. Korrigiere genau diese Fehler:\n" + "\n".join(
@@ -472,17 +496,34 @@ class Pipeline:
             if on_stage is not None and usage.requests:
                 await on_stage(usage, error)
 
+        stages: list[StageUsage] = []
         try:
             planned = await self.skeleton(spec)
         except SkeletonRejectedError as exc:
             await seen(exc.usage, str(exc))
             raise
+        stages.append(planned.usage)
         await seen(planned.usage)
-        try:
-            built = await self.modules(spec, planned.skeleton)
-        except ModulesRejectedError as exc:
-            await seen(exc.usage, str(exc))
-            raise
+        revisions = 0
+        while True:
+            try:
+                built = await self.modules(spec, planned.skeleton)
+                break
+            except ModulesRejectedError as exc:
+                await seen(exc.usage, str(exc))
+                problems = exc.errors.get(SKELETON)
+                if not problems or revisions >= SKELETON_REVISIONS:
+                    raise
+                stages.append(exc.usage)
+                revisions += 1
+                try:
+                    planned = await self.skeleton(spec, revise=(planned, problems))
+                except SkeletonRejectedError as rejected:
+                    await seen(rejected.usage, str(rejected))
+                    raise
+                stages.append(planned.usage)
+                await seen(planned.usage)
+        stages.append(built.usage)
         await seen(built.usage)
         documented = await self.document(spec, planned.skeleton, built)
         await seen(documented.usage)
@@ -490,5 +531,5 @@ class Pipeline:
             documented.design,
             documented.explanation,
             planned.skeleton,
-            [planned.usage, built.usage, documented.usage],
+            [*stages, documented.usage],
         )

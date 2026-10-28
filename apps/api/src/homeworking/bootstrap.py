@@ -59,7 +59,7 @@ def build_container(settings: Settings, engine: Engine | None = None) -> Contain
         models=models,
         pipeline=Pipeline(
             settings,
-            models,
+            build_models(settings, stages=True),
             {k: m.label for k, m in calc.catalog.lumber_species().items()},
         ),
     )

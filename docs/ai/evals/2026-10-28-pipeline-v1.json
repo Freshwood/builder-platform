@@ -1,0 +1,466 @@
+{
+  "schema_version": 1,
+  "label": "pipeline-v1",
+  "date": "2026-10-28",
+  "prompt_version": "2026-10-28.4",
+  "prompt_fingerprint": "7384fcb1e8b62535",
+  "routing_version": "2",
+  "settings": {
+    "llm_mode": "openai",
+    "offline": false,
+    "models": {
+      "designer": "~deepseek/deepseek-v4-flash-latest",
+      "fast": "~deepseek/deepseek-v4-flash-latest"
+    },
+    "model_role": null,
+    "runs": 1,
+    "request_limit": 12,
+    "total_tokens_limit": 1000000,
+    "temperature": 0.2,
+    "reasoning": "low",
+    "max_output_tokens": 12000,
+    "budget_usd": 5.0
+  },
+  "aborted": null,
+  "overall": {
+    "runs": 6,
+    "successes": 0,
+    "success_rate": 0.0,
+    "pass_at_1": 0.0,
+    "pass_any": false,
+    "pass_all": false,
+    "accepted_runs": 2,
+    "mean_attempts": 1.333,
+    "mean_rejected": 1.0,
+    "mean_requests": 2.0,
+    "mean_duration_s": 306.178,
+    "intent_violation_runs": 2,
+    "view_violation_runs": 0,
+    "error_runs": 3,
+    "input_tokens": 125373,
+    "output_tokens": 20525,
+    "stage_input_tokens": 132809,
+    "stage_output_tokens": 94321,
+    "cost_usd": null,
+    "mean_cost_usd": null,
+    "unpriced_requests": 33,
+    "cases": 6,
+    "cases_pass_all": 0,
+    "cases_pass_any": 0
+  },
+  "cases": {
+    "kinderpodest_run_615963ad": {
+      "failure_class": "engine_loop",
+      "brief": "Erstelle mir ein Podest für Kinder für eine Modenschau. Es soll so eine Art Tribüne für ein Catwalk sein. Es soll maximal 2 Meter lang sein und 1 Meter breit. Es wird drinnen aufgestellt. Die Oberfläche kann aus einzelnen Bretter oder als Platte erstellt werden",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 0.0,
+        "mean_rejected": 0.0,
+        "mean_requests": 1.0,
+        "mean_duration_s": 7.753,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "input_tokens": 8931,
+        "output_tokens": 602,
+        "stage_input_tokens": 0,
+        "stage_output_tokens": 0,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 1
+      },
+      "runs": [
+        {
+          "case": "kinderpodest_run_615963ad",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": false,
+          "success": false,
+          "attempts": 0,
+          "rejected": 0,
+          "outcomes": {},
+          "requests": 1,
+          "input_tokens": 8931,
+          "output_tokens": 602,
+          "cache_read_tokens": 0,
+          "stages": {},
+          "stage_input_tokens": 0,
+          "stage_output_tokens": 0,
+          "cost_usd": null,
+          "unpriced_requests": 1,
+          "duration_s": 7.753,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Gerne! Ein Catwalk-Podest für die Kinder-Modenschau – gute Sache. 🙂\n\nBevor ich den Entwurf plane, eine kurze Rückfrage:\n\n- **Wie hoch** soll das Podest sein? Üblich sind 20–40 cm. Für Kinder reichen meist ~30 cm, damit alle gut sehen können.\n\nSag mir einfach die Höhe (oder „egal“ – dann nehme ich 300 mm). Die Oberfläche baue ich aus einzelnen Brettern, das ist für so eine Tribüne typisch und stabil.",
+          "error": null
+        }
+      ]
+    },
+    "podest_kinder_modenschau_es_so_art": {
+      "failure_class": "engine_loop",
+      "brief": "Erstelle mir ein Podest für Kinder für eine Modenschau. Es soll so eine Art Tribüne für ein Catwalk sein. Es soll maximal 2 Meter lang sein und 1 Meter breit. Es wird drinnen aufgestellt. Die Oberfläche kann aus einzelnen Bretter oder als Platte erstellt werden.\nDie höhe kann zwischen 30 und 50cm sein",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 1,
+        "mean_attempts": 3.0,
+        "mean_rejected": 2.0,
+        "mean_requests": 4.0,
+        "mean_duration_s": 995.101,
+        "intent_violation_runs": 1,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "input_tokens": 41919,
+        "output_tokens": 3027,
+        "stage_input_tokens": 60864,
+        "stage_output_tokens": 47127,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 14
+      },
+      "runs": [
+        {
+          "case": "podest_kinder_modenschau_es_so_art",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": false,
+          "attempts": 3,
+          "rejected": 2,
+          "outcomes": {
+            "engine_rejected": 2,
+            "accepted": 1
+          },
+          "requests": 4,
+          "input_tokens": 41919,
+          "output_tokens": 3027,
+          "cache_read_tokens": 34560,
+          "stages": {
+            "skeleton": {
+              "runs": 3,
+              "failed": 0,
+              "requests": 3,
+              "input_tokens": 6401,
+              "output_tokens": 16723
+            },
+            "modules": {
+              "runs": 3,
+              "failed": 2,
+              "requests": 6,
+              "input_tokens": 53086,
+              "output_tokens": 24450
+            },
+            "docs": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 1377,
+              "output_tokens": 5954
+            }
+          },
+          "stage_input_tokens": 60864,
+          "stage_output_tokens": 47127,
+          "cost_usd": null,
+          "unpriced_requests": 14,
+          "duration_s": 995.101,
+          "intent_violations": [
+            "[feature.choice_param] Der Entwurf hat keinen Auswahlparameter 'surface'"
+          ],
+          "view_violations": [],
+          "final_text": "Dein Catwalk-Podest ist fertig geplant! 🎉 Kurzer Überblick:\n\n**Catwalk-Podest für Kinder-Modenschau** – 2000 × 1000 × 403 mm (Länge × Breite × Höhe), Innenraum\n- **Unterbau:** Rahmen aus Fichten-Kantholz (4 Felder), **Deckfläche:** Sperrholzplatte 21 mm – trittfest und verzugsfrei\n- **19 Bauteile,** ca. 52 kg, Holzverbindungen mit Holznägeln, ca. 79 Schrauben\n- **Richtpreis:** ca. **224 € – 351 €** Einkauf (Verbrauch ca. 199 € – 313 €); die Preise sind Richtpreise, da ohne deine Hauspreise\n- Die komplette Bauanleitung, Stückliste, Zuschnitte und Zeichnungen stehen im Projekt – inklusive Erklärung, warum die Konstruktion so aufgebaut ist\n\n**Meine Annahmen:** Da du keine genauen Maße nanntest, habe ich die Maximalmaße (2 m × 1 m) und die mittlere Höhe 40 cm gewählt. Die Deckfläche habe ich als Platte geplant – auf Wunsch stelle ich auf eine Bretterschalung um.\n\n**Varianten, die du direkt wählen kannst:**\n1. **Schmal** – schmalerer Laufsteg für knappe Räume\n2. **Eichen-Unterbau** – edler und langlebiger, dafür teurer (ca. 312 € – 476 €)\n\nHinweis: Das Podest ist eine Planungshilfe ohne Statiknachweis. Für den Einsatz mit Kindern solltest du es auf ebenem Boden aufstellen und während der Modenschau beaufsichtigen – es ist keine geprüfte Absturzsicherung, aber 40 cm Höhe sind für Kinder unkritisch.\n\nMöchtest du etwas ändern – z. B. eine andere Höhe, Bretter statt Platte oder eine der Varianten?",
+          "error": null
+        }
+      ]
+    },
+    "podest_kinder_modenschau_es_so_art_2": {
+      "failure_class": "engine_loop",
+      "brief": "Erstelle mir ein Podest für Kinder für eine Modenschau. Es soll so eine Art Tribüne für ein Catwalk sein. Es soll maximal 2 Meter lang sein und 1 Meter breit. Es wird drinnen aufgestellt. Die Oberfläche kann aus einzelnen Bretter oder als Platte erstellt werden. Es soll zwischen 30cm und 50cm hoch sein",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 1.0,
+        "mean_rejected": 1.0,
+        "mean_requests": 2.0,
+        "mean_duration_s": 144.52,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 1,
+        "input_tokens": 20948,
+        "output_tokens": 2083,
+        "stage_input_tokens": 0,
+        "stage_output_tokens": 0,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 2
+      },
+      "runs": [
+        {
+          "case": "podest_kinder_modenschau_es_so_art_2",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": false,
+          "success": false,
+          "attempts": 1,
+          "rejected": 1,
+          "outcomes": {
+            "exception": 1
+          },
+          "requests": 2,
+          "input_tokens": 20948,
+          "output_tokens": 2083,
+          "cache_read_tokens": 17408,
+          "stages": {},
+          "stage_input_tokens": 0,
+          "stage_output_tokens": 0,
+          "cost_usd": null,
+          "unpriced_requests": 2,
+          "duration_s": 144.52,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "",
+          "error": "UnexpectedModelBehavior: Model token limit (12000) exceeded before any response was generated. Increase the `max_tokens` model setting, or simplify the prompt to result in a shorter response that will fit within the limit."
+        }
+      ]
+    },
+    "podium_kids_catwalk": {
+      "failure_class": "engine_loop",
+      "brief": "Erstelle mir ein Podest für Kinder für eine Modenschau. Es soll so eine Art Tribüne für ein Catwalk sein. Es soll maximal 2 Meter lang sein und 1 Meter breit. Es wird drinnen aufgestellt. Die Oberfläche kann aus einzelnen Bretter oder als Platte erstellt werden",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 1.0,
+        "mean_rejected": 1.0,
+        "mean_requests": 1.0,
+        "mean_duration_s": 179.618,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 1,
+        "input_tokens": 8931,
+        "output_tokens": 7724,
+        "stage_input_tokens": 2177,
+        "stage_output_tokens": 7813,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 2
+      },
+      "runs": [
+        {
+          "case": "podium_kids_catwalk",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": false,
+          "success": false,
+          "attempts": 1,
+          "rejected": 1,
+          "outcomes": {
+            "exception": 1
+          },
+          "requests": 1,
+          "input_tokens": 8931,
+          "output_tokens": 7724,
+          "cache_read_tokens": 8704,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 2177,
+              "output_tokens": 7813
+            }
+          },
+          "stage_input_tokens": 2177,
+          "stage_output_tokens": 7813,
+          "cost_usd": null,
+          "unpriced_requests": 2,
+          "duration_s": 179.618,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "",
+          "error": "TypeError: unsupported format string passed to NoneType.__format__"
+        }
+      ]
+    },
+    "tonie_cloud_shelf": {
+      "failure_class": "args_syntax",
+      "brief": "Tonieregal mit Wolke, Fichte, an der Wand",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 1,
+        "mean_attempts": 1.0,
+        "mean_rejected": 0.0,
+        "mean_requests": 2.0,
+        "mean_duration_s": 170.474,
+        "intent_violation_runs": 1,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "input_tokens": 19471,
+        "output_tokens": 1567,
+        "stage_input_tokens": 58879,
+        "stage_output_tokens": 27612,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 10
+      },
+      "runs": [
+        {
+          "case": "tonie_cloud_shelf",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": false,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 19471,
+          "output_tokens": 1567,
+          "cache_read_tokens": 8704,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 13335,
+              "output_tokens": 10435
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 5,
+              "input_tokens": 44176,
+              "output_tokens": 14489
+            },
+            "docs": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 1368,
+              "output_tokens": 2688
+            }
+          },
+          "stage_input_tokens": 58879,
+          "stage_output_tokens": 27612,
+          "cost_usd": null,
+          "unpriced_requests": 10,
+          "duration_s": 170.474,
+          "intent_violations": [
+            "[materials_any] Kein Bauteil aus glulam_spruce; verwendet: lumber_spruce_18x202, lumber_spruce_18x400"
+          ],
+          "view_violations": [],
+          "final_text": "Dein **Tonieregal mit Wolkenform** ist entworfen – Wandregal aus Fichte mit wolkenförmiger Rückwand und drei Fächern für deine Tonies.\n\n**Die Eckdaten:**\n- **Maße:** 800 × 220 × 650 mm (B × T × H) – ich habe übliche Maße angenommen, alle sind über die Parameter anpassbar (Breite 400–1400 mm, Tiefe 120–350 mm, Höhe 300–1100 mm, 2–4 Fächer)\n- **Material:** Fichte (Massivholz), die Rückwand trägt die Böden und wird an der Wand befestigt\n- **Gewicht:** ca. 8 kg, 5 Bauteile – gut machbar auch für Einsteiger\n- **Kosten:** Einkauf ca. **38–62 €** (Richtpreise), verbraucht werden rund **23–38 €** an Holz\n\n**Varianten:**\n1. **In Eiche** statt Fichte – gleiche Form, robuster und edler, ca. 57–90 € Einkauf\n2. Maße oder Fächerzahl frei anpassbar – sag einfach Bescheid\n\nMöchtest du eine andere Größe, mehr Fächer oder die Eichen-Variante?",
+          "error": null
+        }
+      ]
+    },
+    "window_shutter_reported": {
+      "failure_class": "intent_mismatch",
+      "brief": "Ich möchte Fensterläden für mein Kinderbaumhaus bauen. Die Fensterrahmen sind schon gebaut. Die Fensterläden hätten die Maße Außenbefestigung Breite 31cm Höhe 38cm. Erstelle mir eine Zeichnung dafür. Ich wollte Kinderfensterläden aus Bretter haben.",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 2.0,
+        "mean_rejected": 2.0,
+        "mean_requests": 2.0,
+        "mean_duration_s": 339.599,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 1,
+        "input_tokens": 25173,
+        "output_tokens": 5522,
+        "stage_input_tokens": 10889,
+        "stage_output_tokens": 11769,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 4
+      },
+      "runs": [
+        {
+          "case": "window_shutter_reported",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": false,
+          "success": false,
+          "attempts": 2,
+          "rejected": 2,
+          "outcomes": {
+            "engine_rejected": 1,
+            "exception": 1
+          },
+          "requests": 2,
+          "input_tokens": 25173,
+          "output_tokens": 5522,
+          "cache_read_tokens": 17408,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 2162,
+              "output_tokens": 8912
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 1,
+              "input_tokens": 8727,
+              "output_tokens": 2857
+            }
+          },
+          "stage_input_tokens": 10889,
+          "stage_output_tokens": 11769,
+          "cost_usd": null,
+          "unpriced_requests": 4,
+          "duration_s": 339.599,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "",
+          "error": "UnexpectedModelBehavior: Exceeded maximum output retries (1)"
+        }
+      ]
+    }
+  }
+}

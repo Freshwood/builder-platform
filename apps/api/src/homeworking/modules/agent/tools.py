@@ -43,6 +43,9 @@ from homeworking.modules.projects.service import (
     ProjectService,
 )
 
+# Pipeline runs one chat turn may start (a failed plan is explained to the user after that).
+MAX_PLAN_RUNS = 2
+
 # Upper bound of AddNote.text; explanations span several paragraphs.
 NOTE_MAX_CHARS = 4000
 
@@ -104,6 +107,9 @@ class AgentDeps:
     request_open: int | None = None
     # Plans new designs for ``plan_design``; without it the tool is unavailable.
     planner: DesignPlanner | None = None
+    # Pipeline runs of this turn: every run costs a design's worth of tokens, so a failing
+    # brief is not retried blindly (``MAX_PLAN_RUNS``).
+    plan_runs: int = 0
     # The model may call several tools in parallel; project writes must run one after another,
     # otherwise they race for the next command sequence number.
     write_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -637,6 +643,14 @@ def build_agent(model: Model) -> Agent[AgentDeps, str]:
             return _fail(
                 ctx, "missing_size", "Für den Entwurf fehlen Maße (width_mm, depth_mm, height_mm)."
             )
+        if ctx.deps.plan_runs >= MAX_PLAN_RUNS:
+            return _fail(
+                ctx,
+                "plan_limit",
+                "Der Entwurf ist mehrfach nicht gelungen. Erkläre dem Nutzer kurz, woran es "
+                "lag, und frage, was du an den Angaben ändern sollst.",
+            )
+        ctx.deps.plan_runs += 1
         try:
             planned = await ctx.deps.planner.plan(spec)
         except PlanFailedError as exc:

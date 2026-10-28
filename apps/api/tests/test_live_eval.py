@@ -391,7 +391,8 @@ def test_report_json_has_the_documented_schema(tmp_path: Path) -> None:
     run_keys = {
         "case", "run", "model_role", "routing_reason", "model", "accepted", "success", "attempts",
         "rejected", "outcomes", "requests", "input_tokens", "output_tokens", "cache_read_tokens",
-        "cost_usd", "unpriced_requests", "duration_s", "intent_violations", "view_violations",
+        "stages", "stage_input_tokens", "stage_output_tokens",
+            "cost_usd", "unpriced_requests", "duration_s", "intent_violations", "view_violations",
         "final_text", "error",
     }  # fmt: skip
     assert set(case["runs"][0]) == run_keys

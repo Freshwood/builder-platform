@@ -171,3 +171,57 @@ async def test_a_rejected_plan_is_reported_to_the_model(
     assert "nicht gelungen" in output["error"]
     assert output["errors"] == ["Parameter 'x' fehlt"]
     assert (await client.get("/api/projects")).json() == []
+
+
+async def test_a_provider_error_in_the_pipeline_is_explained_not_raised(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    container = client._transport.app.state.container  # type: ignore[attr-defined]
+
+    async def broken(spec: object, *, on_stage: object = None) -> object:
+        raise RuntimeError("provider down")
+
+    monkeypatch.setattr(container.pipeline, "design", broken)
+    events = await _chat(client, "Ich brauche einen Schrank 80 x 40 x 100 cm")
+    (output,) = _tool_outputs(events)
+    assert output["errors"] == ["Modellaufruf fehlgeschlagen: RuntimeError"]
+
+
+async def test_a_failing_brief_is_not_planned_again_and_again() -> None:
+    from pydantic_ai import Agent
+    from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
+    from pydantic_ai.models.function import AgentInfo, FunctionModel
+
+    from construction_model.pipeline import Spec
+    from homeworking.modules.agent.tools import AgentDeps, PlanFailedError, build_agent
+
+    runs: list[Spec] = []
+
+    class Failing:
+        async def plan(self, spec: Spec) -> object:
+            runs.append(spec)
+            raise PlanFailedError(["kaputt"])
+
+    calls = {"n": 0}
+    spec = {"description": "Schrank", "width_mm": 800, "depth_mm": 400, "height_mm": 1000}
+
+    def script(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        calls["n"] += 1
+        if calls["n"] > 3:
+            return ModelResponse(parts=[TextPart("Es hat nicht geklappt.")])
+        return ModelResponse(
+            parts=[ToolCallPart("plan_design", {"spec": spec, "title": "Schrank"})]
+        )
+
+    agent: Agent[AgentDeps, str] = build_agent(FunctionModel(script))
+    deps = AgentDeps(
+        owner_id=None,  # type: ignore[arg-type]
+        projects=None,  # type: ignore[arg-type]
+        project_id=None,
+        trace_id="t",
+        planner=Failing(),  # type: ignore[arg-type]
+    )
+    await agent.run("Schrank 80 x 40 x 100", deps=deps)
+    assert len(runs) == 2  # the third call is refused without a pipeline run
+    outcomes = [a["outcome"] for a in deps.design_attempts]
+    assert outcomes == ["engine_rejected", "engine_rejected", "plan_limit"]

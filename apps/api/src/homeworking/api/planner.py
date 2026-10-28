@@ -6,6 +6,7 @@ safety check and the storage of every stage run (cost and provenance, like the c
 
 from __future__ import annotations
 
+import logging
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
@@ -19,6 +20,8 @@ from homeworking.modules.pipeline.stages import (
     SkeletonRejectedError,
     StageUsage,
 )
+
+log = logging.getLogger("homeworking.pipeline")
 
 
 class ChatPlanner:
@@ -55,4 +58,7 @@ class ChatPlanner:
             raise PlanFailedError(
                 [f"{key}: {text}" for key, texts in exc.errors.items() for text in texts]
             ) from exc
+        except Exception as exc:  # provider errors, timeouts: the chat can still explain them
+            log.exception("plan_failed")
+            raise PlanFailedError([f"Modellaufruf fehlgeschlagen: {type(exc).__name__}"]) from exc
         return PlannedDesign(result.design, result.explanation)
