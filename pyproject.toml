@@ -82,7 +82,7 @@ source_modules = ["calc_engine"]
 forbidden_modules = ["homeworking", "fastapi", "sqlalchemy", "pydantic_ai"]
 
 [[tool.importlinter.contracts]]
-name = "Only the API layer may use the agent module"
+name = "Only the API layer may use the agent and pipeline modules"
 type = "forbidden"
 source_modules = [
     "homeworking.modules.projects",
@@ -91,4 +91,4 @@ source_modules = [
     "homeworking.modules.compliance",
     "homeworking.modules.identity",
 ]
-forbidden_modules = ["homeworking.modules.agent"]
+forbidden_modules = ["homeworking.modules.agent", "homeworking.modules.pipeline"]

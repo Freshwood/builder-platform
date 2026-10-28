@@ -69,6 +69,22 @@ class Spec(_Frozen):
         return {k: v for k, v in given.items() if v is not None}
 
 
+class SpecUpdates(_Frozen):
+    """What the intake model may read out of the customer's text: the facts, nothing else."""
+
+    use: Use | None = None
+    support: Support | None = None
+    width_mm: int | None = Field(None, ge=1, le=25_000)
+    depth_mm: int | None = Field(None, ge=1, le=25_000)
+    height_mm: int | None = Field(None, ge=1, le=15_000)
+    size_mode: SizeMode | None = None
+    wood: str | None = Field(None, max_length=40)
+    finish: str | None = Field(None, max_length=40)
+    budget_eur: float | None = Field(None, ge=0, le=1_000_000)
+    experience: Experience | None = None
+    usage: str | None = Field(None, max_length=500)
+
+
 class Option(_Frozen):
     value: str = Field(max_length=40)
     label: str = Field(max_length=60)

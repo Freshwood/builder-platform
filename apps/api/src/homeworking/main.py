@@ -14,7 +14,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from calc_engine.engine import DesignRejectedError
 from construction_model.commands import CommandError
-from homeworking.api import chat, projects
+from homeworking.api import chat, pipeline, projects
 from homeworking.bootstrap import Container, build_container
 from homeworking.logging_config import configure_logging
 from homeworking.modules.documents.pdf import warm_up as warm_up_pdf
@@ -90,6 +90,7 @@ def create_app(
 
     app.include_router(projects.router)
     app.include_router(chat.router)
+    app.include_router(pipeline.router)
     return app
 
 

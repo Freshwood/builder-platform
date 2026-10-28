@@ -70,3 +70,14 @@ insgesamt deutlich unter 40K statt 100–150K.
   Pipeline-Steuerung, die auf LLM-Latenz wartet.
 - Neue Prompts und Tools folgen dem Ablauf in `docs/ai/README.md` (Version, Lock, Snapshot,
   Changelog); jede Stufe bekommt dort einen eigenen Abschnitt.
+
+## Stand der Umsetzung (2026-10-28)
+
+- Umgesetzt: Verträge, Lückenregeln, Zusammenführen, Gerüst-Prüfung (`calc_engine.pipeline`),
+  Stufe 1 und 2 als Endpunkte `POST /api/pipeline/intake` und `/api/pipeline/skeleton`
+  (`modules/pipeline`, eigene Prompts, Lock und Token-Budget), Fragen-Schritt im Planer.
+- Offen: Stufe 3 (Module), Anbindung des Gerüsts an den Chat, Stufe 5 (Dokumentation). Das Gerüst
+  wird heute nur über den Endpunkt erzeugt und gespeichert (`agent_runs`, `stage:skeleton`).
+- Gemessen (offline, Anfrageseite exakt): Intake 810, Gerüst 1.690 Token je Anfrage gegenüber
+  7.608 Token Präfix des bisherigen Entwurfsaufrufs. Ob ein kleines Modell brauchbare Module
+  liefert, zeigt erst die Live-Evaluation mit Stufe 3.

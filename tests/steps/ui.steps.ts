@@ -7,6 +7,18 @@ import { Given, Then, When } from "../support/fixtures";
 
 const PROMPT = "Was möchtest du bauen oder reparieren?";
 
+/**
+ * The brief asks the engine for open questions before the planning starts. Answer them with
+ * "Weiter mit Annahmen" when they appear; in the chat (or when nothing is open) just return.
+ */
+async function continueWithAssumptions(page: Page) {
+  const questions = page.getByTestId("intake-questions");
+  await questions.or(page.getByTestId("messages")).first().waitFor();
+  if (await questions.isVisible()) {
+    await questions.getByRole("button", { name: /^Weiter/ }).click();
+  }
+}
+
 async function expectNoSeriousA11yViolations(page: Page, include?: string) {
   let builder = new AxeBuilder({ page }).withTags([
     "wcag2a",
@@ -73,6 +85,7 @@ When("ich im Planer schreibe {string}", async ({ page }, text: string) => {
   await page.getByLabel(PROMPT).fill(text);
   // The first request goes through the project brief, follow-ups through the chat.
   await page.getByRole("button", { name: /^(Planung starten|Senden)$/ }).click();
+  await continueWithAssumptions(page);
 });
 
 Then("zeigen die Nachrichten {string}", async ({ page }, text: string) => {
@@ -116,6 +129,7 @@ Then("zeigen die Details im Brief {string}", async ({ page }, text: string) => {
 
 When("ich die Planung starte", async ({ page }) => {
   await page.getByTestId("project-brief").getByRole("button", { name: "Planung starten" }).click();
+  await continueWithAssumptions(page);
 });
 
 // ---------------------------------------------------------------------------------------------

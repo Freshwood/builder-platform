@@ -736,6 +736,88 @@
           }
         }
       }
+    },
+    "/api/pipeline/intake": {
+      "post": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Intake",
+        "operationId": "intake",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntakeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pipeline/skeleton": {
+      "post": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Skeleton",
+        "operationId": "skeleton",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkeletonRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkeletonResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2152,6 +2234,60 @@
         ],
         "title": "InstructionStep"
       },
+      "IntakeRequest": {
+        "properties": {
+          "spec": {
+            "$ref": "#/components/schemas/Spec"
+          },
+          "extract": {
+            "type": "boolean",
+            "title": "Extract",
+            "default": true
+          },
+          "thorough": {
+            "type": "boolean",
+            "title": "Thorough",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "spec"
+        ],
+        "title": "IntakeRequest"
+      },
+      "IntakeResponse": {
+        "properties": {
+          "spec": {
+            "$ref": "#/components/schemas/Spec"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "usage": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Usage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "spec",
+          "questions",
+          "ready",
+          "usage"
+        ],
+        "title": "IntakeResponse"
+      },
       "JointSpec": {
         "properties": {
           "kind": {
@@ -2409,6 +2545,139 @@
         ],
         "title": "ModelDiff"
       },
+      "ModuleBrief": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]{0,11}$",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Role",
+            "description": "What the module does"
+          },
+          "origin": {
+            "prefixItems": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Origin",
+            "description": "Global position of the module's local zero point, in mm"
+          },
+          "size": {
+            "prefixItems": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Size",
+            "description": "Extent of the module's box along x, y, z, in mm"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "When",
+            "description": "Include the module only if this is truthy"
+          },
+          "interfaces": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Interfaces",
+            "description": "Where and how it meets the other modules",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "role",
+          "origin",
+          "size"
+        ],
+        "title": "ModuleBrief",
+        "description": "A module of the skeleton: a part of the object that one small call designs on its own."
+      },
       "Money": {
         "properties": {
           "min": {
@@ -2498,6 +2767,27 @@
           "message"
         ],
         "title": "Notice"
+      },
+      "Option": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Value"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 60,
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "Option"
       },
       "Origin": {
         "type": "string",
@@ -3253,6 +3543,43 @@
         ],
         "title": "QuantityChange"
       },
+      "Question": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Field"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/Option"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Options"
+          },
+          "blocking": {
+            "type": "boolean",
+            "title": "Blocking",
+            "description": "Without an answer no design is possible",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field",
+          "text"
+        ],
+        "title": "Question",
+        "description": "One follow-up question. ``field`` names the :class:`Spec` field the answer fills."
+      },
       "Rect": {
         "properties": {
           "kind": {
@@ -3698,6 +4025,125 @@
         "title": "Shape",
         "description": "Outline on the face across the thinnest size; (u, v) in mm from the minimum corner, u\nalong the first remaining axis in x, y, z order (members: along the length)."
       },
+      "Skeleton": {
+        "properties": {
+          "object_type": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Object Type"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Summary"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "object",
+              "building"
+            ],
+            "title": "Category",
+            "default": "object"
+          },
+          "use": {
+            "type": "string",
+            "enum": [
+              "indoor",
+              "outdoor"
+            ],
+            "title": "Use",
+            "default": "indoor"
+          },
+          "support": {
+            "type": "string",
+            "enum": [
+              "floor",
+              "wall"
+            ],
+            "title": "Support",
+            "default": "floor"
+          },
+          "finish": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish"
+          },
+          "params": {
+            "items": {
+              "$ref": "#/components/schemas/DesignParam"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Params"
+          },
+          "modules": {
+            "items": {
+              "$ref": "#/components/schemas/ModuleBrief"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Modules"
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/DesignVariant"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Variants"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "object_type",
+          "summary",
+          "params",
+          "modules"
+        ],
+        "title": "Skeleton",
+        "description": "Parameters and module layout of the object. No parts, no materials of single parts."
+      },
+      "SkeletonRequest": {
+        "properties": {
+          "spec": {
+            "$ref": "#/components/schemas/Spec"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "spec"
+        ],
+        "title": "SkeletonRequest"
+      },
+      "SkeletonResponse": {
+        "properties": {
+          "skeleton": {
+            "$ref": "#/components/schemas/Skeleton"
+          },
+          "usage": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Usage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "skeleton",
+          "usage"
+        ],
+        "title": "SkeletonResponse"
+      },
       "Solid": {
         "properties": {
           "position": {
@@ -3864,6 +4310,184 @@
           "deg"
         ],
         "title": "SolidRotation"
+      },
+      "Spec": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "use": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "indoor",
+                  "outdoor"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Use"
+          },
+          "support": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "floor",
+                  "wall"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support"
+          },
+          "width_mm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 25000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width Mm"
+          },
+          "depth_mm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 25000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth Mm"
+          },
+          "height_mm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 15000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height Mm"
+          },
+          "size_mode": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "approx",
+              "max"
+            ],
+            "title": "Size Mode",
+            "default": "approx"
+          },
+          "wood": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wood"
+          },
+          "finish": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish"
+          },
+          "budget_eur": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Eur"
+          },
+          "experience": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "beginner",
+                  "advanced",
+                  "pro"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experience"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Tools"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage"
+          },
+          "details": {
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "type": "object",
+            "maxProperties": 20,
+            "title": "Details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "description"
+        ],
+        "title": "Spec",
+        "description": "What the customer wants to build, as far as it is known. Every field is optional except\nthe description; the intake stage and the platform settings fill the rest."
       },
       "StockPlan": {
         "properties": {

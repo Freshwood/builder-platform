@@ -177,6 +177,7 @@ tasks:
       PYDANTIC_AI_NO_BANNER: "1"
     cmds:
       - uv run python -m homeworking.modules.agent.provenance
+      - uv run python -m homeworking.modules.pipeline.provenance
 
   regress:
     desc: Replay the regression cases and run the intent/corpus checks (offline)

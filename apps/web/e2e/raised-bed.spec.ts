@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+import { continueWithAssumptions } from "./intake";
+
 async function expectNoSeriousA11yViolations(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -17,6 +19,7 @@ async function send(page: Page, text: string) {
   await page.getByLabel("Was möchtest du bauen oder reparieren?").fill(text);
   // The first request goes through the project brief, follow-ups through the chat.
   await page.getByRole("button", { name: /^(Planung starten|Senden)$/ }).click();
+  await continueWithAssumptions(page);
 }
 
 test("plan a raised bed, change it via chat and undo", async ({ page }) => {
@@ -141,6 +144,7 @@ test("project brief collects details and sends them with the request", async ({ 
   await page.screenshot({ path: "test-results/brief.png", fullPage: true });
 
   await brief.getByRole("button", { name: "Planung starten" }).click();
+  await continueWithAssumptions(page);
   const messages = page.getByTestId("messages");
   await expect(messages).toContainText("Maße: 80 × 30 cm (Breite × Tiefe), Höhe 180 cm");
   await expect(messages).toContainText("Oberfläche: geölt");

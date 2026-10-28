@@ -1,9 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+import { continueWithAssumptions } from "./intake";
+
 async function send(page: Page, text: string) {
   await page.getByLabel("Was möchtest du bauen oder reparieren?").fill(text);
   await page.getByRole("button", { name: /^(Planung starten|Senden)$/ }).click();
+  await continueWithAssumptions(page);
 }
 
 test("chat and versions survive a reload; an old version can be viewed and restored", async ({

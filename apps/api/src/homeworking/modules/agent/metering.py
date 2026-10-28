@@ -51,9 +51,14 @@ def tool_definitions_json(tools: Sequence[ToolDefinition]) -> str:
     )
 
 
+def request_tools(info: AgentInfo) -> list[ToolDefinition]:
+    """Function tools plus output tools: both are sent to the provider as tool definitions."""
+    return [*info.function_tools, *info.output_tools]
+
+
 def prefix_fingerprint(info: AgentInfo) -> str:
     """Hash of the static request prefix; must not change between requests (prompt caching)."""
-    prefix = (info.instructions or "") + tool_definitions_json(info.function_tools)
+    prefix = (info.instructions or "") + tool_definitions_json(request_tools(info))
     return hashlib.sha256(prefix.encode()).hexdigest()[:16]
 
 
@@ -106,7 +111,7 @@ class Meter:
             self.requests.append(
                 RequestSize(
                     instructions=len(info.instructions or ""),
-                    tools=len(tool_definitions_json(info.function_tools)),
+                    tools=len(tool_definitions_json(request_tools(info))),
                     history=messages_chars(messages),
                     output=messages_chars([response]),
                     fingerprint=prefix_fingerprint(info),

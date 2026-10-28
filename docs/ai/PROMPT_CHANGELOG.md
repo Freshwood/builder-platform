@@ -10,6 +10,24 @@ Each entry names the version, the fingerprint, what changed and why, and the eff
 offline token benchmark (`task bench`). Every stored agent run carries `prompt_version` and
 `prompt_fingerprint`, so a result can be traced back to exactly one entry.
 
+## 2026-10-28.1 (stages, fingerprint `c0a70f8a81c47d00`)
+
+New, separately versioned prompts for the staged design pipeline (ADR-0010): `intake.de.md`
+(stage 1) and `skeleton.de.md` (stage 2) in `modules/pipeline/prompts/`. Fingerprint and lock
+(`stages.lock`) cover the instructions and the output schema of both stages; the chat agent's
+prompt and `PROMPT_VERSION` are unchanged.
+
+- Intake reads the facts of the description into a `Spec` and words the open questions. The
+  engine decides which questions are open (`calc_engine.pipeline.gaps`); the model has no tools.
+- Skeleton plans parameters and modules only (no parts). The engine applies the customer's
+  facts (use, support, finish, dimensions) and checks every expression before the result is
+  accepted; one repair round with the engine's problems.
+
+Offline measurement (`tests/test_stage_budget.py`, request side exact, output a lower bound):
+intake 810 input tokens per request (prefix 712), skeleton 1,690 (prefix 1,598). The old single
+design call carried a 7,608-token prefix on every request. Neither stage is connected to the
+chat yet, so the end-to-end saving is not measured.
+
 ## 2026-10-14.1 (fingerprint `417fa06d546c2a92`, routing version 2)
 
 Runtime change without a fingerprint change (regression case

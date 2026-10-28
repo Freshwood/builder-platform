@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from construction_model.pipeline import Option, Question, Spec
+from construction_model.pipeline import Option, Question, Spec, SpecUpdates
 
 USE_OPTIONS = [
     Option(value="indoor", label="Innen"),
@@ -51,9 +51,16 @@ def _dimension_question(spec: Spec) -> Question | None:
 
 
 def open_questions(
-    spec: Spec, species: Mapping[str, str] | None = None, *, limit: int = DEFAULT_LIMIT
+    spec: Spec,
+    species: Mapping[str, str] | None = None,
+    *,
+    limit: int = DEFAULT_LIMIT,
+    thorough: bool = False,
 ) -> list[Question]:
-    """The most important open questions, blocking ones first (at most ``limit``)."""
+    """The most important open questions, blocking ones first (at most ``limit``).
+
+    Size, use, support and material shape every design. Finish and experience only change
+    details, so they are asked only when the customer wants a ``thorough`` interview."""
     candidates: list[Question | None] = [
         _dimension_question(spec),
         None
@@ -72,10 +79,10 @@ def open_questions(
             ],
         ),
         None
-        if spec.finish is not None
+        if spec.finish is not None or not thorough
         else Question(field="finish", text="Welche Oberfläche?", options=FINISH_OPTIONS),
         None
-        if spec.experience is not None
+        if spec.experience is not None or not thorough
         else Question(
             field="experience", text="Wie viel Erfahrung hast du?", options=EXPERIENCE_OPTIONS
         ),
@@ -88,3 +95,15 @@ def open_questions(
 def is_ready(spec: Spec) -> bool:
     """A design is possible: the scale of the object is known (everything else has defaults)."""
     return bool(spec.dimensions())
+
+
+def apply_updates(spec: Spec, updates: SpecUpdates) -> Spec:
+    """Fill the fields the customer left open. Given values always win over a model's reading.
+
+    ``size_mode`` has the default "approx", so it counts as open while it still has that value."""
+    fill = {
+        key: value
+        for key, value in updates.model_dump(exclude_none=True).items()
+        if getattr(spec, key) is None or (key == "size_mode" and spec.size_mode == "approx")
+    }
+    return spec.model_copy(update=fill)

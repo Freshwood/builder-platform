@@ -8,7 +8,7 @@ them and derives everything else (BOM, cut list, costs, drawings, 3D model).
 
 | Path | What |
 |---|---|
-| `apps/api` | FastAPI modular monolith (`homeworking`). The agent lives in `modules/agent`, the HTTP layer in `api/`. |
+| `apps/api` | FastAPI modular monolith (`homeworking`). The chat agent lives in `modules/agent`, the staged design pipeline (intake, skeleton) in `modules/pipeline`, the HTTP layer in `api/`. |
 | `apps/web` | Next.js 16 + React 19 client (Vercel AI SDK `useChat`). See `apps/web/AGENTS.md`. |
 | `packages/construction-model` | Pure domain model: inputs, commands, diff, `AssemblyDesign`. |
 | `packages/calc-engine` | Deterministic engine for designs, catalog. No packs or templates: every project is a one-off design (ADR-0008). `pipeline/` holds the gap rules and the module merge of the staged design pipeline (ADR-0010). |
@@ -17,7 +17,7 @@ them and derives everything else (BOM, cut list, costs, drawings, 3D model).
 | `docs/ai` | Prompts, changelog, token benchmarks, model prices. |
 
 Import boundaries are enforced by `lint-imports`. The domain model and the engine import no
-platform, DB or LLM code, and only `homeworking.api` may use `modules.agent`.
+platform, DB or LLM code, and only `homeworking.api` may use `modules.agent` and `modules.pipeline`.
 
 ## Commands (Taskfile)
 
@@ -30,7 +30,7 @@ platform, DB or LLM code, and only `homeworking.api` may use `modules.agent`.
   `task regress:promote -- <slug>` turns a finished draft into a case.
 - `task eval:live`: live LLM evaluation of the regression briefs. Costs money, needs a key, not
   in CI.
-- `task prompt:lock`: record the prompt fingerprint after a prompt or tool change.
+- `task prompt:lock`: record the prompt fingerprint after a prompt or tool change (agent and pipeline stages).
 - `task openapi`: regenerate `openapi.json` and the TS client after API model changes.
 - `task ci`: what CI runs.
 

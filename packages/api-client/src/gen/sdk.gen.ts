@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ChatData, ChatResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DocumentData, DocumentErrors, DocumentResponses, DrawingData, DrawingErrors, DrawingResponses, ExecuteCommandData, ExecuteCommandErrors, ExecuteCommandResponses, ExportData, ExportErrors, ExportResponses, GetProjectData, GetProjectErrors, GetProjectResponses, GetVersionData, GetVersionErrors, GetVersionResponses, HealthData, HealthResponses, HistoryData, HistoryErrors, HistoryResponses, ListProjectsData, ListProjectsResponses, MeData, MeResponses, NoticesData, NoticesResponses, ProjectChatData, ProjectChatErrors, ProjectChatResponses, RestoreVersionData, RestoreVersionErrors, RestoreVersionResponses, UndoData, UndoErrors, UndoResponses, VersionsData, VersionsErrors, VersionsResponses } from './types.gen';
+import type { ChatData, ChatResponses, CreateProjectData, CreateProjectErrors, CreateProjectResponses, DeleteProjectData, DeleteProjectErrors, DeleteProjectResponses, DocumentData, DocumentErrors, DocumentResponses, DrawingData, DrawingErrors, DrawingResponses, ExecuteCommandData, ExecuteCommandErrors, ExecuteCommandResponses, ExportData, ExportErrors, ExportResponses, GetProjectData, GetProjectErrors, GetProjectResponses, GetVersionData, GetVersionErrors, GetVersionResponses, HealthData, HealthResponses, HistoryData, HistoryErrors, HistoryResponses, IntakeData, IntakeErrors, IntakeResponses, ListProjectsData, ListProjectsResponses, MeData, MeResponses, NoticesData, NoticesResponses, ProjectChatData, ProjectChatErrors, ProjectChatResponses, RestoreVersionData, RestoreVersionErrors, RestoreVersionResponses, SkeletonData, SkeletonErrors, SkeletonResponses, UndoData, UndoErrors, UndoResponses, VersionsData, VersionsErrors, VersionsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -127,3 +127,27 @@ export const chat = <ThrowOnError extends boolean = false>(options?: Options<Cha
  * Chat messages of a project (Vercel AI UI message format), oldest first.
  */
 export const projectChat = <ThrowOnError extends boolean = false>(options: Options<ProjectChatData, ThrowOnError>): RequestResult<ProjectChatResponses, ProjectChatErrors, ThrowOnError> => (options.client ?? client).get<ProjectChatResponses, ProjectChatErrors, ThrowOnError>({ url: '/api/projects/{project_id}/chat', ...options });
+
+/**
+ * Intake
+ */
+export const intake = <ThrowOnError extends boolean = false>(options: Options<IntakeData, ThrowOnError>): RequestResult<IntakeResponses, IntakeErrors, ThrowOnError> => (options.client ?? client).post<IntakeResponses, IntakeErrors, ThrowOnError>({
+    url: '/api/pipeline/intake',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Skeleton
+ */
+export const skeleton = <ThrowOnError extends boolean = false>(options: Options<SkeletonData, ThrowOnError>): RequestResult<SkeletonResponses, SkeletonErrors, ThrowOnError> => (options.client ?? client).post<SkeletonResponses, SkeletonErrors, ThrowOnError>({
+    url: '/api/pipeline/skeleton',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});

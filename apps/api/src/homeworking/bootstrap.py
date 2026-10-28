@@ -14,6 +14,7 @@ from homeworking.modules.agent.model import Models, build_models
 from homeworking.modules.agent.tools import AgentDeps, build_agent
 from homeworking.modules.conversations.service import ConversationService
 from homeworking.modules.identity.service import IdentityProvider, SqlGuestIdentityProvider
+from homeworking.modules.pipeline.stages import Pipeline
 from homeworking.modules.projects.repository import SqlProjectRepository
 from homeworking.modules.projects.service import ProjectService
 from homeworking.settings import Settings
@@ -30,6 +31,7 @@ class Container:
     conversations: ConversationService
     agent: Agent[AgentDeps, str]
     models: Models
+    pipeline: Pipeline
 
     async def create_schema(self) -> None:
         """Create tables directly (tests / SQLite dev). Production uses Alembic."""
@@ -55,4 +57,9 @@ def build_container(settings: Settings, engine: Engine | None = None) -> Contain
         conversations=ConversationService(sessions),
         agent=build_agent(models.designer),
         models=models,
+        pipeline=Pipeline(
+            settings,
+            models,
+            {k: m.label for k, m in calc.catalog.lumber_species().items()},
+        ),
     )

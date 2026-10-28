@@ -4,6 +4,8 @@ import clsx from "clsx";
 import { useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 
 import { AutoTextarea } from "@/components/AutoTextarea";
+import { Chips, NumberInput, inputClass } from "@/components/BriefControls";
+import { IntakeQuestions } from "@/components/IntakeQuestions";
 import { Icon, type IconName } from "@/components/ui";
 import {
   EMPTY_BRIEF,
@@ -19,6 +21,8 @@ import {
   type Brief,
   type Option,
 } from "@/lib/brief";
+import { askIntake } from "@/lib/intake";
+import type { Question } from "@homeworking/api-client";
 
 /** Optional details as pills; each one opens a small panel below the prompt. */
 type DetailKey = "place" | "size" | "wood" | "finish" | "budget" | "skills" | "usage";
@@ -75,89 +79,6 @@ function clearDetail(brief: Brief, key: DetailKey): Brief {
     usage: { usage: "" },
   };
   return { ...brief, ...reset[key] };
-}
-
-function Chips({
-  legend,
-  options,
-  value,
-  onChange,
-  multiple = false,
-}: {
-  legend: string;
-  options: Option[];
-  value: string | string[];
-  onChange: (value: string | string[]) => void;
-  multiple?: boolean;
-}) {
-  const selected = (v: string) => (Array.isArray(value) ? value.includes(v) : value === v);
-  function toggle(v: string) {
-    if (Array.isArray(value)) {
-      onChange(selected(v) ? value.filter((x) => x !== v) : [...value, v]);
-    } else {
-      // Clicking the active chip again clears the choice ("egal").
-      onChange(selected(v) ? "" : v);
-    }
-  }
-  return (
-    <fieldset>
-      <legend className="mb-2 text-sm font-medium">
-        {legend}
-        {multiple && <span className="ml-1 font-normal text-muted">(mehrere möglich)</span>}
-      </legend>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={selected(option.value)}
-            onClick={() => toggle(option.value)}
-            className={clsx(
-              "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm transition",
-              selected(option.value)
-                ? "border-text bg-accent-soft font-medium"
-                : "border-border bg-surface hover:border-muted/50 hover:bg-surface-muted",
-            )}
-          >
-            {selected(option.value) && <Icon name="check" className="h-3.5 w-3.5" />}
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
-
-const inputClass =
-  "w-full rounded-md border border-border bg-surface px-3 py-2 text-base placeholder:text-muted/70 focus:border-text focus:ring-1 focus:ring-text focus:outline-none";
-
-function NumberInput({
-  label,
-  value,
-  onChange,
-  unit,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  unit: string;
-}) {
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block text-muted">{label}</span>
-      <span className="relative block">
-        <input
-          inputMode="decimal"
-          value={value}
-          onChange={(event) => onChange(event.target.value.replace(/[^\d.,]/g, ""))}
-          className={clsx(inputClass, "pr-10 tabular-nums")}
-        />
-        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted">
-          {unit}
-        </span>
-      </span>
-    </label>
-  );
 }
 
 function DetailPanel({
@@ -291,19 +212,36 @@ export function ProjectBrief({
   busy: boolean;
 }) {
   const [open, setOpen] = useState<DetailKey | null>(null);
-  const canSend = brief.description.trim().length > 0 && !busy;
+  // Open questions of the intake step; null = not asked (yet).
+  const [asking, setAsking] = useState<Question[] | null>(null);
+  const [checking, setChecking] = useState(false);
+  const canSend = brief.description.trim().length > 0 && !busy && !checking;
 
   function set<K extends keyof Brief>(key: K, value: Brief[K]) {
+    // A new description invalidates the questions asked about the old one.
+    if (key === "description") setAsking(null);
     onChange({ ...brief, [key]: value });
   }
 
-  function submit(event?: FormEvent) {
-    event?.preventDefault();
-    if (!canSend) return;
-    if (onSubmit(briefMessage(brief))) {
+  function send(final: Brief) {
+    if (onSubmit(briefMessage(final))) {
       onChange(EMPTY_BRIEF);
       setOpen(null);
+      setAsking(null);
     }
+  }
+
+  async function submit(event?: FormEvent) {
+    event?.preventDefault();
+    if (!canSend) return;
+    // Second round (questions shown): the start button continues with what is filled in.
+    if (asking) return send(brief);
+    setChecking(true);
+    const result = await askIntake(brief);
+    setChecking(false);
+    if (!result.questions.length) return send(result.brief);
+    onChange(result.brief);
+    setAsking(result.questions);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -391,11 +329,21 @@ export function ProjectBrief({
         <button
           type="submit"
           disabled={!canSend}
+          aria-busy={checking}
           className="ml-auto inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 font-semibold text-on-accent transition hover:brightness-105 active:scale-[0.97] disabled:opacity-35"
         >
           Planung starten
         </button>
       </div>
+
+      {asking && (
+        <IntakeQuestions
+          questions={asking}
+          brief={brief}
+          onChange={onChange}
+          onContinue={() => send(brief)}
+        />
+      )}
 
       {openDetail && (
         <div

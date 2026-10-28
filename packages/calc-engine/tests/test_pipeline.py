@@ -8,11 +8,12 @@ from typing import Any
 import pytest
 
 from calc_engine.engine import default_engine
-from calc_engine.pipeline.gaps import is_ready, open_questions
+from calc_engine.pipeline.gaps import apply_updates, is_ready, open_questions
 from calc_engine.pipeline.merge import SKELETON, attribute, check, merge, shift
+from calc_engine.pipeline.skeleton import check_skeleton, finish_item, normalize
 from construction_model.assembly import AssemblyDesign
 from construction_model.model import ProjectInputs
-from construction_model.pipeline import ModuleBrief, ModuleDesign, Skeleton, Spec
+from construction_model.pipeline import ModuleBrief, ModuleDesign, Skeleton, Spec, SpecUpdates
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -157,6 +158,20 @@ def test_answered_fields_are_not_asked_again() -> None:
     assert is_ready(spec)
 
 
+def test_finish_and_experience_are_asked_only_when_thorough() -> None:
+    spec = Spec(
+        description="Regal",
+        width_mm=800,
+        depth_mm=300,
+        height_mm=1800,
+        use="indoor",
+        support="floor",
+        wood="spruce",
+    )
+    assert open_questions(spec) == []
+    assert [q.field for q in open_questions(spec, thorough=True)] == ["finish", "experience"]
+
+
 def test_partial_size_is_a_soft_question() -> None:
     spec = Spec(description="Regal", width_mm=800, height_mm=1800)
     first = open_questions(spec)[0]
@@ -164,3 +179,82 @@ def test_partial_size_is_a_soft_question() -> None:
     assert not first.blocking
     assert "Tiefe" in first.text
     assert is_ready(spec)
+
+
+# --- stage 1 and 2 rules -------------------------------------------------------------------
+
+
+def test_updates_fill_only_open_fields() -> None:
+    spec = Spec(description="Regal", width_mm=800, use="indoor")
+    filled = apply_updates(
+        spec, SpecUpdates(width_mm=999, height_mm=1800, use="outdoor", size_mode="max")
+    )
+    assert filled.width_mm == 800  # the customer's own value wins
+    assert filled.use == "indoor"
+    assert filled.height_mm == 1800
+    assert filled.size_mode == "max"
+
+
+def test_explicit_size_mode_is_kept() -> None:
+    spec = Spec(description="Regal", size_mode="exact")
+    assert apply_updates(spec, SpecUpdates(size_mode="max")).size_mode == "exact"
+
+
+def _skeleton() -> Skeleton:
+    shelf = fixture_design("shelf")
+    return shelf_modules(shelf)[0]
+
+
+def test_normalize_applies_the_customers_facts() -> None:
+    spec = Spec(
+        description="Regal",
+        width_mm=1000,
+        use="outdoor",
+        support="wall",
+        finish="oil",
+        size_mode="max",
+    )
+    skeleton = normalize(_skeleton(), spec)
+    width = next(p for p in skeleton.params if p.name == "width_mm")
+    assert (width.default, width.max) == (1000, 1000)
+    assert skeleton.use == "outdoor"
+    assert skeleton.support == "wall"
+    assert skeleton.finish == "finish_oil_outdoor_750"
+
+
+def test_normalize_widens_the_bounds_for_an_approximate_size() -> None:
+    skeleton = normalize(_skeleton(), Spec(description="Regal", width_mm=2500))
+    width = next(p for p in skeleton.params if p.name == "width_mm")
+    assert (width.default, width.max) == (2500, 2500)
+
+
+def test_a_valid_skeleton_has_no_problems() -> None:
+    spec = Spec(description="Regal", width_mm=800, height_mm=1800)
+    assert check_skeleton(normalize(_skeleton(), spec), spec) == []
+
+
+def test_skeleton_problems_are_named_for_the_model() -> None:
+    skeleton = _skeleton()
+    broken = skeleton.model_copy(
+        update={
+            "modules": [
+                skeleton.modules[0].model_copy(update={"size": ("nope", 10, 0)}),
+                skeleton.modules[0],
+            ],
+            "params": [p for p in skeleton.params if p.name != "height_mm"],
+        }
+    )
+    problems = check_skeleton(broken, Spec(description="x", height_mm=1800))
+    text = " | ".join(problems)
+    assert "height_mm' für die Maße" in text
+    assert "doppelt" in text
+    assert "size x" in text
+    assert "größer als 0" in text
+
+
+@pytest.mark.parametrize(
+    ("finish", "use", "item"),
+    [("oil", "indoor", "finish_hardwax_750"), ("natural", "indoor", None), (None, "outdoor", None)],
+)
+def test_finish_item(finish: str | None, use: str, item: str | None) -> None:
+    assert finish_item(finish, use) == item

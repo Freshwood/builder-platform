@@ -801,6 +801,42 @@ export type InstructionStep = {
 };
 
 /**
+ * IntakeRequest
+ */
+export type IntakeRequest = {
+    spec: Spec;
+    /**
+     * Extract
+     */
+    extract?: boolean;
+    /**
+     * Thorough
+     */
+    thorough?: boolean;
+};
+
+/**
+ * IntakeResponse
+ */
+export type IntakeResponse = {
+    spec: Spec;
+    /**
+     * Questions
+     */
+    questions: Array<Question>;
+    /**
+     * Ready
+     */
+    ready: boolean;
+    /**
+     * Usage
+     */
+    usage: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * JointSpec
  *
  * Carpentry joint between all touching or overlapping instances of two parts.
@@ -956,6 +992,60 @@ export type ModelDiff = {
 };
 
 /**
+ * ModuleBrief
+ *
+ * A module of the skeleton: a part of the object that one small call designs on its own.
+ */
+export type ModuleBrief = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Role
+     *
+     * What the module does
+     */
+    role: string;
+    /**
+     * Origin
+     *
+     * Global position of the module's local zero point, in mm
+     */
+    origin: [
+        number | string,
+        number | string,
+        number | string
+    ];
+    /**
+     * Size
+     *
+     * Extent of the module's box along x, y, z, in mm
+     */
+    size: [
+        number | string,
+        number | string,
+        number | string
+    ];
+    /**
+     * When
+     *
+     * Include the module only if this is truthy
+     */
+    when?: number | string | null;
+    /**
+     * Interfaces
+     *
+     * Where and how it meets the other modules
+     */
+    interfaces?: string;
+};
+
+/**
  * Money
  */
 export type Money = {
@@ -1011,6 +1101,20 @@ export type Notice = {
      * Rule Id
      */
     rule_id?: string | null;
+};
+
+/**
+ * Option
+ */
+export type Option = {
+    /**
+     * Value
+     */
+    value: string;
+    /**
+     * Label
+     */
+    label: string;
 };
 
 /**
@@ -1352,6 +1456,32 @@ export type QuantityChange = {
 };
 
 /**
+ * Question
+ *
+ * One follow-up question. ``field`` names the :class:`Spec` field the answer fills.
+ */
+export type Question = {
+    /**
+     * Field
+     */
+    field: string;
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Options
+     */
+    options?: Array<Option>;
+    /**
+     * Blocking
+     *
+     * Without an answer no design is possible
+     */
+    blocking?: boolean;
+};
+
+/**
  * Rect
  */
 export type Rect = {
@@ -1574,6 +1704,70 @@ export type Shape = {
 };
 
 /**
+ * Skeleton
+ *
+ * Parameters and module layout of the object. No parts, no materials of single parts.
+ */
+export type Skeleton = {
+    /**
+     * Object Type
+     */
+    object_type: string;
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Category
+     */
+    category?: 'object' | 'building';
+    /**
+     * Use
+     */
+    use?: 'indoor' | 'outdoor';
+    /**
+     * Support
+     */
+    support?: 'floor' | 'wall';
+    /**
+     * Finish
+     */
+    finish?: string | null;
+    /**
+     * Params
+     */
+    params: Array<DesignParam>;
+    /**
+     * Modules
+     */
+    modules: Array<ModuleBrief>;
+    /**
+     * Variants
+     */
+    variants?: Array<DesignVariant>;
+};
+
+/**
+ * SkeletonRequest
+ */
+export type SkeletonRequest = {
+    spec: Spec;
+};
+
+/**
+ * SkeletonResponse
+ */
+export type SkeletonResponse = {
+    skeleton: Skeleton;
+    /**
+     * Usage
+     */
+    usage: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * Solid
  *
  * A placed part for 3D display. Coordinates in mm: x right, y back, z up; ``at`` = min corner.
@@ -1658,6 +1852,73 @@ export type SolidRotation = {
      * Deg
      */
     deg: number;
+};
+
+/**
+ * Spec
+ *
+ * What the customer wants to build, as far as it is known. Every field is optional except
+ * the description; the intake stage and the platform settings fill the rest.
+ */
+export type Spec = {
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Use
+     */
+    use?: 'indoor' | 'outdoor' | null;
+    /**
+     * Support
+     */
+    support?: 'floor' | 'wall' | null;
+    /**
+     * Width Mm
+     */
+    width_mm?: number | null;
+    /**
+     * Depth Mm
+     */
+    depth_mm?: number | null;
+    /**
+     * Height Mm
+     */
+    height_mm?: number | null;
+    /**
+     * Size Mode
+     */
+    size_mode?: 'exact' | 'approx' | 'max';
+    /**
+     * Wood
+     */
+    wood?: string | null;
+    /**
+     * Finish
+     */
+    finish?: string | null;
+    /**
+     * Budget Eur
+     */
+    budget_eur?: number | null;
+    /**
+     * Experience
+     */
+    experience?: 'beginner' | 'advanced' | 'pro' | null;
+    /**
+     * Tools
+     */
+    tools?: Array<string>;
+    /**
+     * Usage
+     */
+    usage?: string | null;
+    /**
+     * Details
+     */
+    details?: {
+        [key: string]: string;
+    };
 };
 
 /**
@@ -2345,3 +2606,53 @@ export type ProjectChatResponses = {
 };
 
 export type ProjectChatResponse = ProjectChatResponses[keyof ProjectChatResponses];
+
+export type IntakeData = {
+    body: IntakeRequest;
+    path?: never;
+    query?: never;
+    url: '/api/pipeline/intake';
+};
+
+export type IntakeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type IntakeError = IntakeErrors[keyof IntakeErrors];
+
+export type IntakeResponses = {
+    /**
+     * Successful Response
+     */
+    200: IntakeResponse;
+};
+
+export type IntakeResponse2 = IntakeResponses[keyof IntakeResponses];
+
+export type SkeletonData = {
+    body: SkeletonRequest;
+    path?: never;
+    query?: never;
+    url: '/api/pipeline/skeleton';
+};
+
+export type SkeletonErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SkeletonError = SkeletonErrors[keyof SkeletonErrors];
+
+export type SkeletonResponses = {
+    /**
+     * Successful Response
+     */
+    200: SkeletonResponse;
+};
+
+export type SkeletonResponse2 = SkeletonResponses[keyof SkeletonResponses];
