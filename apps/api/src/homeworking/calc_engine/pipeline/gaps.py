@@ -93,8 +93,9 @@ def open_questions(
 
 
 def is_ready(spec: Spec) -> bool:
-    """A design is possible: the scale of the object is known (everything else has defaults)."""
-    return bool(spec.dimensions())
+    """A design is possible as soon as the brief says what to build. Missing dimensions never
+    block it: the skeleton stage picks usual ones for the purpose and the design states them."""
+    return bool(spec.description.strip() or spec.dimensions())
 
 
 def apply_updates(spec: Spec, updates: SpecUpdates) -> Spec:

@@ -37,14 +37,14 @@ async def test_chat_is_stored_per_project_including_earlier_questions(
     client: httpx.AsyncClient,
 ) -> None:
     # A question without a project, then the project: both turns form the project's chat
-    await _chat(client, "Ich will ein Hochbeet bauen")
+    await _chat(client, "Hallo, was kannst du?")
     events = await _chat(client, "Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche")
     project_id = _outputs(events)[0]["project"]["project_id"]
     await _chat(client, "Mach es 50 cm breiter", project_id)
 
     chat = (await client.get(f"/api/projects/{project_id}/chat")).json()
     assert [m["role"] for m in chat] == ["user", "assistant"] * 3
-    assert chat[0]["parts"][0]["text"] == "Ich will ein Hochbeet bauen"
+    assert chat[0]["parts"][0]["text"] == "Hallo, was kannst du?"
     # Tool calls with their results are restored, so the UI shows the same activity again
     tools = [p for m in chat for p in m["parts"] if p["type"].startswith("tool-")]
     assert any(p.get("output", {}).get("action") == "created" for p in tools)

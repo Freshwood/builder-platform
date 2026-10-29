@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict
 
 from homeworking.api.deps import ContainerDep, UserDep
 from homeworking.bootstrap import Container
+from homeworking.calc_engine.pipeline.budget import TIME_BUDGET_S, Complexity, classify
 from homeworking.construction_model.assembly import AssemblyDesign
 from homeworking.construction_model.pipeline import Question, Skeleton, Spec
 from homeworking.modules.conversations.service import RunStatus
@@ -45,6 +46,10 @@ class IntakeResponse(BaseModel):
     spec: Spec
     questions: list[Question]
     ready: bool
+    # Category of the brief and the seconds a finished construction may take (a fixed value per
+    # category, see ``calc_engine.pipeline.budget``).
+    complexity: Complexity
+    time_budget_s: int
     usage: dict[str, Any]
 
 
@@ -140,6 +145,8 @@ async def intake(body: IntakeRequest, container: ContainerDep, user: UserDep) ->
         spec=result.spec,
         questions=result.questions,
         ready=result.ready,
+        complexity=classify(result.spec),
+        time_budget_s=TIME_BUDGET_S[classify(result.spec)],
         usage=result.usage.as_dict(),
     )
 
@@ -150,7 +157,7 @@ async def skeleton(
 ) -> SkeletonResponse:
     spec = clean_spec(body.spec)
     if not container.pipeline.ready(spec):
-        raise HTTPException(409, "Für das Gerüst fehlen noch Maße.")
+        raise HTTPException(409, "Für das Gerüst fehlt die Beschreibung.")
     trace_id = uuid4().hex
     try:
         result = await container.pipeline.skeleton(spec)
@@ -168,7 +175,7 @@ async def modules(body: ModulesRequest, container: ContainerDep, user: UserDep) 
     """Design every module of the skeleton, merge and check them with the engine."""
     spec = clean_spec(body.spec)
     if not container.pipeline.ready(spec):
-        raise HTTPException(409, "Für die Module fehlen noch Maße.")
+        raise HTTPException(409, "Für die Module fehlt die Beschreibung.")
     trace_id = uuid4().hex
     try:
         result = await container.pipeline.modules(spec, body.skeleton)

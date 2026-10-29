@@ -23,7 +23,9 @@ Number = float
 #: What an expression may evaluate to: a measurement, or the text of a ``choice`` parameter.
 Scalar = float | str
 
-MAX_LENGTH = 300
+# Building blocks write the slope of a roof as one nested expression; a model's own expressions
+# stay far below this.
+MAX_LENGTH = 2000
 
 _BINARY: dict[type[ast.operator], Callable[[float, float], float]] = {
     ast.Add: operator.add,

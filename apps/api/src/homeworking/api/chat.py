@@ -31,6 +31,7 @@ from homeworking.modules.compliance.redaction import redact
 from homeworking.modules.compliance.safety import SAFETY_RULES_VERSION, check_message
 from homeworking.modules.conversations.service import AgentRun, RunStatus
 from homeworking.modules.llm.fixed import fixed_text_model
+from homeworking.modules.llm.model import reasoning_settings
 
 router = APIRouter(prefix="/api", tags=["agent"])
 log = logging.getLogger("homeworking.agent")
@@ -209,7 +210,12 @@ async def chat(request: Request, container: ContainerDep, user: UserDep) -> Resp
         project_id=project_id,
         trace_id=trace_id,
         planner=ChatPlanner(
-            container.pipeline, container.conversations, user.id, chat_id, last_text
+            container.pipeline,
+            container.conversations,
+            user.id,
+            chat_id,
+            last_text,
+            time_budget=container.settings.design_time_budget,
         ),
         save_design_creates=container.settings.save_design_creates,
     )
@@ -218,6 +224,11 @@ async def chat(request: Request, container: ContainerDep, user: UserDep) -> Resp
         total_tokens_limit=container.settings.agent_total_tokens_limit,
     )
     completed: list[AgentRunResult[Any]] = []
+    plan_settings = (
+        reasoning_settings(container.settings, container.settings.llm_plan_reasoning)
+        if routed.reason == "new_project"
+        else None
+    )
 
     async def stream() -> AsyncIterator[BaseChunk]:
         error: str | None = None
@@ -225,6 +236,7 @@ async def chat(request: Request, container: ContainerDep, user: UserDep) -> Resp
             async for chunk in adapter.run_stream(
                 message_history=history,
                 model=model,
+                model_settings=plan_settings,
                 deps=deps,
                 usage_limits=limits,
                 on_complete=completed.append,

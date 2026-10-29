@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from homeworking.construction_model.assembly import (
     DesignParam,
@@ -100,6 +100,44 @@ class Question(_Frozen):
     blocking: bool = Field(False, description="Without an answer no design is possible")
 
 
+BlockKind = Literal["house", "carcass", "platform", "table", "post_frame", "fence"]
+WallName = Literal["front", "back", "left", "right"]
+
+
+class Opening(_Frozen):
+    """Door or window in a wall of a ``house`` block (the catalog door and windows)."""
+
+    wall: WallName
+    kind: Literal["door", "window", "window_large"]
+    at: float | None = Field(
+        None,
+        ge=0,
+        le=25_000,
+        description="Centre in mm from the front-left corner (x on front/back, y on left/right); "
+        "empty = evenly spaced on the wall",
+    )
+
+
+class BlockSpec(_Frozen):
+    """A building block: the engine writes the parts of this module, the model writes none."""
+
+    kind: BlockKind
+    frame: Literal["fachwerk", "stud"] = "fachwerk"
+    roof: Literal["gable", "flat", "shed"] | None = Field(
+        None, description="house: gable (default) or flat; post_frame: shed (default) or flat"
+    )
+    cover: Literal["tiles", "boards"] = "boards"
+    braces: bool = True
+    shelves: int = Field(3, ge=0, le=10, description="carcass: shelves per column")
+    columns: int = Field(1, ge=1, le=4, description="carcass: columns with dividers")
+    back: bool = Field(True, description="carcass: back panel")
+    doors: bool = Field(False, description="carcass: one door per column")
+    lower_shelf: bool = Field(False, description="table: shelf between the legs")
+    openings: list[Opening] | None = Field(
+        None, max_length=12, description="empty list = none; omitted = door and windows by default"
+    )
+
+
 class ModuleBrief(_Frozen):
     """A module of the skeleton: a part of the object that one small call designs on its own."""
 
@@ -112,13 +150,26 @@ class ModuleBrief(_Frozen):
     interfaces: str = Field(
         "", max_length=300, description="Where and how it meets the other modules"
     )
+    block: BlockSpec | None = Field(
+        None, description="Engine-built module (see the prompt); no model call for it"
+    )
+
+
+def _shorten(value: object) -> object:
+    """A model that writes a sentence too long gets it cut, not a retry (a retry costs seconds)."""
+    if isinstance(value, str) and len(value) > SUMMARY_CHARS:
+        return value[: SUMMARY_CHARS - 1].rstrip() + "…"
+    return value
+
+
+SUMMARY_CHARS = 200
 
 
 class Skeleton(_Frozen):
     """Parameters and module layout of the object. No parts, no materials of single parts."""
 
     object_type: str = Field(min_length=1, max_length=60)
-    summary: str = Field(max_length=200)
+    summary: Annotated[str, BeforeValidator(_shorten)] = Field(max_length=SUMMARY_CHARS)
     category: Literal["object", "building"] = "object"
     use: Use = "indoor"
     support: Support = "floor"

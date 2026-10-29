@@ -41,7 +41,7 @@ _HEIGHT = re.compile(
 )
 _WOODS = {"lärche": "larch", "laerche": "larch", "douglasie": "douglas", "fichte": "spruce"}
 # Furniture the offline pipeline stand-ins can plan (a plywood carcass), see ``_plan_call``.
-_PLANNED = ("schrank", "kommode", "podest", "truhe", "kiste")
+_PLANNED = ("schrank", "kommode", "podest", "truhe", "kiste", "fachwerk")
 _OTHER_PROJECTS = ("terrasse", "carport", "gartenhaus", "schuppen", "zaun", "pergola", "schrank")
 _DIMS3 = re.compile(
     rf"{NUM}\s*(?:{UNIT})?\s*[x×*]\s*{NUM}\s*(?:{UNIT})?\s*[x×*]\s*{NUM}\s*(?:{UNIT})?",
@@ -168,33 +168,22 @@ def _design_params(design: AssemblyDesign, text: str) -> dict[str, Any]:
 
 
 def _plan_call(raw: str, text: str) -> ToolCall | None:
-    """Boxy furniture with dimensions goes through the staged pipeline (ADR-0010): the stand-in
-    only fills the brief, like a real model would."""
+    """Boxy furniture goes through the staged pipeline (ADR-0010): the stand-in only fills the
+    brief, like a real model would. Without dimensions the stages choose usual ones."""
     word = next((w for w in _PLANNED if w in text), None)
     if word is None:
         return None
+    spec: dict[str, Any] = {"description": raw[:2000]}
     if m := _DIMS3.search(text):
         unit = m.group(6) or m.group(4) or m.group(2)
-        width, depth, height = (
-            _to_mm(m.group(1), m.group(2) or unit),
-            _to_mm(m.group(3), m.group(4) or unit),
-            _to_mm(m.group(5), unit),
-        )
+        spec["width_mm"] = _to_mm(m.group(1), m.group(2) or unit)
+        spec["depth_mm"] = _to_mm(m.group(3), m.group(4) or unit)
+        spec["height_mm"] = _to_mm(m.group(5), unit)
     elif m := _DIMS.search(text):
         unit = m.group(4) or m.group(2)
-        width, depth, height = (
-            _to_mm(m.group(1), m.group(2) or unit),
-            _to_mm(m.group(3), unit),
-            800,
-        )
-    else:
-        return None
-    spec: dict[str, Any] = {
-        "description": raw[:2000],
-        "width_mm": width,
-        "depth_mm": depth,
-        "height_mm": height,
-    }
+        spec["width_mm"] = _to_mm(m.group(1), m.group(2) or unit)
+        spec["depth_mm"] = _to_mm(m.group(3), unit)
+        spec["height_mm"] = 800
     if re.search(r"drau(?:ß|ss)en|außen|garten|terrasse", text):
         spec["use"] = "outdoor"
     elif re.search(r"drinnen|\binnen\b|zimmer", text):
@@ -221,12 +210,6 @@ def decide_for_user_text(raw: str) -> Decision:
                 {"command": {"type": "change_parameter_by", "name": name, "delta": sign * amount}},
             )
         ]
-
-    if "hochbeet" in text and not _DIMS.search(text):
-        return (
-            "Gern plane ich dein Hochbeet! Wie lang und wie breit soll es werden "
-            "(z. B. 2 × 1 m), und welche Höhe wünschst du dir?"
-        )
 
     if drafted := _match_design(text):
         params = _design_params(drafted.design, text)

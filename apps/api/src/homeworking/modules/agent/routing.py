@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from homeworking.modules.agent.triggers import DELTA, VARIANTS
 from homeworking.modules.llm.model import Role
 
-ROUTING_VERSION = "2"
+ROUTING_VERSION = "3"
 
 # Words that ask for a new or changed construction (beyond parameters).
 _STRUCTURAL = re.compile(
@@ -48,6 +48,11 @@ class Route:
 def route(text: str, *, has_project: bool) -> Route:
     """Role for a user message; ``has_project`` = an active project is being edited."""
     lowered = text.lower()
+    if not has_project:
+        # Starting a project: the model only fills the brief for ``plan_design`` (a short tool
+        # call). Thinking at length costs 30 s and more and can run into the token limit; the
+        # stages do the designing (see ``llm_plan_reasoning``).
+        return Route("designer", "new_project")
     if _STRUCTURAL.search(lowered):
         return Route("designer", "structural")
     if has_project:

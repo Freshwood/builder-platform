@@ -3,10 +3,13 @@ every expression is checked against the default parameters before any module is 
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 
 from homeworking.calc_engine.assembly.expr import ExprError, evaluate, evaluate_number, is_truthy
 from homeworking.calc_engine.assembly.resolve import _check_param
+from homeworking.calc_engine.pipeline.blocks import prepare
+from homeworking.calc_engine.pipeline.blocks.suggest import adopt, infer_support, infer_use
 from homeworking.construction_model.assembly import DesignParam, Expr
 from homeworking.construction_model.base import ParamValue
 from homeworking.construction_model.pipeline import ModuleBrief, Skeleton, Spec
@@ -23,6 +26,9 @@ _FINISHES = {
 }
 
 
+_KNOWN_FINISHES = set(_FINISHES.values())
+
+
 def finish_item(finish: str | None, use: str) -> str | None:
     return _FINISHES.get((finish or "", use))
 
@@ -33,7 +39,29 @@ def _align(param: DesignParam, value: int, *, ceiling: bool) -> DesignParam:
     return param.model_copy(update={"default": value, "min": low, "max": high})
 
 
-def normalize(skeleton: Skeleton, spec: Spec) -> Skeleton:
+def _forms(value_mm: int) -> list[str]:
+    """How a customer writes a length: 2500 (mm), 250 (cm), 2,5 or 2.5 (m)."""
+    forms = {str(value_mm)}
+    for number in (value_mm / 10, value_mm / 1000):
+        text = f"{number:g}"
+        forms |= {text, text.replace(".", ",")}
+    return sorted(forms)
+
+
+def stated(spec: Spec) -> set[str]:
+    """The dimensions of the spec that the customer's own text contains. The chat model fills the
+    spec and, where the customer said nothing, writes a usual value into it; such an assumption may
+    be corrected by a block, a stated size may not."""
+    text = spec.description.lower()
+    found = set()
+    for name, value in spec.dimensions().items():
+        pattern = "|".join(rf"(?<![\d.,]){re.escape(f)}(?!\d)" for f in _forms(value))
+        if re.search(pattern, text):
+            found.add(name)
+    return found
+
+
+def normalize(skeleton: Skeleton, spec: Spec, *, adopt_blocks: bool = True) -> Skeleton:
     """Apply the customer's facts to the skeleton: use, support, finish and the dimensions."""
     wanted = spec.dimensions()
     params = [
@@ -42,15 +70,20 @@ def normalize(skeleton: Skeleton, spec: Spec) -> Skeleton:
         else p
         for p in skeleton.params
     ]
-    use = spec.use or skeleton.use
-    return skeleton.model_copy(
+    use = spec.use or infer_use(spec.description) or skeleton.use
+    # The model is told to leave the finish empty; an invented catalog id would only be rejected.
+    finish = finish_item(spec.finish, use) or (
+        skeleton.finish if skeleton.finish in _KNOWN_FINISHES else None
+    )
+    fitted = skeleton.model_copy(
         update={
             "params": params,
             "use": use,
-            "support": spec.support or skeleton.support,
-            "finish": finish_item(spec.finish, use) or skeleton.finish,
+            "support": spec.support or infer_support(spec.description) or skeleton.support,
+            "finish": finish,
         }
     )
+    return prepare(adopt(fitted, spec) if adopt_blocks else fitted, stated(spec))
 
 
 def _env(skeleton: Skeleton) -> tuple[dict[str, ParamValue], list[str]]:
@@ -101,6 +134,12 @@ def check_skeleton(skeleton: Skeleton, spec: Spec) -> list[str]:
         for name in DIMENSION_PARAMS.values()
         if name in spec.dimensions() and name not in names
     ]
+    if any(m.block is not None for m in skeleton.modules):
+        errors += [
+            f"Ein Baustein braucht den Parameter '{name}' (kind length, Maß in mm)"
+            for name in ("width_mm", "depth_mm", "height_mm")
+            if name not in names
+        ]
     ids = [m.id for m in skeleton.modules]
     errors += [
         f"Modul-ID '{i}' ist doppelt vergeben" for i in sorted({i for i in ids if ids.count(i) > 1})

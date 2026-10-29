@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import Awaitable, Callable, Iterator, Mapping
+from collections.abc import Awaitable, Callable, Coroutine, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, capture_run_messages
@@ -22,6 +22,8 @@ from pydantic_ai.messages import ModelMessage, ModelRequest, RetryPromptPart
 from pydantic_ai.models import Model
 
 from homeworking.calc_engine.engine import DesignRejectedError, Engine, default_engine
+from homeworking.calc_engine.pipeline.blocks import BlockError, expand, wood_key
+from homeworking.calc_engine.pipeline.blocks.explain import explain
 from homeworking.calc_engine.pipeline.gaps import apply_updates, is_ready, open_questions
 from homeworking.calc_engine.pipeline.materials import digest
 from homeworking.calc_engine.pipeline.merge import SKELETON, check, localize, merge, module_steps
@@ -52,9 +54,16 @@ from homeworking.settings import Settings
 MAX_OPEN_FOR_MODEL = 6
 MAX_QUESTIONS = 3
 SKELETON_ATTEMPTS = 2
+# A skeleton is a few hundred tokens (about 1,500 with a block and parameters). Some providers let
+# a model run on for 8,000 and more; that is 100 seconds. The cap ends such a request early and the
+# second attempt usually answers.
+SKELETON_MAX_TOKENS = 3_500
 # Repair rounds after the first module run; each re-runs only the modules the engine blames.
-MODULE_REPAIRS = 2
-MODULE_PARALLEL = 4
+# Cheap (no thinking, only the blamed modules), so the time budget ends them, not the count.
+MODULE_REPAIRS = 4
+# Every module of a skeleton (at most 6) is designed at the same time: the stage takes as long as
+# its slowest module.
+MODULE_PARALLEL = 6
 # Rounds in which the skeleton is revised because the merged modules fail on something no single
 # module owns (parameters, overall shape). Every round runs all modules again.
 SKELETON_REVISIONS = 1
@@ -88,6 +97,47 @@ class StageUsage:
 
     def as_dict(self) -> dict[str, Any]:
         return dict(self.__dict__)
+
+
+T = TypeVar("T")
+
+
+class DeadlineExceededError(TimeoutError):
+    """The time budget of a design ran out (see ``calc_engine.pipeline.budget``)."""
+
+
+class Deadline:
+    """The time left for one design. ``None`` seconds = no limit (tests, tools)."""
+
+    def __init__(self, seconds: float | None) -> None:
+        self._end = None if seconds is None else time.monotonic() + seconds
+
+    def remaining(self) -> float | None:
+        return None if self._end is None else self._end - time.monotonic()
+
+    def expired(self, needed: float = 0.0) -> bool:
+        left = self.remaining()
+        return left is not None and left <= needed
+
+    async def run(self, work: Coroutine[Any, Any, T]) -> T:
+        """Await ``work`` but give up when the time is over (the work is cancelled)."""
+        left = self.remaining()
+        if left is None:
+            return await work
+        if left <= 0:
+            work.close()
+            raise DeadlineExceededError("budget used up")
+        try:
+            return await asyncio.wait_for(work, left)
+        except TimeoutError as exc:
+            raise DeadlineExceededError("budget used up") from exc
+
+
+NO_DEADLINE = Deadline(None)
+
+
+class _NoModelNeededError(Exception):
+    """Internal: a documentation made of fixed block texts skips the model."""
 
 
 class StageFailedError(RuntimeError):
@@ -214,6 +264,18 @@ def build_agents(
     )
 
 
+def _blocks_only(skeleton: Skeleton) -> Skeleton | None:
+    """The skeleton without its hand-planned modules, if it has both kinds."""
+    blocks = [m for m in skeleton.modules if m.block is not None]
+    if not blocks or len(blocks) == len(skeleton.modules):
+        return None
+    return skeleton.model_copy(update={"modules": blocks})
+
+
+def _with_skeleton(result: SkeletonResult, skeleton: Skeleton) -> SkeletonResult:
+    return SkeletonResult(skeleton, result.usage, result.attempts, result.messages)
+
+
 def _real(models: Models | None) -> Models:
     if models is None:
         raise ValueError("Pipeline needs models unless LLM_MODE=test")
@@ -279,6 +341,7 @@ class Pipeline:
         module_model: Model | None = None,
         docs_model: Model | None = None,
         engine: Engine | None = None,
+        adopt_blocks: bool | None = None,
     ) -> None:
         """``models`` may be ``None`` in test mode (``LLM_MODE=test``): the offline stand-ins
         answer, and no real model exists."""
@@ -296,8 +359,14 @@ class Pipeline:
         # (ADR-0010).
         self._intake_model: Model = intake_model or _real(stand_in).fast
         self._skeleton_model: Model = skeleton_model or _real(stand_in).designer
-        self._module_model: Model = module_model or _real(stand_in).fast
+        self._module_model: Model = module_model or _real(stand_in).module_stage
         self._docs_model: Model = docs_model or _real(stand_in).fast
+        # Offline stand-ins write modules themselves; tests of blocks switch adoption on.
+        self._adopt = (
+            settings.engine_blocks == "auto" and settings.llm_mode != "test"
+            if adopt_blocks is None
+            else adopt_blocks
+        )
         self._species = dict(species or {})
         self._engine = engine or default_engine()
         self._materials = digest(self._engine.catalog)
@@ -345,7 +414,11 @@ class Pipeline:
         return IntakeResult(spec, questions, usage)
 
     async def skeleton(
-        self, spec: Spec, *, revise: tuple[SkeletonResult, list[str]] | None = None
+        self,
+        spec: Spec,
+        *,
+        revise: tuple[SkeletonResult, list[str]] | None = None,
+        deadline: Deadline = NO_DEADLINE,
     ) -> SkeletonResult:
         """Plan parameters and modules; one repair round with the engine's problems.
 
@@ -364,10 +437,18 @@ class Pipeline:
                     "Gerüst (Parameter, Maße, Boxen). Korrigiere genau diese Fehler:\n"
                     + "\n".join(f"- {p}" for p in problems[:8])
                 )
-            for _ in range(SKELETON_ATTEMPTS):
+            for attempt in range(SKELETON_ATTEMPTS):
+                if attempt and deadline.expired():
+                    break  # no time for another try: report what the engine found
                 with _model_call(usage), capture_run_messages() as captured:
                     try:
-                        result = await self.skeleton_agent.run(prompt, message_history=history)
+                        result = await deadline.run(
+                            self.skeleton_agent.run(
+                                prompt,
+                                message_history=history,
+                                model_settings={"max_tokens": SKELETON_MAX_TOKENS},
+                            )
+                        )
                     except UnexpectedModelBehavior as exc:
                         # Invalid output after the framework's retries, or the output cap was
                         # hit. The call cost tokens; their number is unknown.
@@ -378,7 +459,7 @@ class Pipeline:
                             prompt = f"{prompt}\nDie letzte Antwort war ungültig: {why}"
                         continue
                 usage.add(self._skeleton_model.model_name, result.usage)
-                skeleton = normalize(result.output, spec)
+                skeleton = normalize(result.output, spec, adopt_blocks=self._adopt)
                 problems = check_skeleton(skeleton, spec)
                 if not problems:
                     return SkeletonResult(skeleton, usage, failed, result.all_messages())
@@ -429,6 +510,7 @@ class Pipeline:
         designs: dict[str, ModuleDesign],
         failures: dict[str, str],
         usage: StageUsage,
+        deadline: Deadline = NO_DEADLINE,
     ) -> None:
         """One model call per module, a few at a time. A module the model cannot deliver in valid
         form is left out; the merge reports it as missing and the next round asks again."""
@@ -438,8 +520,8 @@ class Pipeline:
             async with gate:
                 with _model_call(usage), capture_run_messages() as captured:
                     try:
-                        result = await self.module_agent.run(
-                            prompt, message_history=histories.get(module_id)
+                        result = await deadline.run(
+                            self.module_agent.run(prompt, message_history=histories.get(module_id))
                         )
                     except UnexpectedModelBehavior as exc:
                         # The call cost tokens; their number is unknown.
@@ -463,27 +545,44 @@ class Pipeline:
                 task.cancel()
             raise
 
-    async def modules(self, spec: Spec, skeleton: Skeleton) -> ModulesResult:
+    async def modules(
+        self, spec: Spec, skeleton: Skeleton, *, deadline: Deadline = NO_DEADLINE
+    ) -> ModulesResult:
         """Design every module, merge, let the engine check; re-run only the modules it blames.
 
         The skeleton comes from the client in the API, so it is normalised and checked again."""
         usage = StageUsage("modules")
         with _timed(usage):
-            skeleton = normalize(skeleton, spec)
+            skeleton = normalize(skeleton, spec, adopt_blocks=self._adopt)
             if problems := check_skeleton(skeleton, spec):
                 raise ModulesRejectedError({SKELETON: problems}, usage)
             params = default_params(skeleton)
             briefs = {m.id: m for m in skeleton.modules}
+            # Block modules are written by the engine: no model call, no repair by the model.
+            blocks: dict[str, ModuleDesign] = {}
+            wood = wood_key(skeleton.use, params, set(self._species))
+            for brief in skeleton.modules:
+                if brief.block is None:
+                    continue
+                try:
+                    blocks[brief.id] = expand(brief, params, wood)
+                except BlockError as exc:
+                    raise ModulesRejectedError({SKELETON: [str(exc)]}, usage) from exc
             prompts = {
-                m.id: self._module_prompt(spec, skeleton, m, params) for m in skeleton.modules
+                m.id: self._module_prompt(spec, skeleton, m, params)
+                for m in skeleton.modules
+                if m.id not in blocks
             }
-            designs: dict[str, ModuleDesign] = {}
+            designs: dict[str, ModuleDesign] = dict(blocks)
             histories: dict[str, list[ModelMessage]] = {}
             failures: dict[str, str] = {}
             repairs: list[dict[str, list[str]]] = []
             errors: dict[str, list[str]] = {}
+            round_s = 0.0
             for attempt in range(MODULE_REPAIRS + 1):
-                await self._run_modules(prompts, histories, designs, failures, usage)
+                round_started = time.monotonic()
+                await self._run_modules(prompts, histories, designs, failures, usage, deadline)
+                round_s = time.monotonic() - round_started
                 merged = await run_blocking(
                     lambda: check(self._engine, merge(skeleton, designs.values()), params)
                 )
@@ -491,10 +590,17 @@ class Pipeline:
                     module: [*texts, *([failures[module]] if module in failures else [])]
                     for module, texts in merged.errors.items()
                 }
+                # Nobody repairs a block module but the skeleton (its options, the dimensions).
+                for module in [m for m in errors if m in blocks]:
+                    errors.setdefault(SKELETON, []).extend(
+                        localize(errors.pop(module), module, merged.part_module)
+                    )
                 if merged.ok and merged.design is not None:
                     return ModulesResult(merged.design, designs, usage, repairs, merged.part_module)
                 repairs.append(errors)
                 if SKELETON in errors or attempt == MODULE_REPAIRS:
+                    break
+                if deadline.expired(round_s / 2):  # a repair round would not finish in time
                     break
                 prompts = {}
                 for module, texts in errors.items():
@@ -518,11 +624,12 @@ class Pipeline:
         design = built.design
         modules = []
         for brief in skeleton.modules:
-            parts = [
-                f"{p.name} [{p.material}]"
-                for p in design.parts
-                if built.part_module.get(p.id) == brief.id
-            ]
+            counts: dict[str, int] = {}
+            for p in design.parts:
+                if built.part_module.get(p.id) == brief.id:
+                    label = f"{p.name} [{p.material}]"
+                    counts[label] = counts.get(label, 0) + 1
+            parts = [f"{label} x{n}" if n > 1 else label for label, n in counts.items()]
             modules.append(f"- {brief.id} ({brief.title}): {brief.role}; Teile: {', '.join(parts)}")
         hardware = ", ".join(h.item for h in design.hardware) or "keine"
         return "\n".join(
@@ -539,7 +646,14 @@ class Pipeline:
             ]
         )
 
-    async def document(self, spec: Spec, skeleton: Skeleton, built: ModulesResult) -> DocsResult:
+    async def document(
+        self,
+        spec: Spec,
+        skeleton: Skeleton,
+        built: ModulesResult,
+        *,
+        deadline: Deadline = NO_DEADLINE,
+    ) -> DocsResult:
         """Write the explanation and the build step texts of a checked design.
 
         The design never depends on this stage: if the model fails, or the engine rejects the
@@ -548,13 +662,20 @@ class Pipeline:
         usage = StageUsage("docs")
         documentation: Documentation | None = None
         error: str | None = None
+        # Engine-built modules come with their own explanation and steps: a design made only of
+        # them needs no documentation call (5-10 s less, and nothing that can time out).
+        blocks_only = all(m.block is not None for m in skeleton.modules)
         with _timed(usage):
             try:
+                if blocks_only:
+                    raise _NoModelNeededError
                 with _model_call(usage):
-                    result = await self.docs_agent.run(self._docs_prompt(spec, skeleton, built))
+                    result = await deadline.run(
+                        self.docs_agent.run(self._docs_prompt(spec, skeleton, built))
+                    )
                 usage.add(self._docs_model.model_name, result.usage)
                 documentation = result.output
-            except UnexpectedModelBehavior:
+            except (UnexpectedModelBehavior, _NoModelNeededError):
                 pass
             except StageFailedError as exc:  # provider error or timeout: no texts, same design
                 error = str(exc)
@@ -573,12 +694,24 @@ class Pipeline:
                     continue
                 design = candidate
                 break
-        return DocsResult(
-            design, documentation.explanation if documentation else None, usage, error
-        )
+        explanation = documentation.explanation if documentation else None
+        if blocks_only:
+            explanation = "\n\n".join(
+                explain(m.block) for m in skeleton.modules if m.block is not None
+            )
+        return DocsResult(design, explanation, usage, error)
 
-    async def design(self, spec: Spec, *, on_stage: StageRecorder | None = None) -> DesignResult:
-        """Skeleton, modules and documentation of a new design. Raises
+    async def design(
+        self,
+        spec: Spec,
+        *,
+        on_stage: StageRecorder | None = None,
+        budget_s: float | None = None,
+    ) -> DesignResult:
+        """Skeleton, modules and documentation of a new design within ``budget_s`` seconds (no
+        limit if ``None``): a stage that cannot finish in time fails with
+        :class:`StageFailedError` caused by :class:`DeadlineExceededError`; the documentation
+        falls back to the plain step texts. Raises
         :class:`SkeletonRejectedError`, :class:`ModulesRejectedError` or, when a model call of
         a stage failed, :class:`StageFailedError`; ``on_stage`` sees every stage that ran, failed
         ones too."""
@@ -587,31 +720,44 @@ class Pipeline:
             if on_stage is not None and (usage.requests or error):
                 await on_stage(usage, error)
 
+        deadline = Deadline(budget_s)
         stages: list[StageUsage] = []
         try:
-            planned = await self.skeleton(spec)
+            planned = await self.skeleton(spec, deadline=deadline)
         except (SkeletonRejectedError, StageFailedError) as exc:
             await seen(exc.usage, str(exc))
             raise
         stages.append(planned.usage)
         await seen(planned.usage)
         revisions = 0
+        omitted: list[str] = []
         while True:
             try:
-                built = await self.modules(spec, planned.skeleton)
+                built = await self.modules(spec, planned.skeleton, deadline=deadline)
                 break
             except StageFailedError as failed:
                 await seen(failed.usage, str(failed))
-                raise
+                if not (alone := _blocks_only(planned.skeleton)):
+                    raise
+                omitted += [m.title for m in planned.skeleton.modules if m.block is None]
+                planned = _with_skeleton(planned, alone)
             except ModulesRejectedError as exc:
                 await seen(exc.usage, str(exc))
                 problems = exc.errors.get(SKELETON)
+                if not problems and (alone := _blocks_only(planned.skeleton)):
+                    # An extra module the model wrote next to a block does not work out: the
+                    # block alone is a complete, buildable design.
+                    omitted += [m.title for m in planned.skeleton.modules if m.block is None]
+                    planned = _with_skeleton(planned, alone)
+                    continue
                 if not problems or revisions >= SKELETON_REVISIONS:
                     raise
                 stages.append(exc.usage)
                 revisions += 1
                 try:
-                    planned = await self.skeleton(spec, revise=(planned, problems))
+                    planned = await self.skeleton(
+                        spec, revise=(planned, problems), deadline=deadline
+                    )
                 except (SkeletonRejectedError, StageFailedError) as rejected:
                     await seen(rejected.usage, str(rejected))
                     raise
@@ -619,11 +765,18 @@ class Pipeline:
                 await seen(planned.usage)
         stages.append(built.usage)
         await seen(built.usage)
-        documented = await self.document(spec, planned.skeleton, built)
+        documented = await self.document(spec, planned.skeleton, built, deadline=deadline)
         await seen(documented.usage, documented.error)
+        explanation = documented.explanation
+        if omitted:
+            note = (
+                f"Hinweis: {', '.join(omitted)} ließ sich nicht planen und fehlt in diesem Entwurf; "
+                "es kann einzeln ergänzt werden."
+            )
+            explanation = f"{explanation}\n\n{note}" if explanation else note
         return DesignResult(
             documented.design,
-            documented.explanation,
+            explanation,
             planned.skeleton,
             [*stages, documented.usage],
         )

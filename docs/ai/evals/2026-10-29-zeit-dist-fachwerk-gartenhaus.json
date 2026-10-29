@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "label": "dist-fachwerk_gartenhaus",
+  "date": "2026-10-29",
+  "prompt_version": "2026-10-29.1",
+  "prompt_fingerprint": "51ed6d86ec4a9c8b",
+  "routing_version": "2",
+  "settings": {
+    "llm_mode": "openai",
+    "offline": false,
+    "models": {
+      "designer": "openai/gpt-5.6-luna",
+      "fast": "openai/gpt-5.6-luna"
+    },
+    "model_role": null,
+    "runs": 2,
+    "request_limit": 12,
+    "total_tokens_limit": 1000000,
+    "temperature": 0.2,
+    "reasoning": "low",
+    "max_output_tokens": 12000,
+    "budget_usd": 5.0
+  },
+  "aborted": null,
+  "overall": {
+    "runs": 2,
+    "successes": 0,
+    "success_rate": 0.0,
+    "pass_at_1": 0.0,
+    "pass_any": false,
+    "pass_all": false,
+    "accepted_runs": 0,
+    "mean_attempts": 3.0,
+    "mean_rejected": 3.0,
+    "mean_requests": 4.0,
+    "mean_duration_s": 83.331,
+    "intent_violation_runs": 0,
+    "view_violation_runs": 0,
+    "error_runs": 0,
+    "over_budget_runs": 0,
+    "input_tokens": 50466,
+    "output_tokens": 2115,
+    "stage_input_tokens": 146125,
+    "stage_output_tokens": 28555,
+    "cost_usd": 0.008188,
+    "mean_cost_usd": 0.004094,
+    "unpriced_requests": 22,
+    "cases": 1,
+    "cases_pass_all": 0,
+    "cases_pass_any": 0
+  },
+  "cases": {
+    "fachwerk_gartenhaus": {
+      "failure_class": "slow_design",
+      "brief": "Ich möchte im Garten ein kleines Fachwerkhaus bauen, in dem wir im Sommer übernachten können.",
+      "summary": {
+        "runs": 2,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 3.0,
+        "mean_rejected": 3.0,
+        "mean_requests": 4.0,
+        "mean_duration_s": 83.331,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "over_budget_runs": 0,
+        "input_tokens": 50466,
+        "output_tokens": 2115,
+        "stage_input_tokens": 146125,
+        "stage_output_tokens": 28555,
+        "cost_usd": 0.008188,
+        "mean_cost_usd": 0.004094,
+        "unpriced_requests": 22
+      },
+      "runs": [
+        {
+          "case": "fachwerk_gartenhaus",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "openai/gpt-5.6-luna",
+          "accepted": false,
+          "success": false,
+          "attempts": 2,
+          "rejected": 2,
+          "outcomes": {
+            "invalid_args": 1,
+            "engine_rejected": 1
+          },
+          "requests": 3,
+          "input_tokens": 18277,
+          "output_tokens": 694,
+          "cache_read_tokens": 16764,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 1323,
+              "output_tokens": 691
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 12,
+              "input_tokens": 76624,
+              "output_tokens": 16293,
+              "errors": [
+                "Modules rejected: walls: Bauteil 'walls_left_top[0]' (Linker Kopfriegel): Maße 70 × 3860 × 2448 mm passen nicht zum Querschnitt 70 × 70 mm von 'lumber_douglas_70x70' (zwei Maße müssen dem Querschnitt entsprechen). Länge 3860 mm angenommen; Maß anpassen: 2448 → 70 mm (Breite). / Bauteil 'walls_right_top[0]' (Rechter Kopfriegel): Maße 70 × 3860 × 2430 mm passen nicht zum Querschnitt 70 × 70 mm von 'lumber_douglas_70x70' (zwei Maße müssen dem Querschnitt entsprechen). Länge 3860 mm angenommen; Maß anpassen: 2430 → 70 mm (Breite)."
+              ]
+            }
+          },
+          "stage_input_tokens": 77947,
+          "stage_output_tokens": 16984,
+          "cost_usd": 0.002565,
+          "unpriced_requests": 12,
+          "duration_s": 80.582,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Die automatische Planung ist an einem technischen Fehler bei zwei Dach-/Wandriegeln gescheitert: Ihre Querschnittsmaße wurden mit der Bauteillänge verwechselt. Bitte starte die Planung mit denselben Angaben erneut; der Fehler lässt sich im nächsten Entwurf korrigieren.",
+          "error": null
+        },
+        {
+          "case": "fachwerk_gartenhaus",
+          "run": 2,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "openai/gpt-5.6-luna",
+          "accepted": false,
+          "success": false,
+          "attempts": 4,
+          "rejected": 4,
+          "outcomes": {
+            "invalid_args": 1,
+            "engine_rejected": 2,
+            "plan_limit": 1
+          },
+          "requests": 5,
+          "input_tokens": 32189,
+          "output_tokens": 1421,
+          "cache_read_tokens": 27940,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 3663,
+              "output_tokens": 1662
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 10,
+              "input_tokens": 64515,
+              "output_tokens": 9909,
+              "errors": [
+                "Modules rejected: roof: Bauteil 'roof_dachhaut_links[0]' (Linke Dachhaut): Stärke 12 mm passt nicht zu 'roof_tiles_clay' (30–120 mm; Stärke = kleinstes Maß bzw. Stabdicke) / Bauteil 'roof_dachhaut_rechts[0]' (Rechte Dachhaut): Stärke 12 mm passt nicht zu 'roof_tiles_clay' (30–120 mm; Stärke = kleinstes Maß bzw. Stabdicke)"
+              ]
+            }
+          },
+          "stage_input_tokens": 68178,
+          "stage_output_tokens": 11571,
+          "cost_usd": 0.005623,
+          "unpriced_requests": 10,
+          "duration_s": 86.08,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Der automatische Entwurf konnte wegen widersprüchlicher Dachmaterial-Vorgaben nicht erstellt werden. Für ein bewohnbares Gartenhaus müssen außerdem **Statik, Gründung und Dachaufbau** durch einen Tragwerksplaner geprüft werden; je nach Bundesland und Größe kann eine Baugenehmigung erforderlich sein. Bitte kläre das mit Bauamt und Landesbauordnung.\n\nIch kann den Entwurf erneut anlegen, wenn du eine Dachvariante vorgibst:\n\n- **Holzdach mit Bitumen- oder EPDM-Abdichtung**\n- **Blechdach**\n- **Ziegel- oder Betondach**\n\nDie bisher angenommenen Maße wären etwa **5.000 × 4.000 × 3.500 mm**, für sommerliche Übernachtungen, mit Tür, Fenstern und einfacher Fachwerkkonstruktion.",
+          "error": null
+        }
+      ]
+    }
+  }
+}

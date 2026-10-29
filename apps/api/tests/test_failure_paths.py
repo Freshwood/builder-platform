@@ -329,7 +329,7 @@ async def test_planner_maps_rejected_modules_to_one_line_per_problem(
 ) -> None:
     pipeline = _pipeline()
 
-    async def rejected(spec: Spec, *, on_stage: object = None) -> object:
+    async def rejected(spec: Spec, **_: object) -> object:
         raise ModulesRejectedError({"body": ["a", "b"], "side": ["c"]}, StageUsage("modules"))
 
     monkeypatch.setattr(pipeline, "design", rejected)
@@ -359,7 +359,7 @@ async def test_planner_maps_a_provider_error_and_stores_the_failed_stage(
 async def test_planner_maps_any_other_error_by_its_type(monkeypatch: pytest.MonkeyPatch) -> None:
     pipeline = _pipeline()
 
-    async def broken(spec: Spec, *, on_stage: object = None) -> object:
+    async def broken(spec: Spec, **_: object) -> object:
         raise ZeroDivisionError
 
     monkeypatch.setattr(pipeline, "design", broken)

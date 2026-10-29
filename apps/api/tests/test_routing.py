@@ -19,16 +19,17 @@ from homeworking.settings import Settings
         ("Höhe bitte 90 cm", True, "fast", "parameters"),
         ("Lieber aus Lärche", True, "fast", "parameters"),
         ("Warum sind die Bretter 28 mm stark?", True, "fast", "question"),
-        # Every new project is a one-off design (ADR-0008): designer
-        ("Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche", False, "designer", "default"),
-        ("Regal 80 × 30 × 180 cm mit 5 Böden", False, "designer", "default"),
+        # Every new project is a one-off design (ADR-0008): designer, without long thinking (the
+        # turn only fills the brief of plan_design)
+        ("Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche", False, "designer", "new_project"),
+        ("Regal 80 × 30 × 180 cm mit 5 Böden", False, "designer", "new_project"),
         # Free designs and structural changes: designer
-        ("Ein Schuhschrank mit zwei Türen", False, "designer", "structural"),
+        ("Ein Schuhschrank mit zwei Türen", False, "designer", "new_project"),
         ("Füge eine Schublade hinzu", True, "designer", "structural"),
-        ("Ein Vogelhaus für den Garten", False, "designer", "default"),
-        ("Ein Kräuterbeet auf Rollen", False, "designer", "default"),
-        # Without a project, edits make no sense: no shortcut
-        ("Mach es 50 cm breiter", False, "designer", "default"),
+        ("Ein Vogelhaus für den Garten", False, "designer", "new_project"),
+        ("Ein Kräuterbeet auf Rollen", False, "designer", "new_project"),
+        # Without a project, edits make no sense: it starts a project
+        ("Mach es 50 cm breiter", False, "designer", "new_project"),
     ],
 )
 def test_route(text: str, has_project: bool, role: str, reason: str) -> None:
@@ -57,7 +58,23 @@ async def test_agent_run_stores_provenance(settings: Settings) -> None:
             run = (await session.scalars(select(AgentRunRow))).one()
     assert run.prompt_fingerprint
     assert run.safety_rules_version
-    assert (run.model_role, run.routing_reason) == ("designer", "default")
+    assert (run.model_role, run.routing_reason) == ("designer", "new_project")
     assert run.duration_ms is not None
     assert run.usage is not None
     assert run.usage["requests"] == len(run.usage["per_request"]) == 2
+
+
+def test_reasoning_is_set_per_run_only_where_the_provider_has_the_setting() -> None:
+    from homeworking.modules.llm.model import reasoning_settings
+
+    offline = Settings(environment="test", llm_mode="test")
+    assert reasoning_settings(offline, "off") is None
+    live = Settings(
+        environment="test",
+        llm_mode="openai",
+        llm_base_url="https://openrouter.ai/api/v1",
+        llm_api_key="x",  # type: ignore[arg-type]
+        llm_model="vendor/m",
+    )
+    assert reasoning_settings(live, "off") == {"openrouter_reasoning": {"enabled": False}}
+    assert reasoning_settings(live, "low") == {"openrouter_reasoning": {"effort": "low"}}

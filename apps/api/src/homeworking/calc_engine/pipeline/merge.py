@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from pydantic import ValidationError
 
 from homeworking.calc_engine.engine import DesignRejectedError, Engine
+from homeworking.calc_engine.pipeline.blocks import block_steps
 from homeworking.construction_model.assembly import (
     AssemblyDesign,
     DesignStep,
@@ -241,6 +242,16 @@ def module_steps(
     for brief in skeleton.modules:
         ids = [p.id for p in design.parts if part_module.get(p.id) == brief.id]
         if not ids:
+            continue
+        if brief.block is not None:
+            # Engine-built modules have their own fixed steps (foundation, walls, roof).
+            prefix = f"{brief.id}_"
+            for title, text, local in block_steps(
+                brief.block.kind, [i.removeprefix(prefix) for i in ids]
+            ):
+                steps.append(
+                    DesignStep(title=title, text=text, parts=[f"{prefix}{i}" for i in local])
+                )
             continue
         title, text = (texts or {}).get(brief.id) or (brief.title, brief.role)
         steps.append(DesignStep(title=title[:80], text=text[:800], parts=ids))

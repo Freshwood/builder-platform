@@ -108,6 +108,72 @@ export type AssemblyDesign = {
 };
 
 /**
+ * BlockSpec
+ *
+ * A building block: the engine writes the parts of this module, the model writes none.
+ */
+export type BlockSpec = {
+    /**
+     * Kind
+     */
+    kind: 'house' | 'carcass' | 'platform' | 'table' | 'post_frame' | 'fence';
+    /**
+     * Frame
+     */
+    frame?: 'fachwerk' | 'stud';
+    /**
+     * Roof
+     *
+     * house: gable (default) or flat; post_frame: shed (default) or flat
+     */
+    roof?: 'gable' | 'flat' | 'shed' | null;
+    /**
+     * Cover
+     */
+    cover?: 'tiles' | 'boards';
+    /**
+     * Braces
+     */
+    braces?: boolean;
+    /**
+     * Shelves
+     *
+     * carcass: shelves per column
+     */
+    shelves?: number;
+    /**
+     * Columns
+     *
+     * carcass: columns with dividers
+     */
+    columns?: number;
+    /**
+     * Back
+     *
+     * carcass: back panel
+     */
+    back?: boolean;
+    /**
+     * Doors
+     *
+     * carcass: one door per column
+     */
+    doors?: boolean;
+    /**
+     * Lower Shelf
+     *
+     * table: shelf between the legs
+     */
+    lower_shelf?: boolean;
+    /**
+     * Openings
+     *
+     * empty list = none; omitted = door and windows by default
+     */
+    openings?: Array<Opening> | null;
+};
+
+/**
  * BomLine
  */
 export type BomLine = {
@@ -829,6 +895,14 @@ export type IntakeResponse = {
      */
     ready: boolean;
     /**
+     * Complexity
+     */
+    complexity: 'medium' | 'heavy';
+    /**
+     * Time Budget S
+     */
+    time_budget_s: number;
+    /**
      * Usage
      */
     usage: {
@@ -1043,6 +1117,10 @@ export type ModuleBrief = {
      * Where and how it meets the other modules
      */
     interfaces?: string;
+    /**
+     * Engine-built module (see the prompt); no model call for it
+     */
+    block?: BlockSpec | null;
 };
 
 /**
@@ -1126,6 +1204,28 @@ export type Notice = {
      * Rule Id
      */
     rule_id?: string | null;
+};
+
+/**
+ * Opening
+ *
+ * Door or window in a wall of a ``house`` block (the catalog door and windows).
+ */
+export type Opening = {
+    /**
+     * Wall
+     */
+    wall: 'front' | 'back' | 'left' | 'right';
+    /**
+     * Kind
+     */
+    kind: 'door' | 'window' | 'window_large';
+    /**
+     * At
+     *
+     * Centre in mm from the front-left corner (x on front/back, y on left/right); empty = evenly spaced on the wall
+     */
+    at?: number | null;
 };
 
 /**

@@ -55,6 +55,15 @@ class CheckedDesign:
     warnings: list[str] = field(default_factory=list)
 
 
+def _span(box: Box) -> str:
+    """Where a part lies, for a message the model can act on: ``von (x, y, z) bis (x, y, z)``."""
+    low, high = box.bounds()
+    return (
+        f"von ({', '.join(str(round(v)) for v in low)}) "
+        f"bis ({', '.join(str(round(v)) for v in high)}) mm"
+    )
+
+
 def _fmt(values: tuple[float, ...]) -> str:
     return " × ".join(f"{v:g}" for v in values)
 
@@ -348,7 +357,8 @@ def check_design(
         a, b = boxes[c.a].part, boxes[c.b].part
         errors.append(
             f"Bauteile '{a.key}' ({a.name}) und '{b.key}' ({b.name}) durchdringen sich "
-            f"({_fmt(tuple(round(o, 1) for o in c.overlap))} mm) – Position oder Maß anpassen"
+            f"({_fmt(tuple(round(o, 1) for o in c.overlap))} mm); Lage: '{a.key}' "
+            f"{_span(boxes[c.a])}, '{b.key}' {_span(boxes[c.b])} – Position oder Maß anpassen"
             " oder als Holzverbindung (joints: half_lap/notch) angeben"
         )
     errors.extend(_check_joints(design, boxes, contacts, overlaps))

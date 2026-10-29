@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "label": "nosize-real",
+  "date": "2026-10-29",
+  "prompt_version": "2026-10-29.1",
+  "prompt_fingerprint": "51ed6d86ec4a9c8b",
+  "routing_version": "2",
+  "settings": {
+    "llm_mode": "openai",
+    "offline": false,
+    "models": {
+      "designer": "~deepseek/deepseek-v4-flash-latest",
+      "fast": "~deepseek/deepseek-v4-flash-latest"
+    },
+    "model_role": null,
+    "runs": 1,
+    "request_limit": 12,
+    "total_tokens_limit": 1000000,
+    "temperature": 0.2,
+    "reasoning": "low",
+    "max_output_tokens": 12000,
+    "budget_usd": 5.0
+  },
+  "aborted": null,
+  "overall": {
+    "runs": 1,
+    "successes": 1,
+    "success_rate": 1.0,
+    "pass_at_1": 1.0,
+    "pass_any": true,
+    "pass_all": true,
+    "accepted_runs": 1,
+    "mean_attempts": 2.0,
+    "mean_rejected": 1.0,
+    "mean_requests": 4.0,
+    "mean_duration_s": 433.922,
+    "intent_violation_runs": 0,
+    "view_violation_runs": 0,
+    "error_runs": 0,
+    "input_tokens": 45235,
+    "output_tokens": 2490,
+    "stage_input_tokens": 145505,
+    "stage_output_tokens": 60948,
+    "cost_usd": null,
+    "mean_cost_usd": null,
+    "unpriced_requests": 24,
+    "cases": 1,
+    "cases_pass_all": 1,
+    "cases_pass_any": 1
+  },
+  "cases": {
+    "schuhe_flur": {
+      "failure_class": "args_syntax",
+      "brief": "Bei uns im Flur liegen ständig die Schuhe der ganzen Familie herum. Ich brauche etwas, wo sie ordentlich hinkommen.",
+      "summary": {
+        "runs": 1,
+        "successes": 1,
+        "success_rate": 1.0,
+        "pass_at_1": 1.0,
+        "pass_any": true,
+        "pass_all": true,
+        "accepted_runs": 1,
+        "mean_attempts": 2.0,
+        "mean_rejected": 1.0,
+        "mean_requests": 4.0,
+        "mean_duration_s": 433.922,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "input_tokens": 45235,
+        "output_tokens": 2490,
+        "stage_input_tokens": 145505,
+        "stage_output_tokens": 60948,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 24
+      },
+      "runs": [
+        {
+          "case": "schuhe_flur",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 2,
+          "rejected": 1,
+          "outcomes": {
+            "engine_rejected": 1,
+            "accepted": 1
+          },
+          "requests": 4,
+          "input_tokens": 45235,
+          "output_tokens": 2490,
+          "cache_read_tokens": 26368,
+          "stages": {
+            "skeleton": {
+              "runs": 2,
+              "failed": 0,
+              "requests": 4,
+              "input_tokens": 15730,
+              "output_tokens": 12322
+            },
+            "modules": {
+              "runs": 2,
+              "failed": 1,
+              "requests": 15,
+              "input_tokens": 128496,
+              "output_tokens": 46860,
+              "errors": [
+                "Modules rejected: backpanel: joints nennen unbekannte Bauteil-IDs: lowershelf_shelf / joints nennen unbekannte Bauteil-IDs: uppershelf_shelf"
+              ]
+            },
+            "docs": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 1279,
+              "output_tokens": 1766
+            }
+          },
+          "stage_input_tokens": 145505,
+          "stage_output_tokens": 60948,
+          "cost_usd": null,
+          "unpriced_requests": 24,
+          "duration_s": 433.922,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Der Schuhschrank ist fertig geplant. Hier die Übersicht:\n\n**Schuhschrank Flur** – 1000 × 350 × 500 mm\n- **Bauweise:** Offener Rahmen aus Fichtenbrettern mit zwei Einstellebenen, steht auf dem Boden. Einfach und stabil, ideal für den Flur.\n- **Material:** Fichte (gehobelt), unbehandelt – günstig und leicht. Für den Innenbereich völlig ausreichend.\n- **Kosten:** Einkauf ca. **34–55 €** (Richtpreis), verbraucht ca. **18–30 €** Holz. Gewicht ca. 9 kg.\n- **Aufbau:** 4 Bauteile, ca. 12 Schrauben, stumpf verschraubt – gut machbar mit Akkuschrauber und Stichsäge.\n\n**Varianten:**\n1. **Eichenausführung** – edleres, härteres Holz, etwas teurer.\n2. **Kompakte Variante** – schmaler und niedriger für kleine Flure.\n\nSoll ich eine der Varianten übernehmen, die Maße anpassen (z. B. breiter für mehr Schuhe) oder eine dritte Ebene ergänzen?",
+          "error": null
+        }
+      ]
+    }
+  }
+}

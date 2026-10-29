@@ -1027,6 +1027,119 @@
         "title": "AssemblyDesign",
         "description": "A complete parametric design of a buildable object.\n\nCoordinates in mm: x = width (right), y = depth (back), z = height (up), floor z = 0.\nNumeric fields (size, at, start, end, section, points, count, quantity, when, deg) take a\nnumber or an arithmetic expression over parameters and the repeat variable, e.g.\n'width_mm - 2 * 18' or\n'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round,\nfloor, ceil, abs, if(cond, a, b), comparisons and and/or/not."
       },
+      "BlockSpec": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "house",
+              "carcass",
+              "platform",
+              "table",
+              "post_frame",
+              "fence"
+            ],
+            "title": "Kind"
+          },
+          "frame": {
+            "type": "string",
+            "enum": [
+              "fachwerk",
+              "stud"
+            ],
+            "title": "Frame",
+            "default": "fachwerk"
+          },
+          "roof": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "gable",
+                  "flat",
+                  "shed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roof",
+            "description": "house: gable (default) or flat; post_frame: shed (default) or flat"
+          },
+          "cover": {
+            "type": "string",
+            "enum": [
+              "tiles",
+              "boards"
+            ],
+            "title": "Cover",
+            "default": "boards"
+          },
+          "braces": {
+            "type": "boolean",
+            "title": "Braces",
+            "default": true
+          },
+          "shelves": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Shelves",
+            "description": "carcass: shelves per column",
+            "default": 3
+          },
+          "columns": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Columns",
+            "description": "carcass: columns with dividers",
+            "default": 1
+          },
+          "back": {
+            "type": "boolean",
+            "title": "Back",
+            "description": "carcass: back panel",
+            "default": true
+          },
+          "doors": {
+            "type": "boolean",
+            "title": "Doors",
+            "description": "carcass: one door per column",
+            "default": false
+          },
+          "lower_shelf": {
+            "type": "boolean",
+            "title": "Lower Shelf",
+            "description": "table: shelf between the legs",
+            "default": false
+          },
+          "openings": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Opening"
+                },
+                "type": "array",
+                "maxItems": 12
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Openings",
+            "description": "empty list = none; omitted = door and windows by default"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "BlockSpec",
+        "description": "A building block: the engine writes the parts of this module, the model writes none."
+      },
       "BomLine": {
         "properties": {
           "position": {
@@ -2315,6 +2428,18 @@
             "type": "boolean",
             "title": "Ready"
           },
+          "complexity": {
+            "type": "string",
+            "enum": [
+              "medium",
+              "heavy"
+            ],
+            "title": "Complexity"
+          },
+          "time_budget_s": {
+            "type": "integer",
+            "title": "Time Budget S"
+          },
           "usage": {
             "additionalProperties": true,
             "type": "object",
@@ -2326,6 +2451,8 @@
           "spec",
           "questions",
           "ready",
+          "complexity",
+          "time_budget_s",
           "usage"
         ],
         "title": "IntakeResponse"
@@ -2706,6 +2833,17 @@
             "title": "Interfaces",
             "description": "Where and how it meets the other modules",
             "default": ""
+          },
+          "block": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlockSpec"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Engine-built module (see the prompt); no model call for it"
           }
         },
         "additionalProperties": false,
@@ -2849,6 +2987,51 @@
           "message"
         ],
         "title": "Notice"
+      },
+      "Opening": {
+        "properties": {
+          "wall": {
+            "type": "string",
+            "enum": [
+              "front",
+              "back",
+              "left",
+              "right"
+            ],
+            "title": "Wall"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "door",
+              "window",
+              "window_large"
+            ],
+            "title": "Kind"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 25000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At",
+            "description": "Centre in mm from the front-left corner (x on front/back, y on left/right); empty = evenly spaced on the wall"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "wall",
+          "kind"
+        ],
+        "title": "Opening",
+        "description": "Door or window in a wall of a ``house`` block (the catalog door and windows)."
       },
       "Option": {
         "properties": {

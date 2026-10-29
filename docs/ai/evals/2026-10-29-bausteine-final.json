@@ -1,0 +1,1236 @@
+{
+  "schema_version": 1,
+  "label": "bausteine-final",
+  "date": "2026-10-29",
+  "prompt_version": "2026-10-29.2",
+  "prompt_fingerprint": "3c4b23056f6e7ccf",
+  "routing_version": "3",
+  "settings": {
+    "llm_mode": "openai",
+    "offline": false,
+    "models": {
+      "designer": "~deepseek/deepseek-v4-flash-latest",
+      "fast": "~deepseek/deepseek-v4-flash-latest"
+    },
+    "model_role": null,
+    "runs": 4,
+    "request_limit": 12,
+    "total_tokens_limit": 1000000,
+    "temperature": 0.2,
+    "reasoning": "low",
+    "max_output_tokens": 12000,
+    "budget_usd": 5.0
+  },
+  "aborted": null,
+  "overall": {
+    "runs": 24,
+    "successes": 21,
+    "success_rate": 0.875,
+    "pass_at_1": 0.875,
+    "pass_any": true,
+    "pass_all": false,
+    "accepted_runs": 22,
+    "mean_attempts": 1.708,
+    "mean_rejected": 0.667,
+    "mean_requests": 3.208,
+    "mean_duration_s": 29.19,
+    "intent_violation_runs": 1,
+    "view_violation_runs": 0,
+    "error_runs": 1,
+    "over_budget_runs": 1,
+    "input_tokens": 1214751,
+    "output_tokens": 64334,
+    "stage_input_tokens": 191893,
+    "stage_output_tokens": 82304,
+    "cost_usd": null,
+    "mean_cost_usd": null,
+    "unpriced_requests": 123,
+    "cases": 6,
+    "cases_pass_all": 3,
+    "cases_pass_any": 6
+  },
+  "cases": {
+    "carport_zwei_autos": {
+      "failure_class": "slow_design",
+      "brief": "Wir wollen einen Carport für zwei Autos neben dem Haus.",
+      "summary": {
+        "runs": 4,
+        "successes": 4,
+        "success_rate": 1.0,
+        "pass_at_1": 1.0,
+        "pass_any": true,
+        "pass_all": true,
+        "accepted_runs": 4,
+        "mean_attempts": 1.0,
+        "mean_rejected": 0.0,
+        "mean_requests": 2.25,
+        "mean_duration_s": 14.525,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "over_budget_runs": 0,
+        "input_tokens": 133122,
+        "output_tokens": 4069,
+        "stage_input_tokens": 13494,
+        "stage_output_tokens": 6297,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 13
+      },
+      "runs": [
+        {
+          "case": "carport_zwei_autos",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 28672,
+          "output_tokens": 827,
+          "cache_read_tokens": 27648,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3309,
+              "output_tokens": 735
+            }
+          },
+          "stage_input_tokens": 3309,
+          "stage_output_tokens": 735,
+          "cost_usd": null,
+          "unpriced_requests": 3,
+          "duration_s": 8.2,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Der Carport ist geplant. Hier die Eckdaten:\n\n**Carport für zwei Autos – 6000 × 6300 × 3546 mm**\n- Offene Pfostenkonstruktion aus Douglasie, unbehandelt\n- Flach geneigtes Schalungsdach, Z-Verstrebungen gegen Verwindung\n- 25 Bauteile, ca. 1215 kg Holz\n- Einkauf: 15 Stangen/Bretter, ca. 72 Schrauben\n- Richtpreis: **2950 € – 4809 €** (Verbrauch 2843 € – 4632 €)\n\n**Wichtig:** Als Gebäude braucht der Carport eine **Statik vom Tragwerksplaner** und in der Regel eine **Baugenehmigung** nach Landesbauordnung – bitte beim Bauamt nachfragen. Die Planung ist eine Hilfe, kein Standsicherheitsnachweis.\n\nIch habe folgende Annahmen getroffen: Breite 6000 mm (zwei Stellplätze nebeneinander), Tiefe 6000 mm, Höhe 2800 mm, Douglasie unbehandelt. Alles lässt sich anpassen – sag einfach Bescheid, wenn du z. B. andere Maße, eine andere Holzart oder ein anderes Dach willst.",
+          "error": null
+        },
+        {
+          "case": "carport_zwei_autos",
+          "run": 2,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 3,
+          "input_tokens": 46994,
+          "output_tokens": 1265,
+          "cache_read_tokens": 40960,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3405,
+              "output_tokens": 1338
+            }
+          },
+          "stage_input_tokens": 3405,
+          "stage_output_tokens": 1338,
+          "cost_usd": null,
+          "unpriced_requests": 4,
+          "duration_s": 11.547,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Der Carport ist entworfen. Hier die Übersicht:\n\n**Carport für zwei Autos** – offener Pultdach-Carport aus Douglasie, freistehend auf dem Boden.\n\n**Maße & Konstruktion**\n- Außenmaße: **6000 × 5800 × 3440 mm** (B × T × H)\n- 4 Pfosten an den Ecken, Dachbalken und Sparren, einseitig geneigtes Pultdach mit Dachdeckung\n- Fundament aus Beton (Pfosten stehen auf Punktfundamenten)\n- 25 Bauteile, ca. 1135 kg\n\n**Material & Kosten**\n- Douglasie (witterungsbeständig, ideal für außen)\n- Einkauf Holz: ca. 22 Stangen/Bretter, ca. 72 Schrauben\n- **Richtpreis: ca. 2.769 € – 4.512 €** (Einkauf), Verbrauch ca. 2.668 € – 4.344 €\n\n**Wichtige Hinweise**\n- Das ist ein **Gebäude**: Tragwerk, Gründung und Dach brauchen eine **Statik vom Tragwerksplaner**, in der Regel auch eine **Baugenehmigung** nach Landesbauordnung – frag dein Bauamt. Die Planung ist eine Hilfe, kein Standsicherheitsnachweis.\n- Die Maße sind Annahmen. Ich kann Breite, Tiefe und Höhe jederzeit anpassen, z. B. wenn deine Stellfläche anders ist.\n\nSoll ich die Maße an deine Gegebenheiten anpassen, oder möchtest du eine andere Variante (z. B. anderes Dach, andere Holzart)?",
+          "error": null
+        },
+        {
+          "case": "carport_zwei_autos",
+          "run": 3,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 28776,
+          "output_tokens": 1075,
+          "cache_read_tokens": 27904,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3389,
+              "output_tokens": 724
+            }
+          },
+          "stage_input_tokens": 3389,
+          "stage_output_tokens": 724,
+          "cost_usd": null,
+          "unpriced_requests": 3,
+          "duration_s": 9.295,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Carport-Entwurf steht. Hier die Eckdaten:\n\n**Carport für zwei Autos** – freistehend neben dem Haus\n- **Außenmaße:** 6000 × 5800 × 3440 mm (B × T × H)\n- **Bauweise:** offene Pfostenkonstruktion aus Douglasie, Pultdach mit Gefälle nach hinten (300 mm), regensicher\n- **Bauteile:** 25 Teile in 6 Positionen, ca. 1135 kg\n- **Material:** Douglasie, wetterfest, mit Holzschutzlasur\n- **Kosten (Richtpreise):** ca. **2.769 € – 4.512 €** Einkauf, Verbrauch ca. 2.668 € – 4.344 €\n\n**Wichtig zu wissen:**\n- Das ist ein **Gebäude**: Tragwerk, Gründung und Dach brauchen eine **Statik vom Tragwerksplaner**, und in der Regel eine **Baugenehmigung** nach Landesbauordnung – frag dein Bauamt. Die Planung ist eine Hilfe, kein Standsicherheitsnachweis.\n- Das Fundament (Beton mit Bodenankern) ist eingeplant, die Pfosten werden darauf verankert.\n\n**Anpassbar:** Breite (4,5–7,5 m), Tiefe, Höhe, Dachgefälle und Holzart lassen sich leicht ändern. Sag einfach, was du anders möchtest – z. B. andere Maße, Satteldach statt Pultdach oder eine andere Holzart.",
+          "error": null
+        },
+        {
+          "case": "carport_zwei_autos",
+          "run": 4,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 28680,
+          "output_tokens": 902,
+          "cache_read_tokens": 27648,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3391,
+              "output_tokens": 3500
+            }
+          },
+          "stage_input_tokens": 3391,
+          "stage_output_tokens": 3500,
+          "cost_usd": null,
+          "unpriced_requests": 3,
+          "duration_s": 29.057,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Carport ist entworfen. Hier die Eckdaten:\n\n**Carport für zwei Autos** – freistehend neben dem Haus\n- **Außenmaße:** 6000 × 6300 × 3546 mm (B × T × H)\n- **Konstruktion:** 4 Pfosten auf Betonfundament, Satteldach mit leichter Neigung, 25 Bauteile\n- **Material:** Douglasie, unbehandelt\n- **Gewicht:** ca. 1215 kg\n- **Einkauf Holz:** 15 Stangen/Bretter, ca. 72 Schrauben\n- **Kosten:** Richtpreise ca. **2950 € – 4809 €** (Einkauf), Verbrauch ca. **2843 € – 4632 €**\n\n**Wichtig:** Als Gebäude braucht der Carport eine **Statik vom Tragwerksplaner** und in der Regel eine **Baugenehmigung** nach Landesbauordnung – frag dein Bauamt. Die Planung ist eine Hilfe, kein Standsicherheitsnachweis.\n\nIch habe angenommen: 6 m breit, 6 m tief, 2,8 m Firsthöhe, Douglasie unbehandelt. Das lässt sich alles anpassen – sag einfach, was du anders möchtest (z. B. andere Breite, Dachform, Holzart, oder ob du einen Preis für ein Material kennst).",
+          "error": null
+        }
+      ]
+    },
+    "fachwerk_gartenhaus": {
+      "failure_class": "slow_design",
+      "brief": "Ich möchte im Garten ein kleines Fachwerkhaus bauen, in dem wir im Sommer übernachten können.",
+      "summary": {
+        "runs": 4,
+        "successes": 3,
+        "success_rate": 0.75,
+        "pass_at_1": 0.75,
+        "pass_any": true,
+        "pass_all": false,
+        "accepted_runs": 3,
+        "mean_attempts": 2.25,
+        "mean_rejected": 1.5,
+        "mean_requests": 4.0,
+        "mean_duration_s": 44.3,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "over_budget_runs": 0,
+        "input_tokens": 252795,
+        "output_tokens": 7569,
+        "stage_input_tokens": 75248,
+        "stage_output_tokens": 33070,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 32
+      },
+      "runs": [
+        {
+          "case": "fachwerk_gartenhaus",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 2,
+          "rejected": 1,
+          "outcomes": {
+            "engine_rejected": 1,
+            "accepted": 1
+          },
+          "requests": 3,
+          "input_tokens": 43739,
+          "output_tokens": 1626,
+          "cache_read_tokens": 41472,
+          "stages": {
+            "skeleton": {
+              "runs": 3,
+              "failed": 0,
+              "requests": 6,
+              "input_tokens": 32881,
+              "output_tokens": 13402
+            },
+            "modules": {
+              "runs": 2,
+              "failed": 2,
+              "requests": 0,
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "errors": [
+                "Modules rejected: skeleton: Haus: Gesamthöhe 2500 mm ist zu niedrig (mindestens 3132 mm)",
+                "Modules rejected: skeleton: Haus: Gesamthöhe 2500 mm ist zu niedrig (mindestens 3132 mm)"
+              ]
+            }
+          },
+          "stage_input_tokens": 32881,
+          "stage_output_tokens": 13402,
+          "cost_usd": null,
+          "unpriced_requests": 9,
+          "duration_s": 70.447,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Fachwerkhaus ist geplant. Hier die Eckdaten:\n\n**Garten-Fachwerkhaus zum Übernachten**\n- **Maße:** ca. 3,5 m breit × 3,6 m tief × 3,2 m hoch (bis First)\n- **Bauweise:** Fachwerk aus Douglasie mit Satteldach, Ausfachung aus Holzschalung, Eingangstür vorn und ein Fenster\n- **Bauteile:** 84 Teile in 29 Positionen, ca. 5,2 t Gesamtgewicht\n- **Holzoberfläche:** ca. 82 m²\n\n**Kosten:** Die Materialkosten liegen laut Stückliste bei **5.953 € – 10.825 €** (Richtpreise). Das liegt über deinem Budget von 4.000 € – ich kann dir gern eine günstigere Variante anbieten, z. B. mit Fichte statt Douglasie oder etwas kleiner.\n\n**Wichtig:** Als Gebäude braucht das Haus eine **Statik vom Tragwerksplaner** und in der Regel eine **Baugenehmigung** nach Landesbauordnung – frag dein Bauamt. Die Planung ist eine Hilfe, kein Standsicherheitsnachweis.\n\nMöchtest du, dass ich die Maße anpasse, eine günstigere Holzart wähle oder das Haus kleiner plane?",
+          "error": null
+        },
+        {
+          "case": "fachwerk_gartenhaus",
+          "run": 2,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": false,
+          "success": false,
+          "attempts": 4,
+          "rejected": 4,
+          "outcomes": {
+            "engine_rejected": 2,
+            "plan_limit": 2
+          },
+          "requests": 6,
+          "input_tokens": 99157,
+          "output_tokens": 2964,
+          "cache_read_tokens": 87040,
+          "stages": {
+            "skeleton": {
+              "runs": 4,
+              "failed": 0,
+              "requests": 5,
+              "input_tokens": 21331,
+              "output_tokens": 6834
+            },
+            "modules": {
+              "runs": 4,
+              "failed": 4,
+              "requests": 0,
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "errors": [
+                "Modules rejected: skeleton: Haus: Gesamthöhe 2500 mm ist zu niedrig (mindestens 3132 mm)",
+                "Modules rejected: skeleton: Haus: Gesamthöhe 2500 mm ist zu niedrig (mindestens 3132 mm)",
+                "Modules rejected: skeleton: Wand vorne: door liegt zu nah an der Ecke oder an einer anderen Öffnung (mindestens 120 mm Pfosten dazwischen)",
+                "Modules rejected: skeleton: Wand vorne: window liegt zu nah an der Ecke oder an einer anderen Öffnung (mindestens 120 mm Pfosten dazwischen)"
+              ]
+            }
+          },
+          "stage_input_tokens": 21331,
+          "stage_output_tokens": 6834,
+          "cost_usd": null,
+          "unpriced_requests": 11,
+          "duration_s": 41.555,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Der Entwurf ist mehrfach nicht gelungen – die Engine kann Tür und Fenster in der Wand nicht sauber platzieren. Damit ich dir ein passendes Fachwerkhaus plane, brauche ich kurz deine Angaben:\n\n- **Grundfläche:** Wie groß soll das Haus sein (z. B. 3 × 3 m)?\n- **Tür und Fenster:** Sollen beide vorne liegen, oder Tür vorne und Fenster an der Seite? Wie groß?\n- **Dach:** Satteldach mit Ziegeln passt gut – ist das so gewünscht?\n\nSag mir kurz, was du dir vorstellst, dann plane ich es neu.",
+          "error": null
+        },
+        {
+          "case": "fachwerk_gartenhaus",
+          "run": 3,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 2,
+          "rejected": 1,
+          "outcomes": {
+            "engine_rejected": 1,
+            "accepted": 1
+          },
+          "requests": 3,
+          "input_tokens": 43651,
+          "output_tokens": 1525,
+          "cache_read_tokens": 41472,
+          "stages": {
+            "skeleton": {
+              "runs": 3,
+              "failed": 0,
+              "requests": 4,
+              "input_tokens": 17699,
+              "output_tokens": 10540
+            },
+            "modules": {
+              "runs": 2,
+              "failed": 2,
+              "requests": 0,
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "errors": [
+                "Modules rejected: skeleton: Haus: Gesamthöhe 2500 mm ist zu niedrig (mindestens 3132 mm)",
+                "Modules rejected: skeleton: Haus: Gesamthöhe 2500 mm ist zu niedrig (mindestens 3132 mm)"
+              ]
+            }
+          },
+          "stage_input_tokens": 17699,
+          "stage_output_tokens": 10540,
+          "cost_usd": null,
+          "unpriced_requests": 7,
+          "duration_s": 48.022,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Fachwerkhaus ist geplant! Hier die Eckdaten:\n\n**Garten-Fachwerkhaus zum Übernachten**\n- **Außenmaße:** 4000 × 3600 × 3400 mm (B × T × Firsthöhe)\n- **Holzart:** Douglasie (witterungsbeständig, ideal für draußen)\n- **Bauweise:** Fachwerk mit sichtbaren Balken, Satteldach, Ausfachung aus Holzschalung, Eingangstür und ein öffnendes Fenster\n- **Bauteile:** 89 Teile in 29 Positionen, ca. 6,2 t Gesamtgewicht\n- **Kosten (Richtpreise):** ca. 6.600 € – 11.900 € Einkauf, Verbrauch ca. 6.400 € – 11.500 €\n\n**Wichtig zu wissen:**\n- Das ist ein **Gebäude** – dafür brauchst du in der Regel eine **Baugenehmigung** nach der Landesbauordnung (frag dein Bauamt) und eine **Statik vom Tragwerksplaner**. Meine Planung ist eine Planungshilfe, kein Standsicherheitsnachweis.\n- Die Firsthöhe habe ich auf 3,4 m angehoben, weil 2,5 m für die Dachkonstruktion zu niedrig waren.\n\nMöchtest du etwas anpassen – zum Beispiel die Grundfläche, die Höhe, die Holzart oder die Ausfachung? Sag mir einfach, was du anders möchtest.",
+          "error": null
+        },
+        {
+          "case": "fachwerk_gartenhaus",
+          "run": 4,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 4,
+          "input_tokens": 66248,
+          "output_tokens": 1454,
+          "cache_read_tokens": 54784,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3337,
+              "output_tokens": 2294
+            }
+          },
+          "stage_input_tokens": 3337,
+          "stage_output_tokens": 2294,
+          "cost_usd": null,
+          "unpriced_requests": 5,
+          "duration_s": 17.177,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein **Garten-Fachwerkhaus zum Übernachten** ist fertig geplant. Hier die Eckdaten:\n\n**Maße & Konstruktion**\n- Außenmaße: **3048 × 3600 mm**, Höhe bis First **3532 mm**\n- Satteldach, Gefachausmauerung mit Lehmsteinen, eine Haustür und ein Fenster vorn\n- Fachwerk aus **Douglasie** (witterungsbeständig), außen geölt\n\n**Material & Kosten** (Richtpreise, ohne Nutzerpreise)\n- Holz: Kanthölzer Douglasie (60×140, 120×120, 100×160 …), 51 Stangen/Bretter + 6 OSB-Platten\n- Gefachausmauerung Lehm, Boden-Deckel-Schalung Lärche, Beton fürs Fundament\n- Tür und Fenster als Fertigelemente\n- **Materialkosten: ca. 5.900–10.700 €** (Einkauf), Verbrauch ca. 5.700–10.400 €\n- Gewicht ca. 4.700 kg, ca. 559 Schrauben\n\n**Wichtig zu wissen**\n- Das ist ein **Gebäude**: Tragwerk, Gründung, Dach und Aussteifung brauchen eine **Statik vom Tragwerksplaner**, in der Regel auch eine **Baugenehmigung** nach Landesbauordnung – frag dein Bauamt. Die Planung ist eine Hilfe, kein Standsicherheitsnachweis.\n- Der Entwurf ist ein KI-Vorschlag und nicht fachlich geprüft – Querschnitte und Verbindungen vor dem Bau vom Fachplaner bestätigen lassen.\n\n**Varianten**\n- **Standard**: Tür + 1 Fenster vorn\n- **Zwei Fenster**: zusätzlich ein Fenster an der Rückwand\n\nMöchtest du die Maße anpassen (z. B. größer/kleiner), die Holzart ändern oder die Variante mit zwei Fenstern wählen?",
+          "error": null
+        }
+      ]
+    },
+    "gartentisch_sechs": {
+      "failure_class": "slow_design",
+      "brief": "Wir brauchen einen Gartentisch, an dem sechs Personen essen können.",
+      "summary": {
+        "runs": 4,
+        "successes": 3,
+        "success_rate": 0.75,
+        "pass_at_1": 0.75,
+        "pass_any": true,
+        "pass_all": false,
+        "accepted_runs": 4,
+        "mean_attempts": 1.25,
+        "mean_rejected": 0.0,
+        "mean_requests": 3.0,
+        "mean_duration_s": 16.75,
+        "intent_violation_runs": 1,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "over_budget_runs": 0,
+        "input_tokens": 193181,
+        "output_tokens": 6718,
+        "stage_input_tokens": 18708,
+        "stage_output_tokens": 5510,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 17
+      },
+      "runs": [
+        {
+          "case": "gartentisch_sechs",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 30783,
+          "output_tokens": 1124,
+          "cache_read_tokens": 27648,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3350,
+              "output_tokens": 810
+            }
+          },
+          "stage_input_tokens": 3350,
+          "stage_output_tokens": 810,
+          "cost_usd": null,
+          "unpriced_requests": 3,
+          "duration_s": 12.063,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Gartentisch ist geplant. Hier die Eckdaten:\n\n**Gartentisch für sechs Personen – 1800 × 900 × 750 mm (B × T × H)**\n- **Tischplatte:** aus 5 Brettern Douglasie (28 mm), mit Zarge und Querstreben\n- **Beine:** Kantholz Douglasie 45 × 70 mm\n- **Gewicht:** ca. 35 kg\n- **Einkauf Holz:** 2 Stangen/Bretter, 2 Platten\n- **Schrauben:** ca. 72 Stück\n- **Holzoberfläche:** 5,5 m²\n- **Kosten:** Richtpreise 214–327 € Einkauf, Verbrauch ca. 159–239 €\n\n**Warum so?**\n- **Bauweise:** Die Platte liegt auf einer umlaufenden Zarge, die die Beine verbindet und den Tisch verwindungssteif macht. Querstreben zwischen den Beinen verhindern, dass der Tisch beim Anlehnen kippelt – so bleibt er auch auf unebenem Rasen stabil.\n- **Material:** Douglasie ist von Natur aus witterungsbeständig und braucht keinen chemischen Schutz. Die 28-mm-Bretter sind dick genug, um auch bei sechs Personen nicht durchzubiegen. Günstiger wäre Fichte, die müsste man aber regelmäßig lasieren.\n- **Verbindungen:** Zarge und Streben werden stumpf gestoßen und von außen verschraubt – einfach und mit dem Akkuschrauber machbar. Die Plattenbretter werden auf der Zarge verschraubt.\n- **Beschläge:** Keine beweglichen Teile, daher keine Bänder nötig. Die Schrauben sind verzinkt, damit sie draußen nicht rosten.\n- **Oberfläche:** Ein Anstrich mit Holzöl für außen schützt die Hirnholzenden und hält die Douglasie schön. Die Platte bekommt einen leichten Überstand, damit Regen abtropft.\n- **Annahmen:** 1800 × 900 mm für sechs Personen, Höhe 750 mm. Du kannst Breite, Tiefe und Höhe jederzeit anpassen, ebenso die Holzart (Lärche oder Eiche als Variante).\n\nAls Varianten habe ich **Lärche** (219–334 €) und **Eiche** (261–395 €) hinterlegt. Sag Bescheid, wenn ich Maße ändern oder eine andere Holzart nehmen soll!",
+          "error": null
+        },
+        {
+          "case": "gartentisch_sechs",
+          "run": 2,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": false,
+          "attempts": 2,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 2
+          },
+          "requests": 6,
+          "input_tokens": 105163,
+          "output_tokens": 3955,
+          "cache_read_tokens": 73472,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3339,
+              "output_tokens": 1301
+            }
+          },
+          "stage_input_tokens": 3339,
+          "stage_output_tokens": 1301,
+          "cost_usd": null,
+          "unpriced_requests": 7,
+          "duration_s": 26.328,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [
+            "[use] Nutzung ist 'indoor', gewünscht war 'outdoor'"
+          ],
+          "view_violations": [],
+          "final_text": "Der Entwurf steht jetzt sauber. Hier die Zusammenfassung:\n\n**Gartentisch für sechs Personen – Douglasie**\n- **Maße:** 1800 × 900 × 750 mm (B × T × H)\n- **Bauweise:** Rahmen mit 4 Beinen (70×70 mm) und umlaufenden Zargen (28×80 mm), Platte aus 6 Douglasie-Brettern (28×150 mm) mit Fugen\n- **Gewicht:** ca. 37 kg\n- **Kosten:** ca. 119–192 € Einkauf (Richtpreise), Verbrauch ca. 103–168 €\n\nDie Platte ist jetzt aus witterungsbeständiger Douglasie statt Fichten-Leimholz – das hält draußen deutlich länger. Die Zargen sind mit den Beinen im Blatt verbunden und zusätzlich verschraubt, die Platte wird von unten befestigt, damit die Oberseite glatt bleibt.\n\n**Varianten:**\n- **Holzart:** Lärche, Eiche oder Robinie statt Douglasie (teurer, aber robuster)\n- **Maße:** Breite, Tiefe und Höhe lassen sich jederzeit anpassen\n- **Oberfläche:** Mit Holzöl oder Lasur behandeln für längere Haltbarkeit\n\nMöchtest du etwas ändern – etwa die Maße, eine andere Holzart oder eine günstigere Variante?",
+          "error": null
+        },
+        {
+          "case": "gartentisch_sechs",
+          "run": 3,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 28613,
+          "output_tokens": 815,
+          "cache_read_tokens": 27648,
+          "stages": {
+            "skeleton": {
+              "runs": 2,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 8664,
+              "output_tokens": 1472
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 0,
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "errors": [
+                "Modules rejected: skeleton: Bauteile 'tischplatte_leg[0]' (Tischbein) und 'leg[0]' (Tischbein) durchdringen sich (70 × 70 × 12 mm); Lage: 'tischplatte_leg[0]' von (0, 0, 710) bis (70, 70, 1432) mm, 'leg[0]' von (0, 0, 0) bis (70, 70, 722) mm – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben / Bauteile 'tischplatte_leg[0]' (Tischbein) und 'top[0]' (Tischplatte) durchdringen sich (70 × 70 × 28 mm); Lage: 'tischplatte_leg[0]' von (0, 0, 710) bis (70, 70, 1432) mm, 'top[0]' von (0, 0, 722) bis (1000, 475, 750) mm – Position oder Maß anpassen oder als Holzverbind"
+              ]
+            }
+          },
+          "stage_input_tokens": 8664,
+          "stage_output_tokens": 1472,
+          "cost_usd": null,
+          "unpriced_requests": 4,
+          "duration_s": 14.329,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Gartentisch ist geplant. Hier die Eckdaten:\n\n**Gartentisch für sechs Personen – 200 × 95 × 75 cm**\n- **Tischplatte** aus Douglasien-Brettern mit Querstreben gegen Verziehen\n- **Gestell** aus vier Kantholzbeinen mit Zargen längs und quer\n- **Bodenfreiheit** ca. 60 cm, damit Stühle drunter passen\n- **Gewicht** ca. 39 kg, **Holzfläche** 6,1 m²\n\n**Kosten (Richtpreise):** Einkauf ca. 326–491 €, verbraucht ca. 271–402 €. Die Preise sind eine Spanne, da ich keine konkreten Preise kenne.\n\n**Meine Annahmen:** 200 cm Länge, 95 cm Tiefe, 75 cm Höhe – das passt gut für sechs Personen. Douglasie ist ideal für draußen (witterungsbeständig, günstiger als Lärche). Als Anfänger mit Akkuschrauber und Stichsäge ist die stumpf verschraubte Bauweise gut machbar.\n\nMöchtest du etwas anpassen – z. B. andere Maße, eine andere Holzart, oder einen Ablageboden unterm Tisch? Ich kann alles direkt ändern.",
+          "error": null
+        },
+        {
+          "case": "gartentisch_sechs",
+          "run": 4,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 28622,
+          "output_tokens": 824,
+          "cache_read_tokens": 27648,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3355,
+              "output_tokens": 1927
+            }
+          },
+          "stage_input_tokens": 3355,
+          "stage_output_tokens": 1927,
+          "cost_usd": null,
+          "unpriced_requests": 3,
+          "duration_s": 14.282,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Gartentisch ist geplant. Hier die Eckdaten:\n\n**Gartentisch für sechs Personen – 2000 × 900 × 750 mm**\n- **Tischplatte:** 28 mm starke Douglasien-Bretter, wetterfest\n- **Beine:** 70×70 Kantholz, **Zargen:** 45×70\n- **Gewicht:** ca. 37 kg\n- **Materialkosten:** ca. 326–491 € (Richtpreise, Einkauf inkl. Verschnitt)\n\n**So ist er aufgebaut:**\n- **Bauweise:** Die Platte liegt auf einem stabilen Zargenrahmen aus vier Kanthölzern, der die Beine verbindet und das Verwinden verhindert. Die Beine stehen außen an den Ecken, damit du bequem sitzen kannst.\n- **Material:** Douglasie ist von Natur aus witterungsbeständig und ideal für draußen – sie arbeitet wenig und hält Feuchtigkeit gut stand. Günstigere Alternative wäre Lärche, teurere Eiche.\n- **Verbindungen:** Zargen und Beine werden stumpf verschraubt, die Plattenbretter von unten an die Zargen geschraubt. So bleibt die Oberseite glatt.\n- **Oberfläche:** Mit Holzöl behandelt, damit die Douglasie ihre silbergraue Patina gleichmäßig entwickelt und vor Feuchte geschützt ist.\n\n**Varianten:**\n1. **Lärche** – ähnlich wetterfest, etwas teurer\n2. **Kompakt** – kleinere Variante für vier Personen (ca. 214–327 €)\n\nSag Bescheid, wenn ich die Maße anpassen oder eine Variante übernehmen soll.",
+          "error": null
+        }
+      ]
+    },
+    "schuhe_flur": {
+      "failure_class": "slow_design",
+      "brief": "Bei uns im Flur liegen ständig die Schuhe der ganzen Familie herum. Ich brauche etwas, wo sie ordentlich hinkommen.",
+      "summary": {
+        "runs": 4,
+        "successes": 4,
+        "success_rate": 1.0,
+        "pass_at_1": 1.0,
+        "pass_any": true,
+        "pass_all": true,
+        "accepted_runs": 4,
+        "mean_attempts": 1.0,
+        "mean_rejected": 0.0,
+        "mean_requests": 2.5,
+        "mean_duration_s": 14.725,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "over_budget_runs": 0,
+        "input_tokens": 152428,
+        "output_tokens": 3713,
+        "stage_input_tokens": 22281,
+        "stage_output_tokens": 10121,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 16
+      },
+      "runs": [
+        {
+          "case": "schuhe_flur",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 3,
+          "input_tokens": 46639,
+          "output_tokens": 1101,
+          "cache_read_tokens": 40960,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 7758,
+              "output_tokens": 4103
+            }
+          },
+          "stage_input_tokens": 7758,
+          "stage_output_tokens": 4103,
+          "cost_usd": null,
+          "unpriced_requests": 5,
+          "duration_s": 20.66,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Deine Schuhablage ist fertig geplant. Hier die Eckdaten:\n\n**Schuhablage Flur – 1000 × 350 × 500 mm**\n- Offener Rahmen aus Fichtenbrettern mit zwei Ebenen, steht auf dem Boden\n- **5 Bauteile**, ca. 17 kg\n- **Einkauf:** ca. 112–167 € (Richtpreise), Verbrauch ca. 97–143 €\n- **Schrauben:** ca. 18 Stück\n- Oberfläche: Hartwachsöl farblos\n\n**Warum so?**\n- **Bauweise:** Ein offener Rahmen aus Brettern mit zwei Ebenen hält die Schuhe griffbereit und luftig – so trocknen feuchte Schuhe schnell und es sammelt sich kein Staub wie in geschlossenen Schränken. Die offene Bauweise ist zudem deutlich einfacher zu bauen als ein Schrank mit Türen.\n- **Material:** Fichte ist leicht, günstig und im Innenbereich völlig ausreichend stabil. Die Bretter in 18 mm Stärke tragen die Schuhe problemlos. Wer es edler mag, kann auf Eiche oder Buche wechseln – das wird aber deutlich teurer.\n- **Verbindungen:** Alle Teile werden stumpf gestoßen und von außen verschraubt – das ist die einfachste und für Anfänger sicherste Verbindung. Die Schrauben werden von der Seite eingedreht, sodass sie von vorn nicht sichtbar sind.\n- **Beschläge:** Es sind keine Bänder oder Verschlüsse nötig, da die Ablage offen ist. Die Schrauben reichen vollkommen aus.\n- **Oberfläche:** Das Hartwachsöl schützt das Holz vor Feuchtigkeit und Flecken von nassen Schuhen und lässt sich bei Bedarf leicht nachölen. Ein kleiner Wandabstand sorgt dafür, dass dahinter nichts anstaut.\n- **Annahmen:** Ich habe 100 cm Breite, 35 cm Tiefe und 50 cm Höhe angenommen. Du kannst Breite, Tiefe und Höhe jederzeit anpassen, ebenso die Holzart.\n\nMöchtest du die Maße ändern, eine dritte Ebene dazu oder eine andere Holzart? Sag einfach Bescheid.",
+          "error": null
+        },
+        {
+          "case": "schuhe_flur",
+          "run": 2,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 30718,
+          "output_tokens": 932,
+          "cache_read_tokens": 27648,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3388,
+              "output_tokens": 620
+            }
+          },
+          "stage_input_tokens": 3388,
+          "stage_output_tokens": 620,
+          "cost_usd": null,
+          "unpriced_requests": 3,
+          "duration_s": 8.214,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Schuhschrank ist geplant. Hier die Eckdaten:\n\n**Schuhschrank Flur – 900 × 350 × 900 mm (B × T × H)**\n- **Bauweise:** Freistehender Korpus aus Kiefer, zwei offene Fächer übereinander für die Schuhe, oben eine Ablagefläche. Einfach stumpf verschraubt – gut für Einsteiger.\n- **Material:** Kiefer-Massivholz, geölt (Hartwachsöl innen).\n- **Bauteile:** 7 Teile in 5 Positionen, ca. 25 kg, 5,5 m² Holzoberfläche.\n- **Schrauben:** ca. 54 Stück.\n- **Kosten:** Richtpreise ca. **133–204 €** Einkauf (Verbrauch ca. 115–174 €).\n\n**Wichtig:** Der Schrank ist hoch und schmal – eine **Kippsicherung an der Wand** ist eingeplant und unbedingt nötig, gerade wenn Kinder dran ziehen.\n\n**Varianten:**\n- **Fichte** statt Kiefer (etwas günstiger, gleiche Optik).\n- Maße sind anpassbar: Breite 675–1125 mm, Tiefe 262–437 mm, Höhe 675–1125 mm.\n\nSag Bescheid, wenn ich etwas ändern soll – z. B. ein drittes Fach, andere Maße oder eine geschlossene Front.",
+          "error": null
+        },
+        {
+          "case": "schuhe_flur",
+          "run": 3,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 3,
+          "input_tokens": 46594,
+          "output_tokens": 1033,
+          "cache_read_tokens": 43264,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3348,
+              "output_tokens": 1297
+            }
+          },
+          "stage_input_tokens": 3348,
+          "stage_output_tokens": 1297,
+          "cost_usd": null,
+          "unpriced_requests": 4,
+          "duration_s": 11.932,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Schuhregal ist fertig geplant. Hier die Eckdaten:\n\n**Schuhregal Flur** – offenes Regal, 1000 × 350 × 450 mm (B × T × H)\n- **Zwei Schuhebenen** für die Familie, oben eine **Ablagefläche** für Schlüssel oder Taschen\n- **7 Bauteile**, einfache stumpf verschraubte Bauweise aus Fichte – gut für Einsteiger\n- Gewicht ca. 21 kg, Einkauf **2 Platten** Holz\n- **Kosten (Richtpreise):** ca. **129–196 €** Einkauf, Verbrauch ca. 111–166 €\n\n**Warum so?**\n- **Bauweise:** Ein offener Rahmen mit zwei Böden und einer oberen Ablage. Offen, damit die Schuhe trocknen und man sie sofort sieht – kein Suchen mehr im Flur.\n- **Material:** Fichte ist leicht, günstig und lässt sich gut verschrauben. Für den Innenbereich völlig ausreichend; alternativ ginge auch Kiefer oder eine Multiplexplatte für eine glattere Optik.\n- **Verbindungen:** Alles stumpf gestoßen und von außen verschraubt – kein Fräsen oder Zapfen nötig, ideal für Einsteiger.\n- **Beschläge:** Keine beweglichen Teile, daher keine Bänder oder Griffe. Nur Schrauben und Leim.\n- **Oberfläche:** Unbehandelt gelassen. Im Flur reicht das; wer mag, kann es mit Hartwachsöl oder einer Lasur behandeln.\n- **Annahmen:** Breite 100 cm, Tiefe 35 cm, Höhe 45 cm. Alle Maße kannst du später leicht anpassen, ebenso die Holzart.\n\nMöchtest du etwas ändern – etwa andere Maße, eine andere Holzart oder eine Sitzbank obendrauf? Sag einfach Bescheid.",
+          "error": null
+        },
+        {
+          "case": "schuhe_flur",
+          "run": 4,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 28477,
+          "output_tokens": 647,
+          "cache_read_tokens": 27648,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 7787,
+              "output_tokens": 4101
+            }
+          },
+          "stage_input_tokens": 7787,
+          "stage_output_tokens": 4101,
+          "cost_usd": null,
+          "unpriced_requests": 4,
+          "duration_s": 18.094,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Der Entwurf steht. Hier die Eckdaten:\n\n**Schuhschrank Flur** – offener Schuhschrank mit drei Ablagen\n- **Maße:** 800 × 350 × 900 mm (B × T × H)\n- **Material:** Fichte, unbehandelt\n- **Bauweise:** Rahmen mit verschraubten Böden – einfach und stabil\n- **Gewicht:** ca. 26 kg\n- **Einkauf:** 2 Platten, ca. 65 Schrauben\n- **Kosten:** ca. 129–196 € (Richtpreise), Verbrauch ca. 112–167 €\n\nMöchtest du etwas anpassen – zum Beispiel mehr Ablagen, eine andere Breite oder eine andere Holzart? Ich kann das direkt ändern.",
+          "error": null
+        }
+      ]
+    },
+    "wandregal_gewuerze": {
+      "failure_class": "slow_design",
+      "brief": "Ein kleines Wandregal für Gewürze, 60 cm breit mit drei Böden",
+      "summary": {
+        "runs": 4,
+        "successes": 4,
+        "success_rate": 1.0,
+        "pass_at_1": 1.0,
+        "pass_any": true,
+        "pass_all": true,
+        "accepted_runs": 4,
+        "mean_attempts": 2.0,
+        "mean_rejected": 0.5,
+        "mean_requests": 3.25,
+        "mean_duration_s": 33.237,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "over_budget_runs": 0,
+        "input_tokens": 214366,
+        "output_tokens": 14954,
+        "stage_input_tokens": 17678,
+        "stage_output_tokens": 17500,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 18
+      },
+      "runs": [
+        {
+          "case": "wandregal_gewuerze",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 3,
+          "input_tokens": 43973,
+          "output_tokens": 1116,
+          "cache_read_tokens": 41216,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 7838,
+              "output_tokens": 7000
+            }
+          },
+          "stage_input_tokens": 7838,
+          "stage_output_tokens": 7000,
+          "cost_usd": null,
+          "unpriced_requests": 5,
+          "duration_s": 32.522,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Gewürzregal ist geplant! Hier die Eckdaten:\n\n**Gewürzregal 60 cm** – 600 × 150 × 600 mm (B × T × H)\n- **3 Böden** plus Rückwand gegen Verrutschen der Gläser\n- **Material:** Multiplexplatte Birke 18 mm (stabil und feuchteunempfindlich), Rückwand aus HDF 3 mm\n- **8 Bauteile**, ca. 8 kg, unbehandelt\n- **Befestigung:** an der Wand (Rückseite), Schrauben und Leim inklusive\n\n**Kosten (Richtpreise):** Einkauf ca. **129–196 €**, Verbrauch ca. **111–167 €**.\n\n**Annahmen:** Ich habe die Tiefe mit 15 cm angelegt (passt für Gewürzgläser gut) und die Höhe mit 60 cm. Breite, Tiefe, Höhe und die Anzahl der Böden kannst du jederzeit anpassen.\n\n**Varianten:**\n- **Kiefer oder Fichte** statt Birke – günstiger, aber weicher\n- **Lärche oder Eiche** – robuster, teurer\n- **Geölte Oberfläche** statt unbehandelt – schützt vor Feuchtigkeit in der Küche\n\nSoll ich etwas anpassen, z. B. die Tiefe auf 12 cm reduzieren oder eine andere Holzart wählen?",
+          "error": null
+        },
+        {
+          "case": "wandregal_gewuerze",
+          "run": 2,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 3,
+          "rejected": 1,
+          "outcomes": {
+            "accepted": 2,
+            "engine_rejected": 1
+          },
+          "requests": 4,
+          "input_tokens": 70114,
+          "output_tokens": 6091,
+          "cache_read_tokens": 55296,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3294,
+              "output_tokens": 3500
+            }
+          },
+          "stage_input_tokens": 3294,
+          "stage_output_tokens": 3500,
+          "cost_usd": null,
+          "unpriced_requests": 5,
+          "duration_s": 39.39,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Gewürzregal ist fertig geplant. Hier die Zusammenfassung:\n\n**Gewürzregal – 600 × 150 × 450 mm, aus Fichte, 3 Böden**\n- **Bauweise:** Rahmen aus zwei Seitenwänden, drei Rückwandbrettern und drei Böden, alles stumpf verschraubt – einfach und anfängertauglich.\n- **Maße:** 60 cm breit, 15 cm tief, 45 cm hoch. Die Böden sitzen bei 0, 216 und 432 mm.\n- **Material:** Fichte, 18 mm stark, unbehandelt. Leicht, günstig, gut zu verarbeiten.\n- **Montage:** An der Wand über ein Wandbefestigungsset an der Rückwand.\n- **Kosten:** Richtpreise ca. **45–72 €** Einkauf, Verbrauch ca. **21–36 €** (2 Stangen/Bretter, ca. 44 Schrauben).\n\n**Varianten:**\n- **Holzart:** Kiefer oder Buche statt Fichte (edler, etwas teurer).\n- **Maße:** Breite, Tiefe und Höhe lassen sich jederzeit anpassen.\n- **Anzahl Böden:** 1–6 Böden möglich.\n\nSag einfach Bescheid, wenn ich etwas ändern soll – z. B. breiter, andere Holzart oder mehr Böden.",
+          "error": null
+        },
+        {
+          "case": "wandregal_gewuerze",
+          "run": 3,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 28341,
+          "output_tokens": 663,
+          "cache_read_tokens": 27648,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3237,
+              "output_tokens": 3500
+            }
+          },
+          "stage_input_tokens": 3237,
+          "stage_output_tokens": 3500,
+          "cost_usd": null,
+          "unpriced_requests": 3,
+          "duration_s": 15.834,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Gewürzregal ist geplant. Hier die Eckdaten:\n\n**Gewürzregal 60 cm** – 600 × 200 × 600 mm (B × T × H)\n- **3 Böden**, Wandmontage, innen\n- **8 Bauteile** in 5 Positionen, ca. 11 kg\n- **Holz:** Fichte (Standard), 2 Platten\n- **Schrauben:** ca. 48 Stück\n- **Kosten:** Richtpreise 129–196 € Einkauf, Verbrauch ca. 111–167 €\n\n**Annahmen:** Tiefe 20 cm und Höhe 60 cm habe ich passend für Gewürzgläser gewählt. Breite, Tiefe, Höhe und Anzahl der Böden kannst du jederzeit anpassen – sag einfach Bescheid, z. B. „10 cm tiefer“ oder „4 Böden“.\n\nMöchtest du eine andere Holzart (z. B. Kiefer, Eiche oder Douglasie) oder soll ich etwas an den Maßen ändern?",
+          "error": null
+        },
+        {
+          "case": "wandregal_gewuerze",
+          "run": 4,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 3,
+          "rejected": 1,
+          "outcomes": {
+            "accepted": 2,
+            "engine_rejected": 1
+          },
+          "requests": 4,
+          "input_tokens": 71938,
+          "output_tokens": 7084,
+          "cache_read_tokens": 54272,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3309,
+              "output_tokens": 3500
+            }
+          },
+          "stage_input_tokens": 3309,
+          "stage_output_tokens": 3500,
+          "cost_usd": null,
+          "unpriced_requests": 5,
+          "duration_s": 45.202,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Gewürzregal ist fertig geplant. Hier die Zusammenfassung:\n\n**Gewürzregal 60 cm** – 600 × 150 × 600 mm (B × T × H), aus Fichte, unbehandelt\n- **3 Böden** für Gewürzgläser, **Rückwand** aus Multiplex, damit nichts nach hinten fällt\n- Einfache Bauweise: stumpf verschraubt, nur Akkuschrauber nötig\n- **Wandmontage** mit Kippsicherung\n- **Gewicht** ca. 6 kg, **Schrauben** ca. 32 Stück\n\n**Kosten (Richtpreise):** Einkauf ca. **107–167 €**, verbraucht ca. **86–133 €** (Fichte ist günstig; die Multiplex-Rückwand macht einen Teil des Preises aus).\n\n**Varianten:**\n- **Günstiger:** Rückwand aus OSB statt Multiplex spart etwas Geld.\n- **Edler:** Alle Teile aus Multiplex Birke – stabiler und schöner, aber teurer.\n- **Andere Holzart:** Kiefer, Douglasie, Eiche usw. sind im Steckbrief wählbar.\n\nMöchtest du etwas anpassen – z. B. andere Maße, mehr Böden oder eine andere Holzart?",
+          "error": null
+        }
+      ]
+    },
+    "zaun_garten": {
+      "failure_class": "slow_design",
+      "brief": "Ich brauche einen Holzzaun, 8 Meter lang und 1,2 Meter hoch, für den Garten.",
+      "summary": {
+        "runs": 4,
+        "successes": 3,
+        "success_rate": 0.75,
+        "pass_at_1": 0.75,
+        "pass_any": true,
+        "pass_all": false,
+        "accepted_runs": 3,
+        "mean_attempts": 2.75,
+        "mean_rejected": 2.0,
+        "mean_requests": 4.25,
+        "mean_duration_s": 51.604,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 1,
+        "over_budget_runs": 1,
+        "input_tokens": 268859,
+        "output_tokens": 27311,
+        "stage_input_tokens": 44484,
+        "stage_output_tokens": 9806,
+        "cost_usd": null,
+        "mean_cost_usd": null,
+        "unpriced_requests": 27
+      },
+      "runs": [
+        {
+          "case": "zaun_garten",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 28468,
+          "output_tokens": 712,
+          "cache_read_tokens": 27648,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 3277,
+              "output_tokens": 606
+            }
+          },
+          "stage_input_tokens": 3277,
+          "stage_output_tokens": 606,
+          "cost_usd": null,
+          "unpriced_requests": 3,
+          "duration_s": 7.704,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Gartenzaun ist geplant. Hier die Eckdaten:\n\n**Gartenzaun 8 m** – Lattenzaun aus Lärche, 8 m lang, 1,2 m hoch, mit im Boden verankerten Pfosten.\n\n- **Außenmaße:** 8000 × 110 × 1200 mm\n- **Bauteile:** 64 Teile (Pfosten, Querriegel, Latten)\n- **Gewicht:** ca. 133 kg\n- **Holz:** Lärche – robust und witterungsbeständig, ideal für draußen\n- **Einkauf:** 20 Stangen/Bretter, ca. 268 Schrauben\n- **Kosten (Richtpreise):** ca. 351 € – 542 € Einkauf, Verbrauch ca. 331 € – 511 €\n\n**Wichtige Hinweise:**\n- Die Pfosten stehen im Boden – für die Standsicherheit ist eine Statik vom Tragwerksplaner nötig, und je nach Landesbauordnung kann eine Baugenehmigung erforderlich sein. Bitte beim Bauamt nachfragen.\n- Die Konstruktion ist ein KI-Entwurf und nicht fachlich geprüft – prüfe Stabilität und Verbindungen vor dem Bau.\n\nMöchtest du etwas anpassen, z. B. die Höhe, eine andere Holzart (Fichte wäre günstiger, Douglasie ähnlich robust) oder eine bestimmte Lattenform? Sag einfach Bescheid.",
+          "error": null
+        },
+        {
+          "case": "zaun_garten",
+          "run": 2,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 4,
+          "input_tokens": 68798,
+          "output_tokens": 5073,
+          "cache_read_tokens": 54528,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 7739,
+              "output_tokens": 1364
+            }
+          },
+          "stage_input_tokens": 7739,
+          "stage_output_tokens": 1364,
+          "cost_usd": null,
+          "unpriced_requests": 6,
+          "duration_s": 33.426,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Gartenzaun ist geplant. Hier die Übersicht:\n\n**Gartenzaun 8 m – Douglasie**\n- **Maße:** 8000 × 110 × 1200 mm (B × T × H)\n- **Aufbau:** 5 Pfosten 90×90 Douglasie, ca. 60 cm einbetoniert (Pfostenabstand 2 m), je Feld zwei Querlatten 40×60 und senkrechte Zaunbretter 20×120 auf der Vorderseite\n- **Gewicht:** ca. 117 kg\n- **Holzoberfläche:** ca. 20,7 m²\n\n**Kosten (Richtpreise, ohne Nutzerpreis):**\n- Einkauf Holz: **303 € – 482 €**\n- Verbrauch (tatsächlich verbaut): **283 € – 451 €**\n- Dazu kommen Beton für die Fundamente und das Holzöl.\n\n**Materialliste:**\n- 3 × Kantholz Douglasie 90×90, 2,5 m\n- 5 × Kantholz Douglasie 40×60, 3 m\n- 12 × Brett Douglasie 20×120, 5 m\n- 2 × Edelstahlschrauben A2 4×50 (200er-Pack)\n- 1 × Holzbauschrauben 8×200 (50er-Pack)\n\n**Wichtig:** Das ist eine Planungshilfe, kein Standsicherheitsnachweis. Für einen Zaun dieser Größe brauchst du je nach Bundesland meist eine Baugenehmigung – frag bei deinem Bauamt nach. Die Statik der Fundamente sollte ein Fachmann bestätigen.\n\nMöchtest du etwas anpassen – z. B. eine andere Holzart (Lärche oder Fichte günstiger), eine andere Höhe, oder soll ich dir die Bauschritte und Zeichnung zeigen?",
+          "error": null
+        },
+        {
+          "case": "zaun_garten",
+          "run": 3,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 28518,
+          "output_tokens": 845,
+          "cache_read_tokens": 27648,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 7406,
+              "output_tokens": 1190
+            }
+          },
+          "stage_input_tokens": 7406,
+          "stage_output_tokens": 1190,
+          "cost_usd": null,
+          "unpriced_requests": 4,
+          "duration_s": 10.333,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Gartenzaun ist geplant. Hier die Eckdaten:\n\n**Gartenzaun 8 m** – Lärche, unbehandelt\n- **Maße:** 8000 × 110 × 1200 mm (L × T × H)\n- **Aufbau:** Pfosten im Boden eingegraben, zwei Querriegel, senkrechte Bretter als Sichtschutz\n- **Gewicht:** ca. 133 kg\n- **Material:** 20 Stangen/Bretter, ca. 268 Schrauben\n- **Kosten:** Richtpreise ca. **351–542 €** (Einkauf), Verbrauch ca. 331–511 €\n\n**Wichtige Hinweise:**\n- Die Pfosten werden eingegraben – für die Standfestigkeit ist die richtige Einbautiefe (ca. 60–80 cm, frostfrei) entscheidend. Die genauen Maße und Bauschritte findest du in der Projektdokumentation.\n- Lärche ist draußen sehr witterungsbeständig und braucht keinen Anstrich – sie vergraut mit der Zeit. Das passt gut für den Garten.\n- Da es sich um ein Bauwerk handelt: Statik und meist eine Baugenehmigung nach Landesbauordnung sind nötig – frag dein Bauamt, ob dein Zaun genehmigungsfrei ist.\n\nMöchtest du etwas anpassen – z. B. eine andere Höhe, eine andere Holzart (Fichte/Douglasie günstiger) oder eine andere Brettanordnung (mit Lücken statt geschlossen)? Sag einfach Bescheid.",
+          "error": null
+        },
+        {
+          "case": "zaun_garten",
+          "run": 4,
+          "model_role": "designer",
+          "routing_reason": "new_project",
+          "model": "~deepseek/deepseek-v4-flash-latest",
+          "accepted": false,
+          "success": false,
+          "attempts": 8,
+          "rejected": 8,
+          "outcomes": {
+            "engine_rejected": 2,
+            "plan_limit": 6
+          },
+          "requests": 9,
+          "input_tokens": 143075,
+          "output_tokens": 20681,
+          "cache_read_tokens": 131328,
+          "stages": {
+            "skeleton": {
+              "runs": 2,
+              "failed": 1,
+              "requests": 2,
+              "input_tokens": 8461,
+              "output_tokens": 4400,
+              "errors": [
+                "Stage skeleton failed: DeadlineExceededError: budget used up"
+              ]
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 3,
+              "input_tokens": 17601,
+              "output_tokens": 2246,
+              "errors": [
+                "Modules rejected: riegel: Modul 'riegel' fehlt / Model token limit (16000) exceeded before any response was generated. Increase the `max_tokens` model setting, or simplify the prompt to result in a shorter response that will fit within the limit."
+              ]
+            }
+          },
+          "stage_input_tokens": 26062,
+          "stage_output_tokens": 6646,
+          "cost_usd": null,
+          "unpriced_requests": 14,
+          "duration_s": 154.954,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": true,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "",
+          "error": "UnexpectedModelBehavior: Model token limit (12000) exceeded before any response was generated. Increase the `max_tokens` model setting, or simplify the prompt to result in a shorter response that will fit within the limit."
+        }
+      ]
+    }
+  }
+}

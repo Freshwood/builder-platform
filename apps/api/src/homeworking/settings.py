@@ -38,11 +38,26 @@ class Settings(BaseSettings):
     llm_reasoning: Literal["off", "minimal", "low", "medium", "high"] = "low"
     # Output cap per model request: a complete design plus explanation needs ~6K tokens.
     llm_max_output_tokens: int = 12_000
+    # OpenRouter picks the provider by this criterion; "throughput" prefers the one with the most
+    # tokens per second (the time of a design is output tokens / speed). Empty = OpenRouter default.
+    # Building blocks (calc_engine/pipeline/blocks): the engine builds modules for houses, shelves,
+    # tables, podiums, pergolas and fences. "auto" also puts a block into a single-module skeleton
+    # whose brief clearly names such an object; "model" only builds what the skeleton asked for.
+    engine_blocks: Literal["auto", "model"] = "auto"
+    llm_provider_sort: Literal["", "price", "throughput", "latency"] = "throughput"
     # The pipeline stages (ADR-0010) fill a schema; thinking only costs time and tokens. A live
     # run with ``llm_reasoning=low`` spent 8-17K output tokens on a skeleton and 14-24K on the
     # modules of one design, mostly reasoning, and hit the 12K cap.
-    llm_stage_reasoning: Literal["off", "minimal", "low", "medium", "high"] = "minimal"
+    # The chat model's turn that starts a project only fills the brief of ``plan_design``; with the
+    # default ``llm_reasoning`` it took 30-70 s (and sometimes ran into the token limit), with
+    # thinking off 8-15 s. Later turns (changes, questions) keep ``llm_reasoning``.
+    llm_plan_reasoning: Literal["off", "minimal", "low", "medium", "high"] = "off"
+    llm_stage_reasoning: Literal["off", "minimal", "low", "medium", "high"] = "off"
+    # The module stage places parts in 3D; it is the only stage where thinking pays off.
+    llm_module_reasoning: Literal["off", "minimal", "low", "medium", "high"] = "minimal"
     llm_stage_max_output_tokens: int = 16_000
+    # Enforce the time budget of a design (``calc_engine.pipeline.budget``); only tools turn it off.
+    design_time_budget: bool = True
     # Low temperature: designs must follow the schema and the user's brief, not be creative.
     llm_temperature: float = 0.2
     # May the chat agent's ``save_design`` create a project? Live, new designs go through the

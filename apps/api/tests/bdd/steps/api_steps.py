@@ -23,6 +23,16 @@ def _new_guest(api: ApiWorld) -> None:
     assert reply.json["is_guest"] is True
 
 
+@step(parsers.parse('ich den Steckbrief "{text}" prüfe'))
+def _check_brief(api: ApiWorld, text: str) -> None:
+    api.post("/api/pipeline/intake", {"spec": {"description": text}})
+
+
+@step(parsers.parse("ist die Planungszeit höchstens {seconds:d} Sekunden"))
+def _planning_time(api: ApiWorld, seconds: int) -> None:
+    assert api.chat_seconds <= seconds, f"{api.chat_seconds:.1f} s statt höchstens {seconds} s"
+
+
 @step(parsers.parse('ich "{path}" abrufe'))
 def _fetch(api: ApiWorld, path: str) -> None:
     api.get(path)

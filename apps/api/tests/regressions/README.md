@@ -38,11 +38,12 @@ every model forbids unknown keys, so a typo fails at load time.
 |---|---|
 | `id` | Equals the directory name (`[a-z][a-z0-9_]*`). |
 | `origin.kind` | `agent_run` (ref = `agent_runs.id`), `bug_report` (ref = docs path or commit) or `hand_written`. |
-| `failure_class` | `args_syntax`, `schema_validation`, `engine_loop`, `intent_mismatch`, or `drawing_defect`. |
+| `failure_class` | `args_syntax`, `schema_validation`, `engine_loop`, `intent_mismatch`, `drawing_defect` or `slow_design` (a timing case, see `complexity`). |
+| `complexity` | Optional time budget category, `medium` (60 s) or `heavy` (90 s). Empty = `calc_engine/pipeline/budget.py` classifies the brief. `task eval:live` fails a run that takes longer, however good its result is. |
 | `brief` | The user's text, verbatim. |
 | `expect` | An `Expectation` document, see `homeworking/calc_engine/assembly/intent.py` (envelope, use, support, materials, features). |
 | `attempts[]` | `file`: record under `attempts/`. `expect_outcome`: outcome the replay must produce now. `errors_contain`: substrings that must occur in the replayed errors (the text the model sees). `synthetic`: reconstructed from a report, not recorded from a real run. |
-| `reference` | The correct construction (the reference the engine must accept): `design` (a design file in the case directory) plus `params`. Optional only for `args_syntax` and `schema_validation`. |
+| `reference` | The correct construction (the reference the engine must accept): `design` (a design file in the case directory) plus `params`. Optional only for `args_syntax`, `schema_validation` and `slow_design`. |
 
 ## attempts/NN.json
 

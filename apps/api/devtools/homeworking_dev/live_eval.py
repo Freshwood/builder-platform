@@ -40,7 +40,9 @@ from sqlalchemy import select
 
 from homeworking.bootstrap import Container, build_container
 from homeworking.calc_engine.assembly.intent import Expectation, evaluate, view_consistency
+from homeworking.calc_engine.pipeline.budget import TIME_BUDGET_S, Complexity, classify
 from homeworking.concurrency import run_blocking
+from homeworking.construction_model.pipeline import Spec
 from homeworking.db.schema import AgentRunRow
 from homeworking.modules.agent.deps import AgentDeps
 from homeworking.modules.agent.planner import ChatPlanner
@@ -74,7 +76,7 @@ class EvalCase(BaseModel):
     """The part of ``case.json`` the live eval needs; everything else is ignored on purpose.
 
     ``tests/regressions/loader.py`` is the authoritative, strict schema (and is tested offline).
-    The harness must not import from ``tests/``, so it reads only these four fields.
+    The harness must not import from ``tests/``, so it reads only these fields.
     """
 
     model_config = ConfigDict(extra="ignore", frozen=True)
@@ -83,6 +85,16 @@ class EvalCase(BaseModel):
     brief: str = Field(min_length=1)
     expect: Expectation
     failure_class: str = ""
+    complexity: Complexity | None = None
+
+    @property
+    def category(self) -> Complexity:
+        """Time budget category: the case's own, else the engine's reading of the brief."""
+        return self.complexity or classify(Spec(description=self.brief[:2000]))
+
+    @property
+    def budget_s(self) -> int:
+        return TIME_BUDGET_S[self.category]
 
 
 class CaseLoadError(ValueError):
@@ -217,6 +229,11 @@ class RunRecord:
     cost_usd: float | None = None  # chat turn plus stages
     unpriced_requests: int = 0
     duration_s: float = 0.0
+    # Time budget of the case's category (``calc_engine.pipeline.budget``); a run that takes
+    # longer is a failure however good its result is.
+    complexity: str = ""
+    budget_s: int = 0
+    over_budget: bool = False
     intent_violations: list[str] = field(default_factory=list)
     view_violations: list[str] = field(default_factory=list)
     final_text: str = ""
@@ -251,6 +268,8 @@ async def run_case(
         model_role=role,
         routing_reason=routing_reason,
         model=model.model_name,
+        complexity=case.category,
+        budget_s=case.budget_s,
     )
     text = redact(case.brief)
     verdict = check_message(text)
@@ -266,9 +285,14 @@ async def run_case(
         projects=container.projects,
         project_id=None,
         trace_id=f"eval-{case.id}",
-        planner=ChatPlanner(
-            container.pipeline, container.conversations, owner, None, text
-        ),  # new designs run via the pipeline
+        planner=ChatPlanner(  # new designs run via the pipeline
+            container.pipeline,
+            container.conversations,
+            owner,
+            None,
+            text,
+            time_budget=settings.design_time_budget,
+        ),
         save_design_creates=settings.save_design_creates,
     )
     started = time.perf_counter()
@@ -278,6 +302,7 @@ async def run_case(
     except Exception as error:  # a failed run is a measurement, not a crash
         record.error = f"{type(error).__name__}: {error}"[:ERROR_MAX_CHARS]
     record.duration_s = round(time.perf_counter() - started, 3)
+    record.over_budget = record.duration_s > record.budget_s
 
     record.attempts = len(deps.design_attempts)
     for attempt in deps.design_attempts:
@@ -305,7 +330,12 @@ async def run_case(
                 lambda: evaluate(project.inputs, project.result, case.expect, container.engine)
             )
             record.view_violations = await _checked(lambda: view_consistency(project.result))
-    record.success = record.accepted and not record.intent_violations and record.error is None
+    record.success = (
+        record.accepted
+        and not record.intent_violations
+        and record.error is None
+        and not record.over_budget
+    )
     return record
 
 
@@ -392,10 +422,19 @@ def _mean(values: Sequence[float]) -> float:
     return round(sum(values) / len(values), 3) if values else 0.0
 
 
+def _budget(case: dict[str, Any]) -> str:
+    """Category and limit of a case in the report table, e.g. ``medium 60 s``."""
+    runs = case["runs"]
+    if not runs or not runs[0].get("complexity"):
+        return "-"
+    return f"{runs[0]['complexity']} {runs[0]['budget_s']} s"
+
+
 def summarize(runs: Sequence[dict[str, Any]]) -> dict[str, Any]:
     """Aggregate run records (dicts as stored in the report) of one brief or of all briefs.
 
-    * ``success``: engine result exists AND zero intent violations AND the run did not fail.
+    * ``success``: engine result exists AND zero intent violations AND the run did not fail
+      AND it finished within the time budget of its category.
     * ``pass_at_1``: expected success probability of one run (successes / runs).
     * ``pass_any`` / ``pass_all``: at least one / every one of the k runs succeeded.
     """
@@ -417,6 +456,7 @@ def summarize(runs: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "intent_violation_runs": sum(1 for r in runs if r["intent_violations"]),
         "view_violation_runs": sum(1 for r in runs if r["view_violations"]),
         "error_runs": sum(1 for r in runs if r["error"]),
+        "over_budget_runs": sum(1 for r in runs if r.get("over_budget")),
         "input_tokens": sum(r["input_tokens"] for r in runs),
         "output_tokens": sum(r["output_tokens"] for r in runs),
         "stage_input_tokens": sum(r.get("stage_input_tokens", 0) for r in runs),
@@ -496,14 +536,14 @@ def markdown(report: dict[str, Any]) -> str:
         f"briefs in every run, mean {overall['mean_attempts']} attempts "
         f"({overall['mean_rejected']} rejected), cost {_money(overall['cost_usd'])} USD.",
         "",
-        "| Brief | Class | Success | Rate | pass any | pass all | Attempts | Rejected | Requests "
-        "| Intent viol. | View viol. | Cost USD | Time s |",
-        "|---|---|---:|---:|:-:|:-:|---:|---:|---:|---:|---:|---:|---:|",
+        "| Brief | Class | Budget | Success | Rate | pass any | pass all | Attempts | Rejected "
+        "| Requests | Intent viol. | View viol. | Cost USD | Time s |",
+        "|---|---|---|---:|---:|:-:|:-:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for slug, case in report["cases"].items():
         c = case["summary"]
         lines.append(
-            f"| {slug} | {case['failure_class']} | {c['successes']}/{c['runs']} "
+            f"| {slug} | {case['failure_class']} | {_budget(case)} | {c['successes']}/{c['runs']} "
             f"| {c['success_rate']:.0%} | {'yes' if c['pass_any'] else 'no'} "
             f"| {'yes' if c['pass_all'] else 'no'} | {c['mean_attempts']} | {c['mean_rejected']} "
             f"| {c['mean_requests']} | {c['intent_violation_runs']} | {c['view_violation_runs']} "
@@ -522,6 +562,10 @@ def markdown(report: dict[str, Any]) -> str:
             )
             if r["error"]:
                 lines.append(f"- Error: `{r['error']}`")
+            if r.get("over_budget"):
+                lines.append(
+                    f"- Too slow: {r['duration_s']} s, budget {r['budget_s']} s ({r['complexity']})"
+                )
             lines += [f"- Intent: {v}" for v in r["intent_violations"]]
             lines += [f"- View: {v}" for v in r["view_violations"]]
             if r["final_text"]:

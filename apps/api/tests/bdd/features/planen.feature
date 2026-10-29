@@ -27,11 +27,10 @@ Funktionalität: Projekt im Chat planen
     Und enthält die Stückliste "Brett Lärche"
     Und trägt das Projekt den Hinweis "AI_DRAFT"
 
-  Szenario: Fehlen die Maße, fragt der Assistent nach
+  Szenario: Fehlen die Maße, plant der Assistent mit üblichen Maßen und fragt nicht nach
     Wenn ich im Chat schreibe "Ich möchte ein Hochbeet bauen"
-    Dann ruft der Assistent kein Werkzeug auf
-    Und antwortet der Assistent mit "Wie lang und wie breit"
-    Und wurde kein Projekt angelegt
+    Dann ruft der Assistent das Werkzeug "save_design" auf
+    Und trägt das Projekt den Hinweis "AI_DRAFT"
 
   Szenario: Eine allgemeine Frage legt kein Projekt an
     Wenn ich im Chat schreibe "Hallo, was kannst du?"

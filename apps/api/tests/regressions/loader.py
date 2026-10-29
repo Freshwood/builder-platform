@@ -16,6 +16,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from homeworking.calc_engine.assembly.intent import Expectation
+from homeworking.calc_engine.pipeline.budget import Complexity
 from homeworking.construction_model.base import ParamValue
 
 #: ``REGRESSION_CASES_DIR`` lets ``capture promote`` replay a draft in ``_drafts/`` with the very
@@ -30,6 +31,7 @@ FailureClass = Literal[
     "engine_loop",
     "intent_mismatch",
     "drawing_defect",
+    "slow_design",
 ]
 Outcome = Literal[
     "accepted",
@@ -43,7 +45,9 @@ Outcome = Literal[
     "exception",
 ]
 #: Failure classes whose bug is the call itself: no design has to exist to describe a fix.
-CLASSES_WITHOUT_REFERENCE: frozenset[str] = frozenset({"args_syntax", "schema_validation"})
+CLASSES_WITHOUT_REFERENCE: frozenset[str] = frozenset(
+    {"args_syntax", "schema_validation", "slow_design"}
+)
 
 
 class CaseError(ValueError):
@@ -104,6 +108,9 @@ class RegressionCase(_Model):
     origin: Origin
     failure_class: FailureClass
     brief: str = Field(min_length=1, description="The user's text, verbatim")
+    complexity: Complexity | None = Field(
+        None, description="Time budget category; empty = the engine classifies the brief"
+    )
     expect: Expectation
     attempts: list[AttemptRef] = Field(default_factory=list)
     reference: Reference | None = None

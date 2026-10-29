@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "label": "dist-schuhe_flur",
+  "date": "2026-10-29",
+  "prompt_version": "2026-10-29.1",
+  "prompt_fingerprint": "51ed6d86ec4a9c8b",
+  "routing_version": "2",
+  "settings": {
+    "llm_mode": "openai",
+    "offline": false,
+    "models": {
+      "designer": "openai/gpt-5.6-luna",
+      "fast": "openai/gpt-5.6-luna"
+    },
+    "model_role": null,
+    "runs": 3,
+    "request_limit": 12,
+    "total_tokens_limit": 1000000,
+    "temperature": 0.2,
+    "reasoning": "low",
+    "max_output_tokens": 12000,
+    "budget_usd": 5.0
+  },
+  "aborted": null,
+  "overall": {
+    "runs": 3,
+    "successes": 3,
+    "success_rate": 1.0,
+    "pass_at_1": 1.0,
+    "pass_any": true,
+    "pass_all": true,
+    "accepted_runs": 3,
+    "mean_attempts": 1.0,
+    "mean_rejected": 0.0,
+    "mean_requests": 2.0,
+    "mean_duration_s": 38.483,
+    "intent_violation_runs": 0,
+    "view_violation_runs": 0,
+    "error_runs": 0,
+    "over_budget_runs": 0,
+    "input_tokens": 36303,
+    "output_tokens": 1502,
+    "stage_input_tokens": 45931,
+    "stage_output_tokens": 9277,
+    "cost_usd": 0.00609,
+    "mean_cost_usd": 0.00203,
+    "unpriced_requests": 14,
+    "cases": 1,
+    "cases_pass_all": 1,
+    "cases_pass_any": 1
+  },
+  "cases": {
+    "schuhe_flur": {
+      "failure_class": "slow_design",
+      "brief": "Bei uns im Flur liegen ständig die Schuhe der ganzen Familie herum. Ich brauche etwas, wo sie ordentlich hinkommen.",
+      "summary": {
+        "runs": 3,
+        "successes": 3,
+        "success_rate": 1.0,
+        "pass_at_1": 1.0,
+        "pass_any": true,
+        "pass_all": true,
+        "accepted_runs": 3,
+        "mean_attempts": 1.0,
+        "mean_rejected": 0.0,
+        "mean_requests": 2.0,
+        "mean_duration_s": 38.483,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "over_budget_runs": 0,
+        "input_tokens": 36303,
+        "output_tokens": 1502,
+        "stage_input_tokens": 45931,
+        "stage_output_tokens": 9277,
+        "cost_usd": 0.00609,
+        "mean_cost_usd": 0.00203,
+        "unpriced_requests": 14
+      },
+      "runs": [
+        {
+          "case": "schuhe_flur",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "openai/gpt-5.6-luna",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 12079,
+          "output_tokens": 477,
+          "cache_read_tokens": 11184,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 1314,
+              "output_tokens": 555
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 5675,
+              "output_tokens": 1102
+            },
+            "docs": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 900,
+              "output_tokens": 519
+            }
+          },
+          "stage_input_tokens": 7889,
+          "stage_output_tokens": 2176,
+          "cost_usd": 0.001904,
+          "unpriced_requests": 3,
+          "duration_s": 29.039,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Die Schuhbank ist geplant: **1.000 × 350 × 500 mm**, mit Sitzfläche und **3 offenen Schuhfächern**. Sie ist für eine typische Familie ausgelegt und einfach stumpf zu verschrauben – passend für Einsteiger.\n\n**Annahmen:** Fichte im Innenbereich, robuste Oberfläche, bodenstehende Ausführung und ein üblicher Flur. Die Fachanzahl lässt sich zwischen **2 und 6 Fächern** anpassen; außerdem sind Breite, Tiefe, Höhe und Holzart veränderbar.\n\nRichtpreise für das Material liegen bei **128–213 €**, der rechnerische Materialverbrauch bei **81–139 €**. Das sind Richtwerte und keine verbindlichen Einkaufspreise.",
+          "error": null
+        },
+        {
+          "case": "schuhe_flur",
+          "run": 2,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "openai/gpt-5.6-luna",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 12125,
+          "output_tokens": 516,
+          "cache_read_tokens": 11184,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 1299,
+              "output_tokens": 733
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 8,
+              "input_tokens": 28926,
+              "output_tokens": 4398
+            },
+            "docs": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 0,
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "errors": [
+                "Stage docs failed: DeadlineExceededError: budget used up"
+              ]
+            }
+          },
+          "stage_input_tokens": 30225,
+          "stage_output_tokens": 5131,
+          "cost_usd": 0.00217,
+          "unpriced_requests": 8,
+          "duration_s": 58.626,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Dein Schuhregal ist geplant: **900 × 300 × 600 mm**, offen, bodenstehend und mit **drei Ebenen** für die Schuhe der Familie. Es besteht aus unbehandelter Fichte und ist als einfache, stumpf verschraubte Konstruktion für Einsteiger ausgelegt.\n\nDie Richtpreise liegen bei **60–98 € Einkauf**; der rechnerische Materialverbrauch beträgt **31–52 €**. Die Planung umfasst **7 Bauteile**, etwa **22 Schrauben** und rund **2,4 m² Holzoberfläche**.\n\nAls Varianten gibt es eine kompakte Ausführung mit zwei Ebenen oder eine große Version mit sechs Ebenen. Da das Regal durch die geringe Tiefe kippen kann, solltest du es zusätzlich an der Wand sichern.",
+          "error": null
+        },
+        {
+          "case": "schuhe_flur",
+          "run": 3,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "openai/gpt-5.6-luna",
+          "accepted": true,
+          "success": true,
+          "attempts": 1,
+          "rejected": 0,
+          "outcomes": {
+            "accepted": 1
+          },
+          "requests": 2,
+          "input_tokens": 12099,
+          "output_tokens": 509,
+          "cache_read_tokens": 11184,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 1291,
+              "output_tokens": 617
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 5661,
+              "output_tokens": 839
+            },
+            "docs": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 1,
+              "input_tokens": 865,
+              "output_tokens": 514
+            }
+          },
+          "stage_input_tokens": 7817,
+          "stage_output_tokens": 1970,
+          "cost_usd": 0.002016,
+          "unpriced_requests": 3,
+          "duration_s": 27.783,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Das Schuhregal ist als offene, bodenstehende Konstruktion mit **864 × 300 × 900 mm** geplant. Es hat mehrere Ablageebenen, fasst die Alltagsschuhe der Familie und wird aus unbehandelter Fichte einfach verschraubt. Für die Standfestigkeit ist bei dieser schmalen, hohen Ausführung eine Kippsicherung an der Wand erforderlich.\n\nDie Richtkosten liegen bei **54–90 €** für den Einkauf; der voraussichtliche Materialverbrauch entspricht **34–57 €**. Die Angaben sind Richtpreise und können je nach Händler schwanken.\n\nAlternativen:\n- **Kompakt:** niedrigere Ausführung mit drei Ebenen.\n- **Familie:** fünf Ablageebenen für mehr Schuhe.\n- **Breit:** mehr Stellfläche für besonders viele Paar Schuhe.\n\nAngenommen sind Innenbereich, unbehandelte Oberfläche und eine einfache Bauweise für Anfänger.",
+          "error": null
+        }
+      ]
+    }
+  }
+}

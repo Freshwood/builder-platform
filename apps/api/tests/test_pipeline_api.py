@@ -13,6 +13,7 @@ from homeworking.construction_model.pipeline import Skeleton, Spec
 from homeworking.db.schema import AgentRunRow
 from homeworking.modules.pipeline import offline
 from homeworking.modules.pipeline.stages import (
+    MODULE_REPAIRS,
     ModulesRejectedError,
     Pipeline,
     SkeletonRejectedError,
@@ -44,11 +45,13 @@ async def test_intake_reads_the_text_and_asks_only_what_is_open(client: httpx.As
     assert len(asked) <= 3
 
 
-async def test_intake_without_size_blocks_and_asks_for_it_first(client: httpx.AsyncClient) -> None:
+async def test_intake_without_size_asks_for_it_first_but_is_ready(
+    client: httpx.AsyncClient,
+) -> None:
     body = (
         await client.post("/api/pipeline/intake", json={"spec": {"description": "Ein Regal"}})
     ).json()
-    assert body["ready"] is False
+    assert body["ready"] is True
     assert body["questions"][0]["field"] == "size"
     assert body["questions"][0]["blocking"] is True
 
@@ -106,8 +109,13 @@ async def test_skeleton_carries_the_customers_facts(client: httpx.AsyncClient) -
     assert {r.routing_reason for r in await _runs(client)} == {"stage:intake", "stage:skeleton"}
 
 
-async def test_skeleton_needs_a_size(client: httpx.AsyncClient) -> None:
+async def test_skeleton_needs_no_size(client: httpx.AsyncClient) -> None:
     response = await client.post("/api/pipeline/skeleton", json={"spec": {"description": "Regal"}})
+    assert response.status_code == 200
+
+
+async def test_skeleton_needs_a_description(client: httpx.AsyncClient) -> None:
+    response = await client.post("/api/pipeline/skeleton", json={"spec": {"description": " "}})
     assert response.status_code == 409
 
 
@@ -226,8 +234,8 @@ async def test_modules_endpoint_returns_a_design_the_engine_accepts(
     assert runs["stage:modules"].status == "completed"
 
 
-async def test_modules_need_a_size(client: httpx.AsyncClient) -> None:
-    spec = {"description": "Regal"}
+async def test_modules_need_a_description(client: httpx.AsyncClient) -> None:
+    spec = {"description": " "}
     skeleton = Skeleton.model_validate(_good()).model_dump(mode="json")
     response = await client.post("/api/pipeline/modules", json={"spec": spec, "skeleton": skeleton})
     assert response.status_code == 409
@@ -305,11 +313,11 @@ async def test_modules_give_up_after_the_repair_rounds() -> None:
         "at": [0, 0, 0],
     }
     bad = {"module": "body", "parts": [part]}
-    pipeline, seen = _module_pipeline(bad, bad, bad)
+    pipeline, seen = _module_pipeline(*[bad] * (MODULE_REPAIRS + 1))
     with pytest.raises(ModulesRejectedError) as raised:
         await pipeline.modules(SPEC, _skeleton())
     assert set(raised.value.errors) == {"body"}
-    assert len(seen) == 3  # first run plus two repairs
+    assert len(seen) == MODULE_REPAIRS + 1  # first run plus the repairs
 
 
 async def test_an_invalid_module_answer_is_asked_again_from_the_start() -> None:
@@ -402,7 +410,7 @@ async def test_a_failing_stage_is_still_reported(monkeypatch: pytest.MonkeyPatch
 
     pipeline = Pipeline(Settings(llm_mode="test"), None, {"spruce": "Fichte"})  # type: ignore[arg-type]
 
-    async def rejected(spec: Spec, skeleton: Skeleton) -> object:
+    async def rejected(spec: Spec, skeleton: Skeleton, **_: Any) -> object:
         usage = StageUsage("modules", requests=3)
         raise ModulesRejectedError({"body": ["kaputt"]}, usage)
 
@@ -446,7 +454,7 @@ async def test_a_skeleton_error_of_the_merge_revises_the_skeleton_once(
     real = pipeline.modules
     calls: list[int] = []
 
-    async def modules(spec: Spec, skeleton: Skeleton) -> Any:
+    async def modules(spec: Spec, skeleton: Skeleton, **_: Any) -> Any:
         calls.append(1)
         if len(calls) == 1:
             raise ModulesRejectedError(
@@ -476,7 +484,7 @@ async def test_a_skeleton_error_of_the_merge_revises_the_skeleton_once(
 async def test_a_second_skeleton_error_ends_the_design(monkeypatch: pytest.MonkeyPatch) -> None:
     pipeline = Pipeline(Settings(llm_mode="test"), None, {"spruce": "Fichte"})  # type: ignore[arg-type]
 
-    async def modules(spec: Spec, skeleton: Skeleton) -> Any:
+    async def modules(spec: Spec, skeleton: Skeleton, **_: Any) -> Any:
         raise ModulesRejectedError({SKELETON: ["zu hoch"]}, StageUsage("modules", requests=2))
 
     monkeypatch.setattr(pipeline, "modules", modules)

@@ -1,0 +1,16 @@
+{
+  "id": "carport_zwei_autos",
+  "title": "Schwere Konstruktion: Carport in 90 s",
+  "origin": {"kind": "hand_written", "ref": "docs/ai/ZEITBUDGET.md", "date": "2026-10-29"},
+  "failure_class": "slow_design",
+  "brief": "Wir wollen einen Carport für zwei Autos neben dem Haus.",
+  "complexity": "heavy",
+  "expect": {
+    "use": "outdoor",
+    "support": "floor",
+    "envelope": {"min_length_mm": 4800, "min_height_mm": 2300},
+    "note": "Carport für zwei Autos, Pultdach, Maße frei gewählt"
+  },
+  "attempts": [],
+  "notes": "Zeitfall der Kategorie heavy (Baustein post_frame). Vor den Bausteinen erzeugte das Modul mehr als 16000 Ausgabetokens und scheiterte."
+}

@@ -10,6 +10,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-PROMPT_VERSION = "2026-10-28.5"
+PROMPT_VERSION = "2026-10-29.2"
 
 INSTRUCTIONS = (Path(__file__).parent / "system.de.md").read_text(encoding="utf-8")

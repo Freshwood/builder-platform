@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-STAGE_PROMPT_VERSION = "2026-10-28.3"
+STAGE_PROMPT_VERSION = "2026-10-29.4"
 
 INTAKE = (Path(__file__).parent / "intake.de.md").read_text(encoding="utf-8")
 SKELETON = (Path(__file__).parent / "skeleton.de.md").read_text(encoding="utf-8")

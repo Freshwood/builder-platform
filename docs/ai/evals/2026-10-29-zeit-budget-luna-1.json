@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "label": "budget-luna-1",
+  "date": "2026-10-29",
+  "prompt_version": "2026-10-29.1",
+  "prompt_fingerprint": "51ed6d86ec4a9c8b",
+  "routing_version": "2",
+  "settings": {
+    "llm_mode": "openai",
+    "offline": false,
+    "models": {
+      "designer": "openai/gpt-5.6-luna",
+      "fast": "openai/gpt-5.6-luna"
+    },
+    "model_role": null,
+    "runs": 1,
+    "request_limit": 12,
+    "total_tokens_limit": 1000000,
+    "temperature": 0.2,
+    "reasoning": "low",
+    "max_output_tokens": 12000,
+    "budget_usd": 5.0
+  },
+  "aborted": null,
+  "overall": {
+    "runs": 2,
+    "successes": 0,
+    "success_rate": 0.0,
+    "pass_at_1": 0.0,
+    "pass_any": false,
+    "pass_all": false,
+    "accepted_runs": 0,
+    "mean_attempts": 2.0,
+    "mean_rejected": 2.0,
+    "mean_requests": 3.0,
+    "mean_duration_s": 74.216,
+    "intent_violation_runs": 0,
+    "view_violation_runs": 0,
+    "error_runs": 0,
+    "over_budget_runs": 1,
+    "input_tokens": 36712,
+    "output_tokens": 1419,
+    "stage_input_tokens": 52105,
+    "stage_output_tokens": 9639,
+    "cost_usd": 0.006498,
+    "mean_cost_usd": 0.003249,
+    "unpriced_requests": 13,
+    "cases": 2,
+    "cases_pass_all": 0,
+    "cases_pass_any": 0
+  },
+  "cases": {
+    "fachwerk_gartenhaus": {
+      "failure_class": "slow_design",
+      "brief": "Ich möchte im Garten ein kleines Fachwerkhaus bauen, in dem wir im Sommer übernachten können.",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 2.0,
+        "mean_rejected": 2.0,
+        "mean_requests": 3.0,
+        "mean_duration_s": 91.715,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "over_budget_runs": 1,
+        "input_tokens": 17905,
+        "output_tokens": 757,
+        "stage_input_tokens": 14418,
+        "stage_output_tokens": 4693,
+        "cost_usd": 0.003835,
+        "mean_cost_usd": 0.003835,
+        "unpriced_requests": 4
+      },
+      "runs": [
+        {
+          "case": "fachwerk_gartenhaus",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "openai/gpt-5.6-luna",
+          "accepted": false,
+          "success": false,
+          "attempts": 2,
+          "rejected": 2,
+          "outcomes": {
+            "engine_rejected": 2
+          },
+          "requests": 3,
+          "input_tokens": 17905,
+          "output_tokens": 757,
+          "cache_read_tokens": 11176,
+          "stages": {
+            "skeleton": {
+              "runs": 2,
+              "failed": 1,
+              "requests": 1,
+              "input_tokens": 1308,
+              "output_tokens": 913,
+              "errors": [
+                "Stage skeleton failed: DeadlineExceededError: budget used up"
+              ]
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 4,
+              "input_tokens": 13110,
+              "output_tokens": 3780,
+              "errors": [
+                "Stage modules failed: DeadlineExceededError: budget used up"
+              ]
+            }
+          },
+          "stage_input_tokens": 14418,
+          "stage_output_tokens": 4693,
+          "cost_usd": 0.003835,
+          "unpriced_requests": 4,
+          "duration_s": 91.715,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": true,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Die Planung ist erneut wegen einer technischen Zeitüberschreitung fehlgeschlagen. Dein Vorhaben ist grundsätzlich planbar; ich kann es mit vereinfachten Angaben erneut versuchen, zum Beispiel zunächst als kleines Gartenhaus mit Holzrahmen und Satteldach.\n\nFür ein bewohnbares Gebäude müssen Statik, Fundament, Dach und Brandschutz durch Fachleute geprüft werden. Außerdem können nach Landesbauordnung und örtlichen Vorgaben eine Baugenehmigung oder weitere Nachweise erforderlich sein – bitte vor dem Bau das Bauamt fragen.",
+          "error": null
+        }
+      ]
+    },
+    "schuhe_flur": {
+      "failure_class": "slow_design",
+      "brief": "Bei uns im Flur liegen ständig die Schuhe der ganzen Familie herum. Ich brauche etwas, wo sie ordentlich hinkommen.",
+      "summary": {
+        "runs": 1,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 2.0,
+        "mean_rejected": 2.0,
+        "mean_requests": 3.0,
+        "mean_duration_s": 56.716,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "over_budget_runs": 0,
+        "input_tokens": 18807,
+        "output_tokens": 662,
+        "stage_input_tokens": 37687,
+        "stage_output_tokens": 4946,
+        "cost_usd": 0.002663,
+        "mean_cost_usd": 0.002663,
+        "unpriced_requests": 9
+      },
+      "runs": [
+        {
+          "case": "schuhe_flur",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "openai/gpt-5.6-luna",
+          "accepted": false,
+          "success": false,
+          "attempts": 2,
+          "rejected": 2,
+          "outcomes": {
+            "engine_rejected": 2
+          },
+          "requests": 3,
+          "input_tokens": 18807,
+          "output_tokens": 662,
+          "cache_read_tokens": 16748,
+          "stages": {
+            "skeleton": {
+              "runs": 2,
+              "failed": 1,
+              "requests": 1,
+              "input_tokens": 1300,
+              "output_tokens": 718,
+              "errors": [
+                "Stage skeleton failed: DeadlineExceededError: budget used up"
+              ]
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 9,
+              "input_tokens": 36387,
+              "output_tokens": 4228,
+              "errors": [
+                "Modules rejected: frame: Bauteile 'frame_seitenwand_l[0]' (Linke Seitenwand) und 'shelves_ablage[0]' (Ablageebene) durchdringen sich (18 × 146 × 18 mm) – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben / Bauteile 'frame_seitenwand_l[0]' (Linke Seitenwand) und 'shelves_ablage[1]' (Ablageebene) durchdringen sich (18 × 146 × 18 mm) – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben / Bauteile 'frame_seitenwand_l[0]' (Linke Seitenwand) und 'shelves_ablage[2]' (Ablageebene) durchdringen sich (18 × 146 × 18 mm) – Position oder Ma"
+              ]
+            }
+          },
+          "stage_input_tokens": 37687,
+          "stage_output_tokens": 4946,
+          "cost_usd": 0.002663,
+          "unpriced_requests": 9,
+          "duration_s": 56.716,
+          "complexity": "medium",
+          "budget_s": 60,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Die Planung konnte wegen einer technischen Zeitüberschreitung nicht abgeschlossen werden. Bitte versuche es noch einmal; ich plane dann dasselbe Schuhregal erneut mit den bisherigen Annahmen.",
+          "error": null
+        }
+      ]
+    }
+  }
+}

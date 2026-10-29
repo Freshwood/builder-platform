@@ -27,7 +27,8 @@ run, a throw-away SQLite database; nothing is written to `agent_runs`.
 | `accepted` | the run ended with a project whose engine result exists |
 | `intent_violations` | `intent.evaluate` of the final project against the case's `expect` (envelope, use, support, materials, features). Empty = the brief is met |
 | `view_violations` | `intent.view_consistency`: dimensions in the drawings agree with the solids. Reported, but not part of `success` |
-| **`success`** | `accepted` AND no intent violation AND the agent run did not fail (usage limit, provider error) |
+| **`success`** | `accepted` AND no intent violation AND the agent run did not fail (usage limit, provider error) AND the run finished within the time budget of its category |
+| `complexity`, `budget_s`, `over_budget` | the case's category (`medium` 60 s, `heavy` 90 s; from `case.json` or `calc_engine/pipeline/budget.py`) and whether `duration_s` exceeded it. The pipeline also stops a stage at that deadline, so a slow run ends as a failed plan instead of running on |
 | `attempts` / `rejected` | entries of `AgentDeps.design_attempts`: every submitted design and every failed tool call; `rejected` = those that were not accepted (invalid arguments, engine rejection, ...). `outcomes` counts them by outcome. Fewer is better: each one is a repair round |
 | `requests`, tokens | model requests and provider-reported input/output/cache tokens of the chat turn |
 | `stages`, `stage_input_tokens`, `stage_output_tokens` | what `plan_design` spent in the pipeline stages (skeleton, modules, docs; ADR-0010): runs, failed runs, requests and tokens per stage. Read from the stage runs the planner stores in the throw-away database |
@@ -111,6 +112,15 @@ designers cost several times that. A `--runs 3` pass over all briefs is typicall
 4. Compare mode prints per brief the success rate, mean attempts and cost per run, old to new, and
    marks `BROKEN` (succeeded before, never now), `REGRESSED` (rate dropped) and `improved`.
    Exit code 1 if anything regressed.
+
+## Time cases (`complexity`)
+
+Cases with `"complexity": "medium"` (60 s) or `"heavy"` (90 s) count a run as failed when it takes
+longer, whatever the result. The cases `schuhe_flur`, `wandregal_gewuerze`, `gartentisch_sechs`
+(medium) and `fachwerk_gartenhaus`, `carport_zwei_autos`, `zaun_garten` (heavy) are the light,
+medium and heavy constructions of [ZEITBUDGET.md](ZEITBUDGET.md); run them with
+`task eval:live -- --runs 3 --case <slug> ...`. The older podium, shelf and shutter cases check
+the intent of a reported bug and stay slower where the model has to write the modules itself.
 
 ## When to run it
 

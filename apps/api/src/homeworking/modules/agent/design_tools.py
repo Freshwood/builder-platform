@@ -126,9 +126,7 @@ def register_design_tools(agent: Agent[AgentDeps, str]) -> None:
         if ctx.deps.planner is None:
             return fail(ctx, "no_planner", "Entwürfe sind derzeit nicht verfügbar.")
         if not is_ready(spec):
-            return fail(
-                ctx, "missing_size", "Für den Entwurf fehlen Maße (width_mm, depth_mm, height_mm)."
-            )
+            return fail(ctx, "empty_brief", "Der Steckbrief enthält keine Beschreibung.")
         if ctx.deps.plan_runs >= MAX_PLAN_RUNS:
             return fail(
                 ctx,

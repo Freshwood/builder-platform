@@ -106,11 +106,46 @@ def _length(name: str, label: str, value: int) -> dict[str, Any]:
     }
 
 
+_BUILDING = re.compile(r"fachwerk|gartenhaus|h(?:ü|ue)tte|schuppen|(?<![a-zäöüß])haus\b", re.I)
+
+
 def skeleton_model() -> FunctionModel:
-    """One box module with the customer's dimensions (or a small default)."""
+    """One box module with the customer's dimensions (or a small default); a building is the
+    engine's ``house`` block."""
 
     def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         spec = _spec_line(_user_text(messages))
+        if _BUILDING.search(str(spec.get("description", ""))):
+            width, depth, height = (
+                int(spec.get(key, default))
+                for key, default in zip(
+                    ("width_mm", "depth_mm", "height_mm"), (4000, 3000, 4000), strict=True
+                )
+            )
+            return _answer(
+                info,
+                {
+                    "object_type": "Fachwerkhaus",
+                    "summary": "Kleines Fachwerkhaus mit Satteldach",
+                    "category": "building",
+                    "use": "outdoor",
+                    "params": [
+                        _length("width_mm", "Breite (mm)", width),
+                        _length("depth_mm", "Tiefe (mm)", depth),
+                        _length("height_mm", "Höhe bis First (mm)", height),
+                    ],
+                    "modules": [
+                        {
+                            "id": "haus",
+                            "title": "Haus",
+                            "role": "Fachwerkhaus auf Punktfundamenten mit Satteldach",
+                            "origin": [0, 0, 0],
+                            "size": ["width_mm", "depth_mm", "height_mm"],
+                            "block": {"kind": "house"},
+                        }
+                    ],
+                },
+            )
         width, depth, height = (
             int(spec.get(key, default))
             for key, default in zip(

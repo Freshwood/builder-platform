@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "label": "dist2-fachwerk_gartenhaus",
+  "date": "2026-10-29",
+  "prompt_version": "2026-10-29.1",
+  "prompt_fingerprint": "51ed6d86ec4a9c8b",
+  "routing_version": "2",
+  "settings": {
+    "llm_mode": "openai",
+    "offline": false,
+    "models": {
+      "designer": "openai/gpt-5.6-luna",
+      "fast": "openai/gpt-5.6-luna"
+    },
+    "model_role": null,
+    "runs": 3,
+    "request_limit": 12,
+    "total_tokens_limit": 1000000,
+    "temperature": 0.2,
+    "reasoning": "low",
+    "max_output_tokens": 12000,
+    "budget_usd": 5.0
+  },
+  "aborted": null,
+  "overall": {
+    "runs": 3,
+    "successes": 0,
+    "success_rate": 0.0,
+    "pass_at_1": 0.0,
+    "pass_any": false,
+    "pass_all": false,
+    "accepted_runs": 0,
+    "mean_attempts": 2.333,
+    "mean_rejected": 2.333,
+    "mean_requests": 3.333,
+    "mean_duration_s": 86.979,
+    "intent_violation_runs": 0,
+    "view_violation_runs": 0,
+    "error_runs": 0,
+    "over_budget_runs": 0,
+    "input_tokens": 64068,
+    "output_tokens": 2951,
+    "stage_input_tokens": 154123,
+    "stage_output_tokens": 42757,
+    "cost_usd": 0.014083,
+    "mean_cost_usd": 0.004694,
+    "unpriced_requests": 30,
+    "cases": 1,
+    "cases_pass_all": 0,
+    "cases_pass_any": 0
+  },
+  "cases": {
+    "fachwerk_gartenhaus": {
+      "failure_class": "slow_design",
+      "brief": "Ich möchte im Garten ein kleines Fachwerkhaus bauen, in dem wir im Sommer übernachten können.",
+      "summary": {
+        "runs": 3,
+        "successes": 0,
+        "success_rate": 0.0,
+        "pass_at_1": 0.0,
+        "pass_any": false,
+        "pass_all": false,
+        "accepted_runs": 0,
+        "mean_attempts": 2.333,
+        "mean_rejected": 2.333,
+        "mean_requests": 3.333,
+        "mean_duration_s": 86.979,
+        "intent_violation_runs": 0,
+        "view_violation_runs": 0,
+        "error_runs": 0,
+        "over_budget_runs": 0,
+        "input_tokens": 64068,
+        "output_tokens": 2951,
+        "stage_input_tokens": 154123,
+        "stage_output_tokens": 42757,
+        "cost_usd": 0.014083,
+        "mean_cost_usd": 0.004694,
+        "unpriced_requests": 30
+      },
+      "runs": [
+        {
+          "case": "fachwerk_gartenhaus",
+          "run": 1,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "openai/gpt-5.6-luna",
+          "accepted": false,
+          "success": false,
+          "attempts": 2,
+          "rejected": 2,
+          "outcomes": {
+            "engine_rejected": 2
+          },
+          "requests": 3,
+          "input_tokens": 18181,
+          "output_tokens": 920,
+          "cache_read_tokens": 16764,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 3616,
+              "output_tokens": 1450
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 10,
+              "input_tokens": 50094,
+              "output_tokens": 13500,
+              "errors": [
+                "Stage modules failed: DeadlineExceededError: budget used up"
+              ]
+            }
+          },
+          "stage_input_tokens": 53710,
+          "stage_output_tokens": 14950,
+          "cost_usd": 0.003956,
+          "unpriced_requests": 10,
+          "duration_s": 86.841,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Der Entwurf konnte wegen einer technischen Zeitüberschreitung nicht erstellt werden. Die Planung wäre weiterhin:\n\n- ungefähr **4.000 × 3.000 mm** Grundfläche\n- Douglasien-Fachwerk mit einfachem Satteldach\n- Eingangstür und zu öffnendes Fenster\n- Nutzung nur als sommerlicher Schlafraum\n- Außenlasur als Wetterschutz\n\nFür ein solches Gebäude brauchst du eine statisch geeignete Fundament- und Holzplanung. Die **Statik muss ein Tragwerksplaner** prüfen; außerdem können je nach Bundesland und Gemeinde eine **Baugenehmigung**, Abstandsflächen und weitere Nachweise erforderlich sein. Bitte erkundige dich vor dem Bau bei Bauamt und nach der Landesbauordnung.",
+          "error": null
+        },
+        {
+          "case": "fachwerk_gartenhaus",
+          "run": 2,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "openai/gpt-5.6-luna",
+          "accepted": false,
+          "success": false,
+          "attempts": 3,
+          "rejected": 3,
+          "outcomes": {
+            "invalid_args": 1,
+            "engine_rejected": 2
+          },
+          "requests": 4,
+          "input_tokens": 26792,
+          "output_tokens": 1251,
+          "cache_read_tokens": 22352,
+          "stages": {
+            "skeleton": {
+              "runs": 2,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 2745,
+              "output_tokens": 1808
+            },
+            "modules": {
+              "runs": 2,
+              "failed": 2,
+              "requests": 9,
+              "input_tokens": 40212,
+              "output_tokens": 11260,
+              "errors": [
+                "Modules rejected: frame: Bauteile 'frame_floor_front[0]' (Vorderer Bodenrahmen) und 'openings_left_post[0]' (Linker Tür- und Fensterpfosten) durchdringen sich (70 × 45 × 145 mm); Lage: 'frame_floor_front[0]' von (0, 0, 200) bis (3000, 45, 345) mm, 'openings_left_post[0]' von (0, 0, 200) bis (70, 100, 2300) mm – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben / Bauteile 'frame_floor_front[0]' (Vorderer Bodenrahmen) und 'openings_left_inner_post[0]' (Linker Fensterpfosten) durchdringen sich (70 × 45 × 145 mm); Lage: 'frame_floor_front[0]' von (0, 0, 200) bis (",
+                "Stage modules failed: DeadlineExceededError: budget used up"
+              ]
+            }
+          },
+          "stage_input_tokens": 42957,
+          "stage_output_tokens": 13068,
+          "cost_usd": 0.005554,
+          "unpriced_requests": 9,
+          "duration_s": 87.487,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Die automatische Planung ist zweimal an technischen Problemen gescheitert: zuerst an kollidierenden Rahmen- und Öffnungsteilen, danach am Zeitlimit der komplexen Fachwerkberechnung.\n\nIch kann es erneut mit einer vereinfachten Konstruktion versuchen: rechteckiger Holzrahmen mit sichtbaren diagonalen Streben, separatem Bodenrahmen, Tür, Fenster und leichtem Dach. Die angenommenen Außenmaße bleiben ungefähr **3.000 × 4.000 × 3.000 mm**. Statik, Fundament, Wind- und Schneelasten sowie die Genehmigung müssen ein Tragwerksplaner und das zuständige Bauamt nach Landesbauordnung prüfen.",
+          "error": null
+        },
+        {
+          "case": "fachwerk_gartenhaus",
+          "run": 3,
+          "model_role": "designer",
+          "routing_reason": "default",
+          "model": "openai/gpt-5.6-luna",
+          "accepted": false,
+          "success": false,
+          "attempts": 2,
+          "rejected": 2,
+          "outcomes": {
+            "engine_rejected": 2
+          },
+          "requests": 3,
+          "input_tokens": 19095,
+          "output_tokens": 780,
+          "cache_read_tokens": 16764,
+          "stages": {
+            "skeleton": {
+              "runs": 1,
+              "failed": 0,
+              "requests": 2,
+              "input_tokens": 3698,
+              "output_tokens": 1923
+            },
+            "modules": {
+              "runs": 1,
+              "failed": 1,
+              "requests": 11,
+              "input_tokens": 53758,
+              "output_tokens": 12816,
+              "errors": [
+                "Modules rejected: walls: Bauteile 'walls_back_left_post[0]' (Hinterer linker Eckpfosten) und 'walls_back_studs[0]' (Hintere Zwischenpfosten) durchdringen sich (35 × 22.5 × 1650 mm); Lage: 'walls_back_left_post[0]' von (0, 2930, 360) bis (70, 3000, 2080) mm, 'walls_back_studs[0]' von (35, 2908, 430) bis (105, 2952, 2430) mm – Position oder Maß anpassen oder als Holzverbindung (joints: half_lap/notch) angeben / Bauteile 'walls_back_left_post[0]' (Hinterer linker Eckpfosten) und 'roof_eave_left[0]' (Traufbalken links) durchdringen sich (45 × 70 × 45 mm); Lage: 'walls_back_left_post[0]' von (0, 29"
+              ]
+            }
+          },
+          "stage_input_tokens": 57456,
+          "stage_output_tokens": 14739,
+          "cost_usd": 0.004573,
+          "unpriced_requests": 11,
+          "duration_s": 86.608,
+          "complexity": "heavy",
+          "budget_s": 90,
+          "over_budget": false,
+          "intent_violations": [],
+          "view_violations": [],
+          "final_text": "Die automatische Gebäudeplanung ist an mehreren sich überschneidenden Bauteilen gescheitert. Für ein Fachwerkhaus müssen Pfosten, Rähme, Tür-/Fensteröffnungen und Dachanschlüsse konstruktiv sauber abgestimmt werden.\n\nIch kann den Entwurf mit vereinfachter Konstruktion erneut anlegen, zum Beispiel mit:\n\n- ca. 3.000 × 3.000 mm Grundfläche\n- Douglasien-Fachwerk\n- einfacher Tür und Fenstern\n- Satteldach\n- Außenlasur\n- ohne Haustechnik\n\nWichtig: Für ein bewohnbares Gartenhaus sind Bauamt, Landesbauordnung, Fundament und Abstandsflächen zu prüfen. Die Statik muss ein Tragwerksplaner nachweisen; die Planung hier ist kein Standsicherheitsnachweis.",
+          "error": null
+        }
+      ]
+    }
+  }
+}

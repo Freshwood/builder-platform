@@ -1,0 +1,17 @@
+{
+  "id": "wandregal_gewuerze",
+  "title": "Leichte Konstruktion: Wandregal für Gewürze in 60 s",
+  "origin": {"kind": "hand_written", "ref": "docs/ai/ZEITBUDGET.md", "date": "2026-10-29"},
+  "failure_class": "slow_design",
+  "brief": "Ein kleines Wandregal für Gewürze, 60 cm breit mit drei Böden",
+  "complexity": "medium",
+  "expect": {
+    "use": "indoor",
+    "support": "wall",
+    "envelope": {"max_length_mm": 600, "min_length_mm": 600},
+    "features": [{"levels": {"min": 3}}],
+    "note": "Wandregal, 600 mm breit, drei Böden"
+  },
+  "attempts": [],
+  "notes": "Leichte Konstruktion der Kategorie medium (Baustein carcass): vor den Bausteinen scheiterte schon dieses Regal mit deepseek an der 60-s-Frist (ein Modul-Aufruf erzeugte 4000 Ausgabetokens)."
+}

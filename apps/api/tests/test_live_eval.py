@@ -123,6 +123,32 @@ async def test_accepted_design_meeting_the_intent_is_a_success(container: Contai
     assert record.duration_s >= 0
 
 
+async def test_a_slow_run_fails_even_when_its_result_is_right(
+    container: Container, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    case = podium_case()
+    assert (case.category, case.budget_s) == ("medium", 60)
+    monkeypatch.setattr(live_eval, "TIME_BUDGET_S", {"medium": 0, "heavy": 0})
+    record = await run_case(
+        container, case, scripted([("save_design", reference_args())]), prices=PRICES
+    )
+
+    assert record.accepted
+    assert record.intent_violations == []
+    assert record.over_budget
+    assert not record.success
+    assert (record.complexity, record.budget_s) == ("medium", 0)
+
+
+def test_the_category_of_a_case_is_its_own_or_the_engines_reading() -> None:
+    plain = EvalCase(id="a", brief="Schuhregal im Flur", expect=Expectation())
+    house = EvalCase(id="b", brief="Ein Fachwerkhaus im Garten", expect=Expectation())
+    forced = EvalCase(id="c", brief="Fachwerkhaus", expect=Expectation(), complexity="medium")
+
+    assert [c.category for c in (plain, house, forced)] == ["medium", "heavy", "medium"]
+    assert [c.budget_s for c in (plain, house, forced)] == [60, 90, 60]
+
+
 async def test_rejected_attempts_are_counted_and_the_run_still_succeeds(
     container: Container,
 ) -> None:
@@ -392,8 +418,8 @@ def test_report_json_has_the_documented_schema(tmp_path: Path) -> None:
         "case", "run", "model_role", "routing_reason", "model", "accepted", "success", "attempts",
         "rejected", "outcomes", "requests", "input_tokens", "output_tokens", "cache_read_tokens",
         "stages", "stage_input_tokens", "stage_output_tokens",
-            "cost_usd", "unpriced_requests", "duration_s", "intent_violations", "view_violations",
-        "final_text", "error",
+            "cost_usd", "unpriced_requests", "duration_s", "complexity", "budget_s", "over_budget",
+        "intent_violations", "view_violations", "final_text", "error",
     }  # fmt: skip
     assert set(case["runs"][0]) == run_keys
 
@@ -404,7 +430,7 @@ def test_markdown_lists_failed_runs_with_their_violations(tmp_path: Path) -> Non
 
     assert "# Live eval: md" in text
     assert "`2026-10-10.1`" in text
-    assert "| a | engine_loop | 1/2 | 50% |" in text
+    assert "| a | engine_loop | - | 1/2 | 50% |" in text
     assert "## Failed runs" in text
     assert "[envelope] zu lang" in text
 

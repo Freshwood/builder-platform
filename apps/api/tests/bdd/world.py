@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -106,6 +107,7 @@ class ApiWorld:
     reply: Reply | None = None
     events: list[dict[str, Any]] = field(default_factory=list)
     view: Any = None
+    chat_seconds: float = 0.0
 
     def path(self, template: str) -> str:
         return template.replace("{projekt}", self.project_id or "kein-projekt")
@@ -143,7 +145,9 @@ class ApiWorld:
                 {"id": str(uuid.uuid4()), "role": "user", "parts": [{"type": "text", "text": text}]}
             ],
         }
+        started = time.perf_counter()
         reply = self.post("/api/chat", body)
+        self.chat_seconds = time.perf_counter() - started
         assert reply.status == 200, reply.text
         self.events = parse_stream(reply.text)
         for event in self.events:

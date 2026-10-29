@@ -1,0 +1,16 @@
+{
+  "id": "gartentisch_sechs",
+  "title": "Mittlere Konstruktion: Gartentisch in 60 s",
+  "origin": {"kind": "hand_written", "ref": "docs/ai/ZEITBUDGET.md", "date": "2026-10-29"},
+  "failure_class": "slow_design",
+  "brief": "Wir brauchen einen Gartentisch, an dem sechs Personen essen können.",
+  "complexity": "medium",
+  "expect": {
+    "use": "outdoor",
+    "support": "floor",
+    "features": ["standing_stable"],
+    "note": "Tisch für sechs Personen, Maße frei gewählt"
+  },
+  "attempts": [],
+  "notes": "Zeitfall der Kategorie medium (Baustein table)."
+}

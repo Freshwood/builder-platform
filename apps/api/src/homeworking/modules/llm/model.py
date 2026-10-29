@@ -28,6 +28,12 @@ class Models:
 
     designer: Model
     fast: Model
+    # Pipeline stages only: the module stage may think more than the other stages (geometry).
+    modules: Model | None = None
+
+    @property
+    def module_stage(self) -> Model:
+        return self.modules or self.fast
 
     def for_role(self, role: Role) -> Model:
         return self.designer if role == "designer" else self.fast
@@ -76,6 +82,11 @@ def build_model(
                 max_tokens=max_tokens,
                 temperature=settings.llm_temperature,
                 openrouter_reasoning=reasoning,
+                **(
+                    {"openrouter_provider": {"sort": settings.llm_provider_sort}}
+                    if settings.llm_provider_sort
+                    else {}
+                ),
                 # Explicit cache points for providers that need them (Anthropic, Gemini); the
                 # static prefix (instructions + tools) is ~70-95 % of every request (ADR-0006).
                 # OpenAI-style providers cache automatically and ignore these flags.
@@ -93,6 +104,17 @@ def build_model(
     )
 
 
+def reasoning_settings(settings: Settings, effort: Effort) -> ModelSettings | None:
+    """Per-run model settings that set the reasoning effort, or ``None`` where the provider has no
+    such setting (offline model, plain OpenAI-compatible endpoint)."""
+    if settings.llm_mode == "test" or "openrouter.ai" not in settings.llm_base_url:
+        return None
+    from pydantic_ai.models.openrouter import OpenRouterModelSettings
+
+    reasoning = {"enabled": False} if effort == "off" else {"effort": effort}
+    return OpenRouterModelSettings(openrouter_reasoning=reasoning)  # type: ignore[typeddict-item]
+
+
 def build_models(
     settings: Settings, *, stages: bool = False, offline: OfflineFactory | None = None
 ) -> Models:
@@ -107,9 +129,24 @@ def build_models(
         else {}
     )
     designer = build_model(settings, offline=offline, **options)
-    if settings.llm_mode == "test" or not settings.llm_model_fast:
+    if settings.llm_mode == "test":
         return Models(designer=designer, fast=designer)
     from pydantic_ai.models.fallback import FallbackModel
 
-    fast = build_model(settings, settings.llm_model_fast, **options)
-    return Models(designer=designer, fast=FallbackModel(fast, designer))
+    fast_name = settings.llm_model_fast or None
+    fast = build_model(settings, fast_name, **options) if fast_name else designer
+    modules: Model | None = None
+    if stages and settings.llm_module_reasoning != settings.llm_stage_reasoning:
+        modules = build_model(
+            settings,
+            fast_name,
+            reasoning_effort=settings.llm_module_reasoning,
+            max_tokens=settings.llm_stage_max_output_tokens,
+        )
+    if not fast_name:
+        return Models(designer=designer, fast=designer, modules=modules)
+    return Models(
+        designer=designer,
+        fast=FallbackModel(fast, designer),
+        modules=FallbackModel(modules, designer) if modules else None,
+    )

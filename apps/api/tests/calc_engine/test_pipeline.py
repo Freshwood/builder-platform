@@ -149,12 +149,13 @@ def test_shift(origin: Any, value: Any, expected: Any) -> None:
     assert shift(origin, value) == expected
 
 
-def test_nothing_known_asks_for_the_size_first() -> None:
+def test_nothing_known_asks_for_the_size_first_but_never_blocks() -> None:
     questions = open_questions(Spec(description="Ein Regal"))
     assert questions[0].field == "size"
     assert questions[0].blocking
     assert len(questions) == 3
-    assert not is_ready(Spec(description="Ein Regal"))
+    assert is_ready(Spec(description="Ein Regal"))
+    assert not is_ready(Spec(description=" "))
 
 
 def test_answered_fields_are_not_asked_again() -> None:

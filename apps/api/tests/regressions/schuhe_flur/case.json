@@ -1,0 +1,17 @@
+{
+  "id": "schuhe_flur",
+  "title": "Problembeschreibung ohne Maße: Schuhe im Flur, mittlere Konstruktion in 60 s",
+  "origin": {
+    "kind": "hand_written",
+    "ref": "docs/ai/EVALS.md",
+    "date": "2026-10-29"
+  },
+  "failure_class": "slow_design",
+  "brief": "Bei uns im Flur liegen ständig die Schuhe der ganzen Familie herum. Ich brauche etwas, wo sie ordentlich hinkommen.",
+  "complexity": "medium",
+  "expect": {
+    "note": "Schuhregal oder Schuhbank; Maße wählt die Engine/das Modell frei"
+  },
+  "attempts": [],
+  "notes": "Kein Fehlerbericht, sondern der Zeitfall der Kategorie medium (calc_engine/pipeline/budget.py): ein Brief ohne jede Maßangabe muss ohne Rückfrage in TIME_BUDGET_S['medium'] Sekunden ein fertiges Projekt ergeben (Live-Eval prüft die Dauer, task eval:live)."
+}

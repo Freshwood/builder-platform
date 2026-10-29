@@ -1,0 +1,19 @@
+{
+  "id": "fachwerk_gartenhaus",
+  "title": "Fachwerkhaus als Gartenhaus: schwere Konstruktion in 90 s",
+  "origin": {
+    "kind": "hand_written",
+    "ref": "docs/ai/EVALS.md",
+    "date": "2026-10-29"
+  },
+  "failure_class": "slow_design",
+  "brief": "Ich möchte im Garten ein kleines Fachwerkhaus bauen, in dem wir im Sommer übernachten können.",
+  "complexity": "heavy",
+  "expect": {
+    "use": "outdoor",
+    "support": "floor",
+    "note": "Fachwerk-Gartenhaus, Maße frei gewählt"
+  },
+  "attempts": [],
+  "notes": "Zeitfall der Kategorie heavy (TIME_BUDGET_S['heavy']): Gebäude und große Holzkonstruktionen. Kein Fehlerbericht; der Live-Eval prüft die Dauer."
+}

@@ -59,10 +59,12 @@ async def test_chat_creates_and_changes_project(client: httpx.AsyncClient) -> No
     assert stored["project"]["inputs"]["params"]["width_mm"] == 1500
 
 
-async def test_chat_asks_for_missing_dimensions(client: httpx.AsyncClient) -> None:
+async def test_chat_plans_with_usual_dimensions_instead_of_asking(
+    client: httpx.AsyncClient,
+) -> None:
     events = await _chat(client, "Ich will ein Hochbeet bauen")
-    assert not _tool_outputs(events)
-    assert "Wie lang" in _text(events)
+    assert _tool_outputs(events)[0]["action"] == "created"
+    assert "Wie lang" not in _text(events)
 
 
 async def test_safety_gate_blocks_electrical_work(client: httpx.AsyncClient) -> None:
@@ -155,9 +157,10 @@ async def test_chat_plans_a_new_design_through_the_pipeline(client: httpx.AsyncC
     assert {r.chat_id for r in runs} == {"c1"}
 
 
-async def test_planning_without_a_size_is_not_attempted(client: httpx.AsyncClient) -> None:
+async def test_planning_without_a_size_uses_usual_dimensions(client: httpx.AsyncClient) -> None:
     events = await _chat(client, "Ich brauche einen Schrank")
-    assert not _tool_outputs(events)
+    (output,) = _tool_outputs(events)
+    assert output["action"] == "created"
 
 
 async def test_a_rejected_plan_is_reported_to_the_model(
@@ -165,7 +168,7 @@ async def test_a_rejected_plan_is_reported_to_the_model(
 ) -> None:
     container = client._transport.app.state.container  # type: ignore[attr-defined]
 
-    async def rejected(spec: object, *, on_stage: object = None) -> object:
+    async def rejected(spec: object, **_: object) -> object:
         raise SkeletonRejectedError(["Parameter 'x' fehlt"], StageUsage("skeleton"))
 
     monkeypatch.setattr(container.pipeline, "design", rejected)
@@ -181,7 +184,7 @@ async def test_a_provider_error_in_the_pipeline_is_explained_not_raised(
 ) -> None:
     container = client._transport.app.state.container  # type: ignore[attr-defined]
 
-    async def broken(spec: object, *, on_stage: object = None) -> object:
+    async def broken(spec: object, **_: object) -> object:
         raise RuntimeError("provider down")
 
     monkeypatch.setattr(container.pipeline, "design", broken)

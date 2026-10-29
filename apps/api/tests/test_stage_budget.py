@@ -15,7 +15,7 @@ from homeworking_dev.pipeline_bench import measure
 # stage -> (max input tokens of one request, max static prefix tokens)
 BUDGET = {
     "intake": (900, 800),
-    "skeleton": (1_800, 1_700),
+    "skeleton": (2_900, 2_800),
     "modules": (3_400, 2_800),
     "docs": (900, 700),
 }

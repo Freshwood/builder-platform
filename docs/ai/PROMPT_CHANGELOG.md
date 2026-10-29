@@ -10,6 +10,67 @@ Each entry names the version, the fingerprint, what changed and why, and the eff
 offline token benchmark (`task bench`). Every stored agent run carries `prompt_version` and
 `prompt_fingerprint`, so a result can be traced back to exactly one entry.
 
+## 2026-10-29.2 (agent, fingerprint `3c4b23056f6e7ccf`; stages unchanged)
+
+Zeitbudget, Chat-Seite: Mit den Bausteinen dauert die Pipeline 3–10 s, aber der Chat-Zug, der ein
+Projekt beginnt (er füllt nur den Steckbrief für `plan_design`), brauchte mit `LLM_REASONING=low`
+30–70 s und lief mehrfach ins Token-Limit (12000, „Model token limit exceeded“). Mit ausgeschaltetem
+Denken: 8–15 s (6 von 6 Läufen), mit `minimal` weiter Ausreißer.
+
+- Routing (`ROUTING_VERSION` 3): jede Nachricht ohne aktives Projekt bekommt Grund `new_project`
+  (vorher `default` oder `structural`); Rolle bleibt `designer`.
+- Laufzeit: für `new_project` setzt `api/chat.py` das Denken des Zuges auf `LLM_PLAN_REASONING`
+  (Standard `off`); alle späteren Züge (Umbau, Fragen) behalten `LLM_REASONING`.
+- System-Prompt, Tools und Schemas unverändert; der Fingerprint ändert sich nur durch die
+  Routing-Version.
+- Offline-Token-Benchmark: unverändert.
+
+## 2026-10-29.4 (stages, fingerprint `137eeb9d017ba830`; agent unchanged)
+
+Zeitbudget (`docs/ai/ZEITBUDGET.md`): mit dem konfigurierten deepseek-v4-flash scheiterten nicht nur
+schwere Konstruktionen (Fachwerk, Carport: Geometrie, über 16000 Ausgabetokens im Modul), sondern
+schon ein Wandregal in 54 s (ein Modul-Aufruf erzeugt rund 4000 Ausgabetokens bei 40–90 Token/s).
+Ursache ist nicht das Modell, sondern dass es Hunderte Bauteile mit Koordinaten setzen soll.
+
+- Neu: **Bausteine** (`calc_engine/pipeline/blocks`). Das Gerüst darf je Modul `block` setzen
+  (`house`, `carcass`, `platform`, `table`, `post_frame`, `fence`, Optionen im Schema `BlockSpec`).
+  Die Engine erzeugt die Teile selbst (Ausdrücke über die Parameter, Regler und Varianten bleiben
+  nutzbar); für Block-Module gibt es keinen Modul-Aufruf und keine Reparatur durch das Modell.
+- Gerüst-Prompt, Regel 8: Bausteine, ihre Optionen und `summary` höchstens 200 Zeichen. Das
+  Schema wächst um `BlockSpec` und `ModuleBrief.block`.
+- Laufzeit ohne Fingerprint-Änderung: Hat das Gerüst nur ein Modul ohne Baustein und nennt der
+  Brief eindeutig ein Objekt (Carport, Zaun, Tisch, Regal, …), setzt die Engine den Baustein ein
+  (`blocks/suggest.py`, Einstellung `ENGINE_BLOCKS=auto|model`); passt der Baustein nicht zu den
+  Maßen, bleibt der Plan des Modells. Ausdrücke dürfen bis 2000 Zeichen lang sein (Dach-Neigung).
+- Offline-Token-Budget (`test_stage_budget.py`): Gerüst-Anfrage 1800 → 2900 Token (Regel 8 und
+  `BlockSpec`), Prefix 1700 → 2800. Begründung: dafür entfällt der Modul-Aufruf (3,4K Eingabe,
+  bis zu 16K Ausgabe) bei allen Objekten, die ein Baustein abdeckt.
+- Live (deepseek-v4-flash, `task pipeline:live`): Wandregal 7 s, Schuhregal 8 s, Podest 7 s,
+  Fachwerkhaus 9 s (vorher Abbruch nach 54–90 s), 4–5K statt 27K Eingabetokens je Lauf.
+
+## 2026-10-29.1 (agent, fingerprint `51ed6d86ec4a9c8b`; stages, fingerprint `94f26517d46587d5`)
+
+Manual tests showed that a brief without dimensions never led to a design: the system was
+unusable for a plain problem description. Causes: rule 3 ("frage gezielt nach") contradicted
+rules 9 and 11, and `plan_design`, `/api/pipeline/skeleton` and `/modules` refused a brief
+without any dimension (`missing_size`, 409). The live run of the pipeline and of the chat agent
+with the child podium brief (dimensions given, height missing) already ended with an accepted
+design; the blocker is the case with no dimensions at all.
+
+- System prompt, rule 3: no questions for missing details; assume usual values, deliver, state the
+  assumptions. Ask once only if it is unclear what to build.
+- Skeleton prompt, rule 1: a missing dimension is chosen by the model (usual size for purpose and
+  user), the parameters are created anyway, the assumption goes into `summary`. Never ask back.
+- Runtime, no fingerprint change: `is_ready` only requires a non-empty description; the tool error
+  `missing_size` became `empty_brief`; the two 409s only fire for an empty brief.
+- Offline benchmark: no measurable change (routed flash total 5.199 -> 5.204 US cents).
+- Runtime, no fingerprint change (time budget, see `docs/ai/ZEITBUDGET.md`): fixed budgets per
+  category (medium 60 s, heavy 90 s) enforced per model request in the pipeline; the stage models
+  get their own reasoning (`LLM_STAGE_REASONING` default `off`, `LLM_MODULE_REASONING` default
+  `minimal`) and OpenRouter routes by throughput (`LLM_PROVIDER_SORT`); module repair rounds are
+  limited by the deadline (up to 4) and all modules run at once; engine collision messages name
+  where both parts lie.
+
 ## 2026-10-28.5 (agent, fingerprint `d1a105f6fbee5b28`)
 
 First live run of the pipeline (`docs/ai/evals/2026-10-28-pipeline-v1.md`, six regression briefs,

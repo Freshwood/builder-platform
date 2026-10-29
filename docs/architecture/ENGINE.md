@@ -85,7 +85,35 @@ An deklarierten Verbindungen entfallen automatische Schrauben.
 Schüttgut und Flächenmaterial (`kind="bulk"`): Ausfachung, Beton und Dämmung nach m³,
 Dachdeckung und Schalung nach m², jeweils mit erlaubtem Stärkenbereich.
 
-## 5. Der Katalog
+## 5. Zeitbudget
+
+Jede Konstruktion muss für den Kunden in fester Zeit fertig sein, gemessen von der Nachricht bis
+zum gespeicherten Projekt: **mittel 60 s, schwer 90 s**. `calc_engine/pipeline/budget.py` stuft den
+Steckbrief regelbasiert ein (Gebäude, Fachwerk, Carport, Pergola, Zaun oder ein Maß ab 3 m =
+schwer, sonst mittel) und hält die Werte. Durchgesetzt wird das in `modules/pipeline/stages.py`:
+jede Modellanfrage läuft gegen die Frist (`Deadline`), Reparaturrunden der Module enden, wenn eine
+weitere nicht mehr passt, die Doku fällt bei Zeitmangel auf die Standardtexte zurück. Der Chat
+rechnet seine eigene Zeit mit (`ChatPlanner`, 6 s Reserve für die Schlussantwort). Verhaltenstest:
+`apps/api/tests/bdd/features/zeitbudget.feature`; Mechanik: `tests/test_time_budget.py`; echte
+Dauer: `task eval:live` (Fälle `schuhe_flur`, `fachwerk_gartenhaus`). Messung und Grenzen:
+[`docs/ai/ZEITBUDGET.md`](../ai/ZEITBUDGET.md).
+
+## 5a. Bausteine
+
+Was die Engine selbst bauen kann, baut sie selbst (`calc_engine/pipeline/blocks`). Ein Modul des
+Gerüsts trägt dann `block` statt eines Modell-Aufrufs: `house` (Fundament, vier Wände aus Fachwerk
+oder Ständerbau mit Tür und Fenstern, Satteldach oder Flachdach), `carcass` (Regal, Schrank),
+`platform` (Podest), `table` (Tisch, Bank, Werkbank), `post_frame` (Carport, Pergola) und `fence`.
+Ein Baustein schreibt Bauteile als Ausdrücke über die Parameter; Stückzahlen (Pfosten, geteilte
+Hölzer, Plattenraster) legt er für das obere Ende des Reglerbereichs fest, Neigungen sind in Ausdrücken
+begrenzt (Satteldach 12–45°, Pultdach 12–30°), und `prepare` begrenzt die Regler auf einen Bereich, der
+nachweislich baut (`tests/calc_engine/test_blocks.py` prüft jede Ecke). Passt ein Baustein nicht zu
+den Maßen, meldet er auf Deutsch, was zu ändern ist (`BlockError`); die Pipeline gibt das dem Gerüst
+zurück. Die Teile gehen durch dieselben Prüfungen wie alles andere (kein Durchdringen, flächiger
+Kontakt, Katalogquerschnitte und Handelslängen). `blocks/suggest.py` setzt einen Baustein ein, wenn
+das Modell ein einzelnes Modul ohne ihn plant und der Brief das Objekt eindeutig nennt.
+
+## 6. Der Katalog
 
 `apps/api/src/homeworking/calc_engine/data/catalog.json` ist die zentrale Fachquelle für Querschnitte,
 Handelslängen, Formate, Preise, Eignung außen und Beschlagtypen. Seine Pflege ist ein
