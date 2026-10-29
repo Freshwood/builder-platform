@@ -31,50 +31,28 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 
-from construction_model.assembly import AssemblyDesign
+from homeworking.construction_model.assembly import AssemblyDesign
+from homeworking.modules.agent.triggers import DELTA, DELTA_PARAM, NUM, UNIT, VARIANTS
 
-_NUM = r"(\d+(?:[.,]\d+)?)"
-_UNIT = r"(mm|cm|m)\b"
-_DIMS = re.compile(rf"{_NUM}\s*(?:{_UNIT})?\s*[x×*]\s*{_NUM}\s*(?:{_UNIT})?", re.IGNORECASE)
+_DIMS = re.compile(rf"{NUM}\s*(?:{UNIT})?\s*[x×*]\s*{NUM}\s*(?:{UNIT})?", re.IGNORECASE)
 _HEIGHT = re.compile(
-    rf"(?:{_NUM}\s*{_UNIT}\s*hoch)|(?:h(?:ö|oe)he\s*(?:von\s*)?(?:ca\.?\s*)?{_NUM}\s*{_UNIT})",
+    rf"(?:{NUM}\s*{UNIT}\s*hoch)|(?:h(?:ö|oe)he\s*(?:von\s*)?(?:ca\.?\s*)?{NUM}\s*{UNIT})",
     re.IGNORECASE,
 )
-_DELTA = re.compile(
-    rf"{_NUM}\s*{_UNIT}\s*(breiter|schmaler|l(?:ä|ae)nger|k(?:ü|ue)rzer|h(?:ö|oe)her|niedriger)",
-    re.IGNORECASE,
-)
-_DELTA_PARAM = {
-    "breiter": ("width_mm", 1),
-    "schmaler": ("width_mm", -1),
-    "länger": ("length_mm", 1),
-    "laenger": ("length_mm", 1),
-    "kürzer": ("length_mm", -1),
-    "kuerzer": ("length_mm", -1),
-    "höher": ("height_mm", 1),
-    "hoeher": ("height_mm", 1),
-    "niedriger": ("height_mm", -1),
-}
 _WOODS = {"lärche": "larch", "laerche": "larch", "douglasie": "douglas", "fichte": "spruce"}
-_VARIANTS = {
-    "günstig": "budget",
-    "guenstig": "budget",
-    "langlebig": "durable",
-    "komfort": "comfort",
-}
 # Furniture the offline pipeline stand-ins can plan (a plywood carcass), see ``_plan_call``.
 _PLANNED = ("schrank", "kommode", "podest", "truhe", "kiste")
 _OTHER_PROJECTS = ("terrasse", "carport", "gartenhaus", "schuppen", "zaun", "pergola", "schrank")
 _DIMS3 = re.compile(
-    rf"{_NUM}\s*(?:{_UNIT})?\s*[x×*]\s*{_NUM}\s*(?:{_UNIT})?\s*[x×*]\s*{_NUM}\s*(?:{_UNIT})?",
+    rf"{NUM}\s*(?:{UNIT})?\s*[x×*]\s*{NUM}\s*(?:{UNIT})?\s*[x×*]\s*{NUM}\s*(?:{UNIT})?",
     re.IGNORECASE,
 )
 _COUNT = re.compile(
     r"(\d+)\s*(?:fach)?(?:böden|boeden|fächer|faecher|sitzlatten|latten|flügel|fluegel)",
     re.IGNORECASE,
 )
-_LENGTH = re.compile(rf"{_NUM}\s*{_UNIT}\s*(?:lang|breit)", re.IGNORECASE)
-_WIDTH = re.compile(rf"breite\s*(?:von\s*)?(?:ca\.?\s*)?{_NUM}\s*{_UNIT}", re.IGNORECASE)
+_LENGTH = re.compile(rf"{NUM}\s*{UNIT}\s*(?:lang|breit)", re.IGNORECASE)
+_WIDTH = re.compile(rf"breite\s*(?:von\s*)?(?:ca\.?\s*)?{NUM}\s*{UNIT}", re.IGNORECASE)
 # Order in which dimensions of "a × b × c" map to design parameters.
 _DIM_ORDER = ("width_mm", "length_mm", "depth_mm", "height_mm")
 _DESIGNS = Path(__file__).resolve().parent / "offline_designs"
@@ -234,8 +212,8 @@ def decide_for_user_text(raw: str) -> Decision:
     if re.search(r"rückgängig|rueckgaengig|undo", text):
         return [ToolCall("undo_last_change", {})]
 
-    if delta := _DELTA.search(text):
-        name, sign = _DELTA_PARAM[delta.group(3)]
+    if delta := DELTA.search(text):
+        name, sign = DELTA_PARAM[delta.group(3)]
         amount = _to_mm(delta.group(1), delta.group(2))
         return [
             ToolCall(
@@ -267,7 +245,7 @@ def decide_for_user_text(raw: str) -> Decision:
             )
         ]
 
-    for word, key in _VARIANTS.items():
+    for word, key in VARIANTS.items():
         if word in text and "variante" in text:
             return [
                 ToolCall(
@@ -379,15 +357,3 @@ async def _stream(
 
 def offline_model() -> FunctionModel:
     return FunctionModel(_respond, stream_function=_stream, model_name="homeworking-offline")
-
-
-def fixed_text_model(text: str) -> FunctionModel:
-    """Model that always answers with a fixed text (used for safety referrals)."""
-
-    def respond(_messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
-        return ModelResponse(parts=[TextPart(text)])
-
-    async def stream(_messages: list[ModelMessage], _info: AgentInfo) -> AsyncIterator[str]:
-        yield text
-
-    return FunctionModel(respond, stream_function=stream, model_name="homeworking-safety")

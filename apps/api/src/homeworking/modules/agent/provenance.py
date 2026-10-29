@@ -9,8 +9,6 @@ changelog entry. ``task prompt:lock`` updates the lock file.
 
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -19,11 +17,23 @@ from uuid import uuid4
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
+from homeworking.modules.agent.deps import AgentDeps
 from homeworking.modules.agent.prompts import PROMPT_VERSION
 from homeworking.modules.agent.routing import ROUTING_VERSION
-from homeworking.modules.agent.tools import AgentDeps, build_agent
+from homeworking.modules.agent.tools import build_agent
+from homeworking.modules.llm.provenance import Once, PromptLock, fingerprint
 
-LOCK_FILE = Path(__file__).parent / "prompts" / "prompt.lock"
+LOCK = PromptLock(
+    path=Path(__file__).parent / "prompts" / "prompt.lock",
+    version=PROMPT_VERSION,
+    version_name="PROMPT_VERSION",
+    what="The prompt",
+    bump_hint=(
+        "bump it in modules/agent/prompts/__init__.py and add an entry to "
+        "docs/ai/PROMPT_CHANGELOG.md."
+    ),
+)
+LOCK_FILE = LOCK.path
 
 
 @dataclass(frozen=True)
@@ -40,8 +50,7 @@ class PromptSpec:
 
     @property
     def fingerprint(self) -> str:
-        raw = json.dumps(self.canonical(), ensure_ascii=False, sort_keys=True)
-        return hashlib.sha256(raw.encode()).hexdigest()[:16]
+        return fingerprint(self.canonical())
 
 
 async def prompt_spec() -> PromptSpec:
@@ -69,42 +78,27 @@ async def prompt_spec() -> PromptSpec:
     )
 
 
-_cache: list[str] = []
+async def _compute() -> str:
+    return (await prompt_spec()).fingerprint
+
+
+_live = Once(_compute)
 
 
 async def prompt_fingerprint() -> str:
     """Fingerprint of the live prompt (computed once per process)."""
-    if not _cache:
-        _cache.append((await prompt_spec()).fingerprint)
-    return _cache[0]
+    return await _live.get()
 
 
 def read_lock() -> dict[str, str]:
-    return cast(dict[str, str], json.loads(LOCK_FILE.read_text(encoding="utf-8")))
-
-
-def write_lock(fingerprint: str) -> None:
-    lock = {"version": PROMPT_VERSION, "fingerprint": fingerprint}
-    LOCK_FILE.write_text(json.dumps(lock, indent=2) + "\n", encoding="utf-8")
+    return LOCK.read()
 
 
 def main() -> None:
     """``task prompt:lock``: record the current fingerprint (refuses without a version bump)."""
     import asyncio
-    import sys
 
-    fingerprint = asyncio.run(prompt_fingerprint())
-    lock = read_lock() if LOCK_FILE.exists() else {}
-    if lock.get("fingerprint") == fingerprint:
-        print(f"prompt.lock is up to date ({PROMPT_VERSION}, {fingerprint})")
-        return
-    if lock.get("version") == PROMPT_VERSION:
-        sys.exit(
-            f"The prompt changed but PROMPT_VERSION is still {PROMPT_VERSION}: bump it in "
-            "modules/agent/prompts/__init__.py and add an entry to docs/ai/PROMPT_CHANGELOG.md."
-        )
-    write_lock(fingerprint)
-    print(f"prompt.lock updated: {PROMPT_VERSION} -> {fingerprint}")
+    LOCK.record(asyncio.run(prompt_fingerprint()))
 
 
 if __name__ == "__main__":

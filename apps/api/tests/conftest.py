@@ -1,9 +1,14 @@
+import os
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
 
 import httpx
 import pytest
+
+# Settings default to production (known dev secret and offline model refused); tests that build
+# ``Settings(...)`` without an environment run as "test". Must be set before the first Settings().
+os.environ.setdefault("ENVIRONMENT", "test")
 
 from homeworking.main import create_app
 from homeworking.settings import Settings

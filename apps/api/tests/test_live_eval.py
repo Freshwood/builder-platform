@@ -1,4 +1,4 @@
-"""The live evaluation harness (``homeworking.modules.agent.live_eval``), tested offline.
+"""The live evaluation harness (``homeworking_dev.live_eval``), tested offline.
 
 No real model is involved: a scripted ``FunctionModel`` replays the recorded tool calls of the
 podium regression case (``regressions/podium_kids_catwalk``). The tests prove the metrics, the
@@ -19,10 +19,12 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCall
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import UsageLimits
 
-from calc_engine.assembly.intent import Expectation
 from homeworking.bootstrap import Container, build_container
-from homeworking.modules.agent import live_eval
-from homeworking.modules.agent.live_eval import (
+from homeworking.calc_engine.assembly.intent import Expectation
+from homeworking.modules.llm.model import Models
+from homeworking.settings import Settings
+from homeworking_dev import live_eval
+from homeworking_dev.live_eval import (
     CaseLoadError,
     EvalCase,
     RunRecord,
@@ -37,8 +39,6 @@ from homeworking.modules.agent.live_eval import (
     summarize,
     write_report,
 )
-from homeworking.modules.agent.model import Models
-from homeworking.settings import Settings
 
 REGRESSIONS = Path(__file__).resolve().parent / "regressions"
 PODIUM = "podium_kids_catwalk"
@@ -57,11 +57,11 @@ def _attempt_args(number: int) -> dict[str, Any]:
     return args
 
 
-def golden_args() -> dict[str, Any]:
-    """save_design arguments of the hand-fixed golden podium (design and params of the case)."""
+def reference_args() -> dict[str, Any]:
+    """save_design arguments of the hand-fixed reference podium (design and params of the case)."""
     case = json.loads((REGRESSIONS / PODIUM / "case.json").read_text("utf-8"))
-    design = json.loads((REGRESSIONS / PODIUM / "golden.json").read_text("utf-8"))
-    return {"title": "Podest", "design": design, "params": case["golden"]["params"]}
+    design = json.loads((REGRESSIONS / PODIUM / "reference.json").read_text("utf-8"))
+    return {"title": "Podest", "design": design, "params": case["reference"]["params"]}
 
 
 def scripted(calls: Script) -> FunctionModel:
@@ -103,7 +103,7 @@ async def container(settings: Settings) -> AsyncIterator[Container]:
 
 
 async def test_accepted_design_meeting_the_intent_is_a_success(container: Container) -> None:
-    model = scripted([("save_design", golden_args())])
+    model = scripted([("save_design", reference_args())])
     record = await run_case(container, podium_case(), model, prices=PRICES)
 
     assert record.accepted
@@ -127,7 +127,7 @@ async def test_rejected_attempts_are_counted_and_the_run_still_succeeds(
     container: Container,
 ) -> None:
     # Attempt 02 of the case: an undeclared name in a when condition, rejected by the engine.
-    model = scripted([("save_design", _attempt_args(2)), ("save_design", golden_args())])
+    model = scripted([("save_design", _attempt_args(2)), ("save_design", reference_args())])
     record = await run_case(container, podium_case(), model, prices=PRICES)
 
     assert record.success
@@ -138,7 +138,7 @@ async def test_rejected_attempts_are_counted_and_the_run_still_succeeds(
 
 async def test_intent_violation_makes_an_accepted_design_a_failure(container: Container) -> None:
     # The design is valid and builds, but the expectation demands a shorter podium than it is.
-    model = scripted([("save_design", golden_args())])
+    model = scripted([("save_design", reference_args())])
     record = await run_case(container, podium_case(max_length_mm=500), model, prices=PRICES)
     assert record.accepted
     assert not record.success
@@ -177,7 +177,7 @@ async def test_a_crashing_model_is_recorded_not_raised(container: Container) -> 
 
 
 async def test_usage_limit_ends_the_run_with_an_error(container: Container) -> None:
-    model = scripted([("save_design", golden_args())])
+    model = scripted([("save_design", reference_args())])
     record = await run_case(
         container, podium_case(), model, limits=UsageLimits(request_limit=1), prices=PRICES
     )
@@ -188,7 +188,7 @@ async def test_usage_limit_ends_the_run_with_an_error(container: Container) -> N
 
 
 async def test_unpriced_model_has_no_cost(container: Container) -> None:
-    model = scripted([("save_design", golden_args())])
+    model = scripted([("save_design", reference_args())])
     record = await run_case(container, podium_case(), model, prices={})
 
     assert record.success
@@ -664,7 +664,7 @@ async def test_the_budget_stops_further_runs(container: Container) -> None:
         live_eval.PlannedRun(case, i + 1, "designer", "default", MODEL_NAME) for i in range(3)
     ]
 
-    model = scripted([("save_design", golden_args())])
+    model = scripted([("save_design", reference_args())])
     scripted_container = replace(container, models=Models(designer=model, fast=model))
 
     prices = {MODEL_NAME: {"input": 1_000_000.0, "output": 1_000_000.0}}

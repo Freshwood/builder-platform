@@ -1,4 +1,4 @@
-"""Token budget of the agent, measured offline (see modules/agent/bench.py).
+"""Token budget of the agent, measured offline (see devtools/homeworking_dev/bench.py).
 
 The limits are the measured values of the current prompt version plus a small margin. A
 prompt, tool or history change that makes requests bigger fails here; tighten the limits when
@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from homeworking.modules.agent.bench import run_bench
+from homeworking_dev.bench import run_bench
 
 # scenario -> (max input tokens of the whole turn, max tokens of a single request)
 # Baseline 2026-10-07.2 (docs/ai/benchmarks/2026-10-07-baseline.md) in the comments.

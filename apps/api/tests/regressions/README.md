@@ -8,7 +8,7 @@ every model forbids unknown keys, so a typo fails at load time.
 <slug>/
   case.json          the case (see below)
   attempts/NN.json   recorded tool calls, exactly one `design_attempts` entry each
-  golden.json        the hand-fixed correct design (AssemblyDesign JSON), if golden.design is used
+  reference.json     the hand-fixed correct design (AssemblyDesign JSON), if reference.design is used
 ```
 
 ## case.json
@@ -29,7 +29,7 @@ every model forbids unknown keys, so a typo fails at load time.
       "synthetic": true
     }
   ],
-  "golden": {"design": "golden.json", "params": {"surface": "boards"}},
+  "reference": {"design": "reference.json", "params": {"surface": "boards"}},
   "notes": "free text"
 }
 ```
@@ -40,9 +40,9 @@ every model forbids unknown keys, so a typo fails at load time.
 | `origin.kind` | `agent_run` (ref = `agent_runs.id`), `bug_report` (ref = docs path or commit) or `hand_written`. |
 | `failure_class` | `args_syntax`, `schema_validation`, `engine_loop`, `intent_mismatch`, or `drawing_defect`. |
 | `brief` | The user's text, verbatim. |
-| `expect` | An `Expectation` document, see `calc_engine/assembly/intent.py` (envelope, use, support, materials, features). |
+| `expect` | An `Expectation` document, see `homeworking/calc_engine/assembly/intent.py` (envelope, use, support, materials, features). |
 | `attempts[]` | `file`: record under `attempts/`. `expect_outcome`: outcome the replay must produce now. `errors_contain`: substrings that must occur in the replayed errors (the text the model sees). `synthetic`: reconstructed from a report, not recorded from a real run. |
-| `golden` | The correct construction: `design` (a design file in the case directory) plus `params`. Optional only for `args_syntax` and `schema_validation`. |
+| `reference` | The correct construction (the reference the engine must accept): `design` (a design file in the case directory) plus `params`. Optional only for `args_syntax` and `schema_validation`. |
 
 ## attempts/NN.json
 
@@ -61,12 +61,16 @@ are rejected. Outcomes: `accepted`, `engine_rejected`, `invalid_args`, `paramete
    the outcome the code gives today, not necessarily the one of the original run: a bug that has
    been fixed shows up as `accepted`. Unrecorded successful calls (e.g. `create_project`) are not
    replayed; a truncated `raw_args` (`...[truncated, N chars in total]`) cannot be replayed.
-2. Golden: the golden design is built and must pass `corpus.check` (all invariants),
+2. Reference: the reference design is built and must pass `corpus.check` (all invariants),
    `intent.evaluate` with `expect`, and `intent.view_consistency`.
 
 ## Adding a case
 
 Copy the `agent_runs` row's `design_attempts` entries into `attempts/NN.json` (in order), write
-the `brief` and `expect`, fix the design by hand into `golden.json`, run
+the `brief` and `expect`, fix the design by hand into `reference.json`, run
 `uv run pytest apps/api/tests/test_regressions.py -k <slug>` and set `expect_outcome` from what
 the replay really does. Never loosen `expect` to make a case pass.
+
+`task regress:capture -- <run_id>` drafts a case from a stored agent run and
+`task regress:promote -- <slug>` checks the finished draft and moves it here (the tool is
+`apps/api/devtools/homeworking_dev/capture.py`).

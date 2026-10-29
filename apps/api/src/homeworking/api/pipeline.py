@@ -4,31 +4,31 @@ from __future__ import annotations
 
 import logging
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict
 
-from construction_model.assembly import AssemblyDesign
-from construction_model.pipeline import Question, Skeleton, Spec
 from homeworking.api.deps import ContainerDep, UserDep
 from homeworking.bootstrap import Container
-from homeworking.modules.compliance.redaction import redact
-from homeworking.modules.compliance.safety import SAFETY_RULES_VERSION, check_message
-from homeworking.modules.conversations.service import AgentRun, RunStatus
-from homeworking.modules.pipeline.prompts import STAGE_PROMPT_VERSION
-from homeworking.modules.pipeline.provenance import stage_fingerprint
+from homeworking.construction_model.assembly import AssemblyDesign
+from homeworking.construction_model.pipeline import Question, Skeleton, Spec
+from homeworking.modules.conversations.service import RunStatus
+from homeworking.modules.identity.service import User
+from homeworking.modules.pipeline import runs
+from homeworking.modules.pipeline.runs import SpecBlockedError, record_stage
 from homeworking.modules.pipeline.stages import (
     ModulesRejectedError,
     SkeletonRejectedError,
+    StageFailedError,
     StageUsage,
 )
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 log = logging.getLogger("homeworking.pipeline")
 
-# Stage -> model role of the run record (see ADR-0010: small intake and modules, larger skeleton).
-_ROLES = {"intake": "fast", "skeleton": "designer", "modules": "fast", "docs": "fast"}
+# Body of the 422 when a model call fails (provider error, timeout, unusable output).
+MODEL_FAILED_MESSAGE = "Der Modellaufruf ist fehlgeschlagen. Bitte versuche es gleich noch einmal."
 
 
 class IntakeRequest(BaseModel):
@@ -73,73 +73,69 @@ class ModulesResponse(BaseModel):
 
 
 def clean_spec(spec: Spec) -> Spec:
-    """Redact personal data in every free-text field; refuse topics the safety gate blocks."""
-    cleaned = spec.model_copy(
-        update={
-            "description": redact(spec.description),
-            "usage": redact(spec.usage) if spec.usage else None,
-            "details": {k: redact(v) for k, v in spec.details.items()},
-        }
-    )
-    text = " ".join([cleaned.description, cleaned.usage or "", *cleaned.details.values()])
-    verdict = check_message(text)
-    if verdict.blocked:
-        raise HTTPException(422, {"blocked": True, "message": verdict.response})
-    return cleaned
-
-
-async def record_stage(
-    container: Container,
-    owner_id: UUID,
-    usage: StageUsage,
-    *,
-    status: RunStatus,
-    trace_id: str,
-    error: str | None = None,
-    chat_id: str | None = None,
-) -> None:
-    """Every stage run is stored, also failed ones: AI results cost money."""
-    await container.conversations.record(
-        AgentRun(
-            trace_id=trace_id,
-            owner_id=owner_id,
-            chat_id=chat_id,
-            project_id=None,
-            status=status,
-            model=usage.model,
-            prompt_version=STAGE_PROMPT_VERSION,
-            ui_messages=[],
-            usage=usage.as_dict(),
-            error=error,
-            prompt_fingerprint=await stage_fingerprint(),
-            safety_rules_version=SAFETY_RULES_VERSION,
-            model_role=_ROLES[usage.stage],
-            routing_reason=f"stage:{usage.stage}",
-            duration_ms=usage.duration_ms,
-        )
-    )
-    log.info("pipeline_stage", extra={"trace_id": trace_id, **usage.as_dict()})
+    """The brief with personal data redacted; a topic the safety gate blocks is a 422."""
+    try:
+        return runs.clean_spec(spec)
+    except SpecBlockedError as exc:
+        raise HTTPException(422, {"blocked": True, "message": exc.message}) from exc
 
 
 async def _record(
-    container: ContainerDep,
-    user: UserDep,
+    container: Container,
+    user: User,
     usage: StageUsage,
     *,
     status: RunStatus,
     trace_id: str,
     error: str | None = None,
 ) -> None:
-    await record_stage(container, user.id, usage, status=status, trace_id=trace_id, error=error)
+    await record_stage(
+        container.conversations, user.id, usage, status=status, trace_id=trace_id, error=error
+    )
+
+
+async def _fail(
+    container: Container,
+    user: User,
+    usage: StageUsage,
+    exc: Exception,
+    *,
+    trace_id: str,
+    record: bool = True,
+) -> None:
+    """Store a failed stage run. A storage problem must not hide the error the caller reports."""
+    if not record:
+        return
+    try:
+        await _record(container, user, usage, status="failed", trace_id=trace_id, error=str(exc))
+    except Exception:
+        log.exception("pipeline_run_not_stored", extra={"trace_id": trace_id})
+
+
+async def _model_failed(
+    container: Container, user: User, exc: StageFailedError, trace_id: str
+) -> HTTPException:
+    """The model call of a stage failed: store the run with its usage so far, answer 422."""
+    log.warning(
+        "pipeline_stage_failed",
+        extra={"trace_id": trace_id, "stage": exc.usage.stage},
+        exc_info=exc.cause,
+    )
+    await _fail(container, user, exc.usage, exc, trace_id=trace_id)
+    return HTTPException(422, MODEL_FAILED_MESSAGE)
 
 
 @router.post("/intake")
 async def intake(body: IntakeRequest, container: ContainerDep, user: UserDep) -> IntakeResponse:
-    result = await container.pipeline.intake(
-        clean_spec(body.spec), extract=body.extract, thorough=body.thorough
-    )
+    trace_id = uuid4().hex
+    try:
+        result = await container.pipeline.intake(
+            clean_spec(body.spec), extract=body.extract, thorough=body.thorough
+        )
+    except StageFailedError as exc:
+        raise await _model_failed(container, user, exc, trace_id) from exc
     if result.usage.requests:  # no model call, no cost, nothing to record
-        await _record(container, user, result.usage, status="completed", trace_id=uuid4().hex)
+        await _record(container, user, result.usage, status="completed", trace_id=trace_id)
     return IntakeResponse(
         spec=result.spec,
         questions=result.questions,
@@ -159,10 +155,10 @@ async def skeleton(
     try:
         result = await container.pipeline.skeleton(spec)
     except SkeletonRejectedError as exc:
-        await _record(
-            container, user, exc.usage, status="failed", trace_id=trace_id, error=str(exc)
-        )
+        await _fail(container, user, exc.usage, exc, trace_id=trace_id)
         raise HTTPException(422, exc.errors) from exc
+    except StageFailedError as exc:
+        raise await _model_failed(container, user, exc, trace_id) from exc
     await _record(container, user, result.usage, status="completed", trace_id=trace_id)
     return SkeletonResponse(skeleton=result.skeleton, usage=result.usage.as_dict())
 
@@ -177,11 +173,13 @@ async def modules(body: ModulesRequest, container: ContainerDep, user: UserDep) 
     try:
         result = await container.pipeline.modules(spec, body.skeleton)
     except ModulesRejectedError as exc:
-        if exc.usage.requests:  # a skeleton rejected up front cost nothing
-            await _record(
-                container, user, exc.usage, status="failed", trace_id=trace_id, error=str(exc)
-            )
+        # A skeleton rejected up front cost nothing.
+        await _fail(
+            container, user, exc.usage, exc, trace_id=trace_id, record=bool(exc.usage.requests)
+        )
         raise HTTPException(422, exc.errors) from exc
+    except StageFailedError as exc:
+        raise await _model_failed(container, user, exc, trace_id) from exc
     await _record(container, user, result.usage, status="completed", trace_id=trace_id)
     return ModulesResponse(
         design=result.design, repairs=len(result.repairs), usage=result.usage.as_dict()

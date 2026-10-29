@@ -7,12 +7,11 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID, uuid4
 
-import anyio
-
-from calc_engine.assembly.derive import DESIGN_VERSION
-from calc_engine.engine import ENGINE_VERSION, Engine
-from construction_model.assembly import AssemblyDesign
-from construction_model.commands import (
+from homeworking.calc_engine.assembly.derive import DESIGN_VERSION
+from homeworking.calc_engine.engine import ENGINE_VERSION, Engine
+from homeworking.concurrency import run_blocking
+from homeworking.construction_model.assembly import AssemblyDesign
+from homeworking.construction_model.commands import (
     Command,
     CommandError,
     CreateProject,
@@ -24,8 +23,8 @@ from construction_model.commands import (
     command_adapter,
     effective_commands,
 )
-from construction_model.diff import ModelDiff, diff_results
-from construction_model.model import (
+from homeworking.construction_model.diff import ModelDiff, diff_results
+from homeworking.construction_model.model import (
     ConstructionResult,
     Origin,
     ParamValue,
@@ -73,7 +72,7 @@ class ProjectService:
     async def _build(self, inputs: ProjectInputs) -> ConstructionResult:
         """Run the engine in a worker thread: it is CPU-bound and would block the event loop
         (and with it every other request and agent stream) for its whole duration."""
-        return await anyio.to_thread.run_sync(self._engine.build, inputs)
+        return await run_blocking(self._engine.build, inputs)
 
     @property
     def engine(self) -> Engine:

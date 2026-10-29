@@ -10,7 +10,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import anyio
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import TypeAdapter
 from pydantic_ai import Agent, AgentRunResult
 from pydantic_ai.models import Model
@@ -20,16 +20,17 @@ from pydantic_ai.ui.vercel_ai.response_types import BaseChunk, ErrorChunk
 from pydantic_ai.usage import RunUsage, UsageLimits
 
 from homeworking.api.deps import ContainerDep, UserDep
-from homeworking.api.planner import ChatPlanner
-from homeworking.modules.agent.offline import fixed_text_model
+from homeworking.bootstrap import Container
+from homeworking.modules.agent.deps import AgentDeps
+from homeworking.modules.agent.planner import ChatPlanner
 from homeworking.modules.agent.prompts import PROMPT_VERSION
 from homeworking.modules.agent.provenance import prompt_fingerprint
 from homeworking.modules.agent.request_shape import failed_request
 from homeworking.modules.agent.routing import route
-from homeworking.modules.agent.tools import AgentDeps
 from homeworking.modules.compliance.redaction import redact
 from homeworking.modules.compliance.safety import SAFETY_RULES_VERSION, check_message
 from homeworking.modules.conversations.service import AgentRun, RunStatus
+from homeworking.modules.llm.fixed import fixed_text_model
 
 router = APIRouter(prefix="/api", tags=["agent"])
 log = logging.getLogger("homeworking.agent")
@@ -106,37 +107,82 @@ def _redact_user_messages(run_input: Any) -> str:
     return last_text
 
 
+async def _store(container: Container, run: AgentRun) -> None:
+    """Store a run; a storage problem is logged and never hides the turn's own outcome."""
+    with anyio.CancelScope(shield=True):
+        try:
+            await container.conversations.record(run)
+        except Exception:
+            log.exception("agent_run_not_stored", extra={"trace_id": run.trace_id})
+
+
+def _parse_body(body_bytes: bytes) -> tuple[dict[str, Any], Any]:
+    """The request as a dict and as the adapter's run input; anything else is a client error."""
+    try:
+        body = json.loads(body_bytes or b"{}")
+        if not isinstance(body, dict):
+            raise ValueError("body is not an object")
+        return body, VercelAIAdapter.build_run_input(body_bytes)
+    except ValueError as exc:  # JSONDecodeError and pydantic's ValidationError are ValueErrors
+        raise HTTPException(
+            422, "Die Chat-Anfrage ist ungültig (erwartet: JSON im Format der AI-SDK-Nachrichten)."
+        ) from exc
+
+
 @router.post("/chat", response_class=Response)
 async def chat(request: Request, container: ContainerDep, user: UserDep) -> Response:
-    body_bytes = await request.body()
-    body = json.loads(body_bytes or b"{}")
-    run_input = VercelAIAdapter.build_run_input(body_bytes)
-
-    project_id = _project_id(body)
-    if project_id is not None:
-        try:
-            await container.projects.get(user.id, project_id)
-        except LookupError:
-            project_id = None
-    chat_id = str(body.get("id") or "")[:128] or None
-
-    history = await container.conversations.history(user.id, chat_id=chat_id, project_id=project_id)
-    if history:
-        # Stored runs are the trusted history; of the client's messages only the new one counts
-        # (older clients still send the whole chat, which would duplicate it).
-        run_input.messages = run_input.messages[-1:]
+    body, run_input = _parse_body(await request.body())
+    # Before anything can fail: a stored run must never carry the customer's unredacted text.
     last_text = _redact_user_messages(run_input)
 
     trace_id = uuid4().hex
-    verdict = check_message(last_text)
-    agent: Agent[AgentDeps, str] = container.agent
-    routed = route(last_text, has_project=project_id is not None)
-    model: Model | None = container.models.for_role(routed.role)
-    model_name = model.model_name if model is not None else ""
-    if verdict.blocked and verdict.response:
-        agent = Agent(fixed_text_model(verdict.response), deps_type=AgentDeps)
-        model, model_name = None, "safety"
-    fingerprint = await prompt_fingerprint()
+    started = time.perf_counter()
+    project_id = _project_id(body)
+    chat_id = str(body.get("id") or "")[:128] or None
+    try:
+        if project_id is not None:
+            try:
+                await container.projects.get(user.id, project_id)
+            except LookupError:
+                project_id = None
+
+        history = await container.conversations.history(
+            user.id, chat_id=chat_id, project_id=project_id
+        )
+        if history:
+            # Stored runs are the trusted history; of the client's messages only the new one
+            # counts (older clients still send the whole chat, which would duplicate it).
+            run_input.messages = run_input.messages[-1:]
+
+        verdict = check_message(last_text)
+        agent: Agent[AgentDeps, str] = container.agent
+        routed = route(last_text, has_project=project_id is not None)
+        model: Model | None = container.models.for_role(routed.role)
+        model_name = model.model_name if model is not None else ""
+        if verdict.blocked and verdict.response:
+            agent = Agent(fixed_text_model(verdict.response), deps_type=AgentDeps)
+            model, model_name = None, "safety"
+        fingerprint = await prompt_fingerprint()
+    except Exception as exc:
+        # Every turn is stored, also one that failed before the model was called.
+        await _store(
+            container,
+            AgentRun(
+                trace_id=trace_id,
+                owner_id=user.id,
+                chat_id=chat_id,
+                project_id=project_id,
+                status="failed",
+                model="",
+                prompt_version=PROMPT_VERSION,
+                ui_messages=_turn_messages(run_input, None, "failed"),
+                usage=_usage(None, []),
+                error=f"{type(exc).__name__}: {exc}",
+                safety_rules_version=SAFETY_RULES_VERSION,
+                duration_ms=round((time.perf_counter() - started) * 1000),
+            ),
+        )
+        raise
 
     log.info(
         "agent_turn",
@@ -162,8 +208,10 @@ async def chat(request: Request, container: ContainerDep, user: UserDep) -> Resp
         projects=container.projects,
         project_id=project_id,
         trace_id=trace_id,
-        planner=ChatPlanner(container, user.id, chat_id, last_text),
-        save_design_creates=container.settings.llm_mode == "test",
+        planner=ChatPlanner(
+            container.pipeline, container.conversations, user.id, chat_id, last_text
+        ),
+        save_design_creates=container.settings.save_design_creates,
     )
     limits = UsageLimits(
         request_limit=container.settings.agent_request_limit,
@@ -173,7 +221,6 @@ async def chat(request: Request, container: ContainerDep, user: UserDep) -> Resp
 
     async def stream() -> AsyncIterator[BaseChunk]:
         error: str | None = None
-        started = time.perf_counter()
         try:
             async for chunk in adapter.run_stream(
                 message_history=history,
@@ -230,11 +277,7 @@ async def chat(request: Request, container: ContainerDep, user: UserDep) -> Resp
                     "cache_read_tokens": usage.get("cache_read_tokens"),
                 },
             )
-            with anyio.CancelScope(shield=True):
-                try:
-                    await container.conversations.record(run)
-                except Exception:
-                    log.exception("agent_run_not_stored", extra={"trace_id": trace_id})
+            await _store(container, run)
 
     return adapter.streaming_response(stream())
 

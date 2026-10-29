@@ -1,6 +1,6 @@
 # Architekturentscheidungen (ADRs)
 
-Der gültige Gesamtstand steht in [ARCHITEKTUR.md](../ARCHITEKTUR.md). ADRs halten fest, warum
+Der gültige Gesamtstand steht in [ARCHITEKTUR.md](../ARCHITEKTUR.md), der Ist-Stand der Pakete und Stacks in [STRUKTUR.md](../STRUKTUR.md). ADRs halten fest, warum
 eine Entscheidung so gefallen ist. Neue ADRs werden fortlaufend nummeriert
 (`NNNN-titel-in-kebab-case.md`, Deutsch, Abschnitte Kontext · Entscheidung · Konsequenzen) und
 anschließend in `ARCHITEKTUR.md` eingearbeitet.
@@ -9,8 +9,13 @@ anschließend in `ARCHITEKTUR.md` eingearbeitet.
 
 | Nr. | Titel | Datum |
 |---|---|---|
-| [0009](0009-neuanfang-go-backend-vite-spa.md) | Neuanfang mit Go-Backend, Vite-SPA und BDD-Szenarien | 2026-10-16 |
 | [0010](0010-gestufte-entwurfspipeline.md) | Gestufte Entwurfspipeline statt eines großen Aufrufs | 2026-10-28 |
+
+## Nicht umgesetzt
+
+| Nr. | Titel | Datum | Hinweis |
+|---|---|---|---|
+| [0009](0009-neuanfang-go-backend-vite-spa.md) | Neuanfang mit Go-Backend, Vite-SPA und BDD-Szenarien | 2026-10-16 | Go und Vite am 2026-10-29 entfernt; nur die BDD-Szenarien (`tests/`) blieben. Ersatz-ADR steht aus. |
 
 ## Archiv (in ARCHITEKTUR.md eingearbeitet)
 

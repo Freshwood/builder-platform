@@ -1,12 +1,15 @@
 import json
+from pathlib import Path
 
 import httpx
 import pytest
 from sqlalchemy import select
 
 from homeworking.db.schema import AgentRunRow
+from homeworking.main import create_app
 from homeworking.modules.agent.offline import ToolCall, decide_for_user_text
 from homeworking.modules.pipeline.stages import SkeletonRejectedError, StageUsage
+from homeworking.settings import Settings
 
 
 def _message(text: str, message_id: str = "m1") -> dict:  # type: ignore[type-arg]
@@ -192,8 +195,9 @@ async def test_a_failing_brief_is_not_planned_again_and_again() -> None:
     from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
     from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-    from construction_model.pipeline import Spec
-    from homeworking.modules.agent.tools import AgentDeps, PlanFailedError, build_agent
+    from homeworking.construction_model.pipeline import Spec
+    from homeworking.modules.agent.deps import AgentDeps, PlanFailedError
+    from homeworking.modules.agent.tools import build_agent
 
     runs: list[Spec] = []
 
@@ -231,8 +235,9 @@ async def test_save_design_cannot_create_when_the_pipeline_owns_new_designs() ->
     from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
     from pydantic_ai.models.function import AgentInfo, FunctionModel
 
+    from homeworking.modules.agent.deps import AgentDeps
     from homeworking.modules.agent.offline import offline_designs
-    from homeworking.modules.agent.tools import AgentDeps, build_agent
+    from homeworking.modules.agent.tools import build_agent
 
     shelf = next(d for d in offline_designs() if d.key == "shelf")
     calls = {"n": 0}
@@ -258,11 +263,17 @@ async def test_save_design_cannot_create_when_the_pipeline_owns_new_designs() ->
 
 
 async def test_the_customers_wording_reaches_the_pipeline(client: httpx.AsyncClient) -> None:
-    from construction_model.pipeline import Spec
-    from homeworking.api.planner import ChatPlanner
+    from homeworking.construction_model.pipeline import Spec
+    from homeworking.modules.agent.planner import ChatPlanner
 
     container = client._transport.app.state.container  # type: ignore[attr-defined]
-    planner = ChatPlanner(container, None, None, "Schrank aus Leimholz mit 3 Fächern")  # type: ignore[arg-type]
+    planner = ChatPlanner(
+        container.pipeline,
+        container.conversations,
+        None,  # type: ignore[arg-type]
+        None,
+        "Schrank aus Leimholz mit 3 Fächern",
+    )
     spec = Spec(description="Schrank")
     merged = planner._with_wording(spec)
     assert merged.description == "Schrank\nWortlaut des Kunden: Schrank aus Leimholz mit 3 Fächern"
@@ -270,3 +281,20 @@ async def test_the_customers_wording_reaches_the_pipeline(client: httpx.AsyncCli
     assert planner._with_wording(Spec(description="Schrank aus Leimholz mit 3 Fächern")) == Spec(
         description="Schrank aus Leimholz mit 3 Fächern"
     )
+
+
+async def test_the_setting_decides_whether_save_design_may_create(tmp_path: Path) -> None:
+    """The offline model drafts a raised bed with save_design; with creation switched off by the
+    setting the agent is sent to plan_design instead and no project appears."""
+    settings = Settings(
+        environment="test",
+        database_url=f"sqlite+aiosqlite:///{tmp_path / 'off.db'}",
+        llm_mode="test",
+        agent_save_design_creates=False,
+    )
+    app = create_app(settings, create_schema=True)
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            await _chat(client, "Ich möchte ein Hochbeet 2 × 1 m, 80 cm hoch, aus Lärche bauen.")
+            assert (await client.get("/api/projects")).json() == []

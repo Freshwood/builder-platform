@@ -1,10 +1,11 @@
 "use client";
 
-import type { VersionEntry } from "@homeworking/api-client";
+import type { VersionEntry } from "@/api";
 import clsx from "clsx";
 
 import { Icon, Spinner } from "@/components/ui";
-import { formatEur, useVersions } from "@/lib/api";
+import { useVersions } from "@/lib/api";
+import { formatEur } from "@/lib/prices";
 
 const TIME = new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short" });
 

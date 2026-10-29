@@ -36,8 +36,8 @@
       "synthetic": false
     }
   ],
-  "golden": {
-    "design": "golden.json",
+  "reference": {
+    "design": "reference.json",
     "params": {
       "length_mm": 2000,
       "deck_boards": 8,
@@ -45,5 +45,5 @@
       "surface": "boards"
     }
   },
-  "notes": "Echter Lauf (Modell upstage/solar-pro4, Prompt 2026-10-10.1, Rolle designer). Der erste save_design wurde von der Engine abgelehnt: die Rahmenleisten sind 70 mm breit, 'lumber_spruce_44x69' hat aber den Querschnitt 44 x 69 mm. Danach schlugen zwei weitere Modellanfragen an, die vierte wurde vom Provider mit HTTP 400 abgelehnt (Missing required parameter 'messages[6].content'). Der Lauf endete als failed ohne Projekt. Der Provider-Fehler ist NICHT als Fall abgedeckt: die gesendeten Nachrichten wurden bei fehlgeschlagenen Läufen nicht gespeichert (model_messages ist leer), die Ursache ist ungeklärt. Golden und expect sind die des Falls podium_kids_catwalk (derselbe Brief)."
+  "notes": "Echter Lauf (Modell upstage/solar-pro4, Prompt 2026-10-10.1, Rolle designer). Der erste save_design wurde von der Engine abgelehnt: die Rahmenleisten sind 70 mm breit, 'lumber_spruce_44x69' hat aber den Querschnitt 44 x 69 mm. Danach schlugen zwei weitere Modellanfragen an, die vierte wurde vom Provider mit HTTP 400 abgelehnt (Missing required parameter 'messages[6].content'). Der Lauf endete als failed ohne Projekt. Der Provider-Fehler ist NICHT als Fall abgedeckt: die gesendeten Nachrichten wurden bei fehlgeschlagenen Läufen nicht gespeichert (model_messages ist leer), die Ursache ist ungeklärt. Referenz und expect sind die des Falls podium_kids_catwalk (derselbe Brief)."
 }

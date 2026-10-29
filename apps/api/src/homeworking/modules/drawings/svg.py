@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from xml.sax.saxutils import escape, quoteattr
 
-from construction_model.drawing import (
+from homeworking.construction_model.drawing import (
     Callout,
     Dimension,
     Drawing,

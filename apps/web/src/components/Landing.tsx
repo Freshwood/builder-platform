@@ -4,8 +4,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { ProjectBrief } from "@/components/ProjectBrief";
-import { ProjectThumb } from "@/components/ProjectList";
-import { Icon, relativeTime, type IconName } from "@/components/ui";
+import { ProjectCard } from "@/components/ProjectCard";
+import { Icon, type IconName } from "@/components/ui";
 import { useProjects } from "@/lib/api";
 import { EMPTY_BRIEF, type Brief } from "@/lib/brief";
 
@@ -198,15 +198,13 @@ function MeasuringRule() {
   );
 }
 
+/** The last projects as shortcuts; their loading and failing is visible, never silent. */
 function RecentProjects() {
-  const { data } = useProjects();
-  const recent = (data ?? [])
-    .slice()
-    .sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? ""))
-    .slice(0, 3);
-  if (!recent.length) return null;
+  const { data, isLoading, isError, refetch } = useProjects();
+  const recent = (data ?? []).slice(0, 3);
+  if (!isLoading && !isError && !recent.length) return null;
   return (
-    <section aria-labelledby="recent-heading" className="mt-12">
+    <section aria-labelledby="recent-heading" className="mt-12" aria-busy={isLoading}>
       <div className="mb-3 flex items-baseline justify-between">
         <h2 id="recent-heading" className="text-xl font-bold">
           Weiter planen
@@ -215,26 +213,30 @@ function RecentProjects() {
           Alle Projekte
         </Link>
       </div>
-      <ul className="grid gap-3 sm:grid-cols-3">
-        {recent.map((project) => (
-          <li key={project.id}>
-            <Link
-              href={`/projects/${project.id}`}
-              className="flex items-center gap-3 rounded-lg border border-border bg-surface p-2 pr-3 transition hover:border-text/40"
-            >
-              <ProjectThumb id={project.id} className="h-14 w-14 shrink-0 rounded-md" />
-              <span className="min-w-0">
-                <span className="block truncate font-semibold">{project.title}</span>
-                {project.updated_at && (
-                  <span className="block text-xs text-muted">
-                    {relativeTime(project.updated_at)}
-                  </span>
-                )}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {isError ? (
+        <p role="status" className="text-sm text-muted">
+          Deine letzten Projekte konnten nicht geladen werden.{" "}
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="font-medium text-accent-strong underline underline-offset-2"
+          >
+            Erneut versuchen
+          </button>
+        </p>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-3">
+          {isLoading
+            ? [0, 1, 2].map((i) => (
+                <li key={i} className="h-[4.5rem] animate-pulse rounded-lg bg-surface-muted" />
+              ))
+            : recent.map((project) => (
+                <li key={project.id}>
+                  <ProjectCard project={project} variant="compact" />
+                </li>
+              ))}
+        </ul>
+      )}
     </section>
   );
 }

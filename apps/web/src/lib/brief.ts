@@ -143,9 +143,3 @@ export function briefMessage(brief: Brief): string {
   const lines = facts.map(([label, value]) => `- ${label}: ${value}`);
   return `${description}\n\nAngaben:\n${lines.join("\n")}`;
 }
-
-export const BRIEF_FIELDS = 9;
-
-export function briefCompleteness(brief: Brief): number {
-  return briefFacts(brief).length;
-}

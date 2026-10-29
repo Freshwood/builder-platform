@@ -5,18 +5,19 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from design_fixtures import fixture_design
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.tools import ToolDefinition
 
+from design_fixtures import fixture_design
 from homeworking.bootstrap import build_container
 from homeworking.modules.agent.args import (
     hoist_nested_arguments,
     parse_json,
     quote_bare_expressions,
 )
-from homeworking.modules.agent.tools import AgentDeps, build_agent
+from homeworking.modules.agent.deps import AgentDeps
+from homeworking.modules.agent.tools import build_agent
 from homeworking.settings import Settings
 
 FIXTURES = Path(__file__).parent / "fixtures" / "tool_args"

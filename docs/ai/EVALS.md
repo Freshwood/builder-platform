@@ -9,7 +9,7 @@ checks what the agent built. It costs money, takes minutes and is never part of 
 | Tool | Checks | Needs an LLM | Cost | Where |
 |---|---|---|---|---|
 | `task bench` | prompt/tool size and repair-round cost (estimated tokens) | no | none | on every prompt change |
-| `task test` (`test_regressions.py`) | tools and engine give the recorded outcome, the golden design builds and meets the intent | no | none | CI |
+| `task test` (`test_regressions.py`) | tools and engine give the recorded outcome, the reference design builds and meets the intent | no | none | CI |
 | `task eval:live` | a real model ends with a project that meets the intent of the brief | **yes** | cents to a few USD | before switching models, after a prompt change |
 
 The offline tests prove the machinery is correct; the live eval measures the model.

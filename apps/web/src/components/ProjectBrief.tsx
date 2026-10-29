@@ -1,7 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 
 import { AutoTextarea } from "@/components/AutoTextarea";
 import { Chips, NumberInput, inputClass } from "@/components/BriefControls";
@@ -21,8 +28,8 @@ import {
   type Brief,
   type Option,
 } from "@/lib/brief";
-import { askIntake } from "@/lib/intake";
-import type { Question } from "@homeworking/api-client";
+import { askIntake, type Intake } from "@/lib/intake";
+import type { Question } from "@/api";
 
 /** Optional details as pills; each one opens a small panel below the prompt. */
 type DetailKey = "place" | "size" | "wood" | "finish" | "budget" | "skills" | "usage";
@@ -215,12 +222,29 @@ export function ProjectBrief({
   // Open questions of the intake step; null = not asked (yet).
   const [asking, setAsking] = useState<Question[] | null>(null);
   const [checking, setChecking] = useState(false);
+  // Number of the latest intake check. An edit (or leaving the form) bumps it, which makes the
+  // answer of a check still in flight obsolete: it belongs to a brief that no longer exists.
+  const latestCheck = useRef(0);
   const canSend = brief.description.trim().length > 0 && !busy && !checking;
+
+  useEffect(
+    () => () => {
+      latestCheck.current += 1;
+    },
+    [],
+  );
+
+  /** Every edit of the brief goes through here so that it cancels a pending intake check. */
+  function change(next: Brief) {
+    latestCheck.current += 1;
+    setChecking(false);
+    onChange(next);
+  }
 
   function set<K extends keyof Brief>(key: K, value: Brief[K]) {
     // A new description invalidates the questions asked about the old one.
     if (key === "description") setAsking(null);
-    onChange({ ...brief, [key]: value });
+    change({ ...brief, [key]: value });
   }
 
   function send(final: Brief) {
@@ -236,9 +260,16 @@ export function ProjectBrief({
     if (!canSend) return;
     // Second round (questions shown): the start button continues with what is filled in.
     if (asking) return send(brief);
+    const check = ++latestCheck.current;
     setChecking(true);
-    const result = await askIntake(brief);
-    setChecking(false);
+    let result: Intake;
+    try {
+      result = await askIntake(brief);
+    } finally {
+      if (check === latestCheck.current) setChecking(false);
+    }
+    // Edited in the meantime: the questions and the filled-in facts would overwrite newer input.
+    if (check !== latestCheck.current) return;
     if (!result.questions.length) return send(result.brief);
     onChange(result.brief);
     setAsking(result.questions);
@@ -309,7 +340,7 @@ export function ProjectBrief({
                 {value && (
                   <button
                     type="button"
-                    onClick={() => onChange(clearDetail(brief, detail.key))}
+                    onClick={() => change(clearDetail(brief, detail.key))}
                     className="mr-1 rounded-full p-0.5 hover:bg-accent/15"
                     aria-label={`${detail.label} entfernen`}
                   >
@@ -340,7 +371,7 @@ export function ProjectBrief({
         <IntakeQuestions
           questions={asking}
           brief={brief}
-          onChange={onChange}
+          onChange={change}
           onContinue={() => send(brief)}
         />
       )}

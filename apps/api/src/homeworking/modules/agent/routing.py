@@ -12,11 +12,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Literal
 
-from homeworking.modules.agent.offline import _DELTA, _VARIANTS
-
-Role = Literal["designer", "fast"]
+from homeworking.modules.agent.triggers import DELTA, VARIANTS
+from homeworking.modules.llm.model import Role
 
 ROUTING_VERSION = "2"
 
@@ -55,11 +53,11 @@ def route(text: str, *, has_project: bool) -> Route:
     if has_project:
         if _UNDO.search(lowered):
             return Route("fast", "undo")
-        if _DELTA.search(lowered):
+        if DELTA.search(lowered):
             return Route("fast", "relative_change")
         if _PRICE.search(lowered):
             return Route("fast", "price")
-        if any(word in lowered for word in _VARIANTS) and "variante" in lowered:
+        if any(word in lowered for word in VARIANTS) and "variante" in lowered:
             return Route("fast", "variant")
         if _PARAMS.search(lowered):
             return Route("fast", "parameters")

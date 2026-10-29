@@ -73,8 +73,8 @@
       ]
     }
   ],
-  "golden": {
-    "design": "golden.json",
+  "reference": {
+    "design": "reference.json",
     "params": {
       "length_mm": 2000,
       "deck_boards": 8,
@@ -82,5 +82,5 @@
       "surface": "boards"
     }
   },
-  "notes": "Echter Lauf (Modell upstage/solar-pro4, Prompt 2026-10-10.1, Rolle designer, trace c1ee3d8ab1b7482fb6b80cf94fe491e9). Versuch 01: die Teileliste endete mit '}}' statt '}]' (dazu ein Hardware-Eintrag in parts); balance_brackets verwarf die Klammer, statt sie zu ']' zu tauschen, das Modell sah 'Kein gültiges JSON'. Seit der Reparatur in modules/agent/args.py (Fixture tests/fixtures/tool_args/podest_kinder_wrong_closer.txt) wird das JSON gelesen und der Aufruf nur noch am falschen Teil abgelehnt. Versuche 02–06 sind berechtigte Engine-Ablehnungen (Pfosten durchdringen Platte bzw. Streben, Oberrahmen nur mit Kantenkontakt, half_lap zwischen Teilen ohne Berührung); das Modell konnte die Geometrie nicht reparieren, nach 6 Versuchen brach der Lauf am total_tokens_limit 200000 ab (235954). Kein Engine-Fehler; offen bleibt eine Podest-Vorlage, damit der Brief ohne freie Geometrie auskommt. Golden und expect wie podium_kids_catwalk, ergänzt um die Höhe 30–50 cm."
+  "notes": "Echter Lauf (Modell upstage/solar-pro4, Prompt 2026-10-10.1, Rolle designer, trace c1ee3d8ab1b7482fb6b80cf94fe491e9). Versuch 01: die Teileliste endete mit '}}' statt '}]' (dazu ein Hardware-Eintrag in parts); balance_brackets verwarf die Klammer, statt sie zu ']' zu tauschen, das Modell sah 'Kein gültiges JSON'. Seit der Reparatur in modules/agent/args.py (Fixture tests/fixtures/tool_args/podest_kinder_wrong_closer.txt) wird das JSON gelesen und der Aufruf nur noch am falschen Teil abgelehnt. Versuche 02–06 sind berechtigte Engine-Ablehnungen (Pfosten durchdringen Platte bzw. Streben, Oberrahmen nur mit Kantenkontakt, half_lap zwischen Teilen ohne Berührung); das Modell konnte die Geometrie nicht reparieren, nach 6 Versuchen brach der Lauf am total_tokens_limit 200000 ab (235954). Kein Engine-Fehler; offen bleibt eine Podest-Vorlage, damit der Brief ohne freie Geometrie auskommt. Referenz und expect wie podium_kids_catwalk, ergänzt um die Höhe 30–50 cm."
 }

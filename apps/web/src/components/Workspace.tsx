@@ -1,20 +1,19 @@
 "use client";
 
-import { projectChat } from "@homeworking/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import type { UIMessage } from "ai";
 import clsx from "clsx";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { PlanningProgress, PlanningStopped } from "@/components/Activity";
 import { Chat } from "@/components/Chat";
 import { Landing } from "@/components/Landing";
 import { ProjectPanel } from "@/components/ProjectPanel";
 import { Icon, Spinner } from "@/components/ui";
-import { projectKey } from "@/lib/api";
+import { invalidateProject } from "@/lib/api";
 import { messageBlocks } from "@/lib/activity";
-import { assistantErrorText, messageText, useAssistant } from "@/lib/assistant";
+import { assistantErrorText, messageText, useAssistant, useStoredChat } from "@/lib/assistant";
 import { EMPTY_BRIEF, type Brief } from "@/lib/brief";
+import { isTyping, useGlobalKey } from "@/lib/keys";
 
 type MobileView = "chat" | "project";
 
@@ -28,8 +27,7 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
     (id: string) => {
       setProjectId(id);
       setMobileView("project");
-      void queryClient.invalidateQueries({ queryKey: projectKey(id) });
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      invalidateProject(queryClient, id);
       // Keep the chat mounted but make the URL shareable/bookmarkable.
       if (window.location.pathname !== `/projects/${id}`) {
         window.history.replaceState(null, "", `/projects/${id}`);
@@ -42,16 +40,8 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
   const { restore } = assistant;
 
   // An opened project brings its stored conversation along (it survives reloads).
-  useEffect(() => {
-    if (!initialProjectId) return;
-    let cancelled = false;
-    void projectChat({ path: { project_id: initialProjectId } }).then(({ data }) => {
-      if (!cancelled && data?.length) restore(data as unknown as UIMessage[]);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [initialProjectId, restore]);
+  const history = useStoredChat(initialProjectId, restore);
+
   const lastRequest = [...assistant.messages].reverse().find((m) => m.role === "user");
   const lastMessage = assistant.messages.at(-1);
   const lastReply = lastMessage?.role === "assistant" ? messageText(lastMessage) : "";
@@ -63,21 +53,15 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
     : undefined;
 
   // "/" jumps into the chat from anywhere, like in most chat and search apps.
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
-      if (event.key !== "/" || target?.closest("input, textarea, select, [contenteditable]"))
-        return;
-      const input =
-        document.getElementById("chat-input") ?? document.getElementById("brief-description");
-      if (!input) return;
-      event.preventDefault();
-      setMobileView("chat");
-      input.focus();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  useGlobalKey((event) => {
+    if (event.key !== "/" || isTyping(event.target)) return;
+    const input =
+      document.getElementById("chat-input") ?? document.getElementById("brief-description");
+    if (!input) return;
+    event.preventDefault();
+    setMobileView("chat");
+    input.focus();
+  });
 
   if (!projectId && assistant.messages.length === 0) {
     return (
@@ -102,7 +86,12 @@ export function Workspace({ initialProjectId = null }: { initialProjectId?: stri
           mobileView === "chat" ? "block" : "hidden",
         )}
       >
-        <Chat assistant={assistant} projectId={projectId} />
+        <Chat
+          assistant={assistant}
+          projectId={projectId}
+          historyFailed={history.error}
+          onReloadHistory={history.reload}
+        />
       </aside>
 
       <div

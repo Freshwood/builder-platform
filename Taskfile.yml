@@ -34,7 +34,7 @@ tasks:
   install:py:
     run: once
     desc: Install Python dependencies with uv
-    sources: [uv.lock, pyproject.toml, apps/api/pyproject.toml, "packages/*/pyproject.toml"]
+    sources: [uv.lock, pyproject.toml, apps/api/pyproject.toml]
     generates: ['{{.UV_PROJECT_ENVIRONMENT | default ".venv"}}/pyvenv.cfg']
     cmds:
       - uv sync --locked
@@ -42,7 +42,7 @@ tasks:
   install:web:
     run: once
     desc: Install Node dependencies with pnpm
-    sources: [pnpm-lock.yaml, package.json, "apps/*/package.json", "packages/*/package.json"]
+    sources: [pnpm-lock.yaml, package.json, apps/web/package.json]
     generates: [node_modules/.modules.yaml]
     cmds:
       - "{{.PNPM}} install --frozen-lockfile"
@@ -90,8 +90,6 @@ tasks:
       - >-
         uv run uvicorn homeworking.main:app --reload --port {{.API_PORT}}
         --reload-dir apps/api/src
-        --reload-dir packages/construction-model/src
-        --reload-dir packages/calc-engine/src
 
   dev:web:
     desc: Run only the web app
@@ -135,11 +133,12 @@ tasks:
       - uv run lint-imports
 
   check:web:
-    desc: eslint and tsc
+    desc: eslint, tsc and the Vitest unit tests of the web app
     deps: [install:web]
     cmds:
       - "{{.PNPM}} -r lint"
       - "{{.PNPM}} -r typecheck"
+      - "{{.PNPM}} -r test"
 
   fmt:
     desc: Format and auto-fix Python and web code
@@ -153,6 +152,12 @@ tasks:
     deps: [install:py]
     cmds:
       - uv run pytest {{.CLI_ARGS}}
+
+  test:web:
+    desc: "Vitest unit tests of the web app (src/lib). Watch mode: pnpm --filter web test:watch"
+    deps: [install:web]
+    cmds:
+      - "{{.PNPM}} --filter web test {{.CLI_ARGS}}"
 
   test:pg:
     desc: Python tests including PostgreSQL integration tests
@@ -168,7 +173,7 @@ tasks:
     env:
       PYDANTIC_AI_NO_BANNER: "1"
     cmds:
-      - uv run python -m homeworking.modules.agent.bench {{.CLI_ARGS}}
+      - uv run python -m homeworking_dev.bench {{.CLI_ARGS}}
 
   prompt:lock:
     desc: Record the prompt fingerprint after a prompt/tool change (needs a new PROMPT_VERSION)
@@ -185,9 +190,9 @@ tasks:
     cmds:
       - >-
         uv run pytest apps/api/tests/test_regressions.py
-        packages/calc-engine/tests/test_corpus.py
-        packages/calc-engine/tests/test_corpus_views.py
-        packages/calc-engine/tests/test_intent.py {{.CLI_ARGS}}
+        apps/api/tests/calc_engine/test_corpus.py
+        apps/api/tests/calc_engine/test_corpus_views.py
+        apps/api/tests/calc_engine/test_intent.py {{.CLI_ARGS}}
 
   regress:capture:
     desc: "Draft a regression case from a failed agent run: task regress:capture -- <run_id>"
@@ -195,7 +200,7 @@ tasks:
     env:
       PYDANTIC_AI_NO_BANNER: "1"
     cmds:
-      - uv run python -m homeworking.modules.agent.capture {{.CLI_ARGS}}
+      - uv run python -m homeworking_dev.capture {{.CLI_ARGS}}
 
   regress:promote:
     desc: "Check a finished draft and make it a case: task regress:promote -- <slug>"
@@ -203,7 +208,7 @@ tasks:
     env:
       PYDANTIC_AI_NO_BANNER: "1"
     cmds:
-      - uv run python -m homeworking.modules.agent.capture promote {{.CLI_ARGS}}
+      - uv run python -m homeworking_dev.capture promote {{.CLI_ARGS}}
 
   eval:live:
     desc: Live LLM evaluation of the regression briefs (needs LLM_MODE=openai and a key; costs money; not part of CI)
@@ -211,16 +216,16 @@ tasks:
     env:
       PYDANTIC_AI_NO_BANNER: "1"
     cmds:
-      - uv run python -m homeworking.modules.agent.live_eval {{.CLI_ARGS}}
+      - uv run python -m homeworking_dev.live_eval {{.CLI_ARGS}}
 
   pipeline:live:
     desc: One brief through the pipeline stages with the real models, tokens and errors per stage (costs money; not part of CI)
     deps: [install:py]
     cmds:
-      - uv run python -m homeworking.modules.pipeline.live {{.CLI_ARGS}}
+      - uv run python -m homeworking_dev.pipeline_live {{.CLI_ARGS}}
 
   e2e:
-    desc: Browser end-to-end tests with accessibility checks (offline LLM)
+    desc: "Browser tests: end-to-end specs and Gherkin scenarios with accessibility checks (offline LLM)"
     deps: [install:py, install:web]
     cmds:
       - mkdir -p var
@@ -233,21 +238,41 @@ tasks:
     cmds:
       - "{{.PNPM}} --filter web exec playwright install --with-deps chromium --only-shell"
 
+  bdd:
+    desc: "All Gherkin scenarios: API (pytest-bdd) and browser (playwright-bdd)"
+    cmds:
+      - task: bdd:backend
+      - task: bdd:frontend
+
+  bdd:backend:
+    desc: "Gherkin scenarios against the API, in-process (offline LLM). Filter: task bdd:backend -- -k Regal"
+    deps: [install:py]
+    cmds:
+      - uv run pytest apps/api/tests/bdd {{.CLI_ARGS}}
+
+  bdd:frontend:
+    desc: "Gherkin scenarios in the browser (offline LLM). Filter: task bdd:frontend -- --grep Regal"
+    deps: [install:py, install:web]
+    cmds:
+      - mkdir -p var
+      - rm -f var/e2e.db
+      - "{{.PNPM}} --filter web test:bdd {{.CLI_ARGS}}"
+
   # --- API client ----------------------------------------------------------------------------
 
   openapi:
     desc: Export OpenAPI schema and regenerate the TypeScript client (only when the API changed)
     deps: [install:py, install:web]
-    sources: ["apps/api/src/**/*.py", "packages/*/src/**/*.py", packages/api-client/openapi-ts.config.ts]
-    generates: [packages/api-client/openapi.json, "packages/api-client/src/gen/**/*.ts"]
+    sources: ["apps/api/src/**/*.py", apps/web/openapi-ts.config.ts]
+    generates: [apps/web/openapi.json, "apps/web/src/api/gen/**/*.ts"]
     cmds:
-      - uv run python -m homeworking.openapi > packages/api-client/openapi.json
-      - "{{.PNPM}} --filter @homeworking/api-client generate"
+      - uv run python -m homeworking.openapi > apps/web/openapi.json
+      - "{{.PNPM}} --filter web generate"
 
   openapi:check:
     desc: Fail if the committed OpenAPI schema is out of date (as in CI)
     cmds:
-      - uv run python -m homeworking.openapi | diff -u packages/api-client/openapi.json -
+      - uv run python -m homeworking.openapi | diff -u apps/web/openapi.json -
 
   # --- Aggregates ----------------------------------------------------------------------------
 
@@ -261,4 +286,4 @@ tasks:
   clean:
     desc: Remove caches and build output (keeps .venv and node_modules)
     cmds:
-      - rm -rf .mypy_cache .ruff_cache .pytest_cache .import_linter_cache .hypothesis .task apps/web/.next apps/web/test-results var/e2e.db
+      - rm -rf apps/web/tests/bdd/.features-gen var/bdd.db .mypy_cache .ruff_cache .pytest_cache .import_linter_cache .hypothesis .task apps/web/.next apps/web/test-results var/e2e.db

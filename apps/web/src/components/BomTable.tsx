@@ -1,6 +1,6 @@
 "use client";
 
-import type { BomLine, ProjectModel } from "@homeworking/api-client";
+import type { BomLine, ProjectModel } from "@/api";
 import clsx from "clsx";
 import { useState, type FormEvent } from "react";
 

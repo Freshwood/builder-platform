@@ -19,9 +19,9 @@
       "synthetic": false
     }
   ],
-  "golden": {
-    "design": "golden.json",
+  "reference": {
+    "design": "reference.json",
     "params": {}
   },
-  "notes": "Das Design in attempts/01.json ist der echte Text aus dem Fixture (design als String, Formeln wie 18 + (i + 1) * (height_mm - 36) / (shelves + 1) ohne Anführungszeichen). Nur der Umschlag (title) ist rekonstruiert, ebenso der Nutzertext (aus test_tool_args.py und docs abgeleitet). Die JSON-Reparatur (modules/agent/args.py) gelingt heute; der Aufruf scheitert danach trotzdem an der Schema-Prüfung, weil die drei Längenparameter width_mm, height_mm und depth_mm kein min/max haben. golden.json ergänzt min/max und lässt die Bauteilmaße den Parametern folgen (im Original waren 750/150/450 fest verdrahtet, obwohl width_mm und depth_mm existierten)."
+  "notes": "Das Design in attempts/01.json ist der echte Text aus dem Fixture (design als String, Formeln wie 18 + (i + 1) * (height_mm - 36) / (shelves + 1) ohne Anführungszeichen). Nur der Umschlag (title) ist rekonstruiert, ebenso der Nutzertext (aus test_tool_args.py und docs abgeleitet). Die JSON-Reparatur (modules/agent/args.py) gelingt heute; der Aufruf scheitert danach trotzdem an der Schema-Prüfung, weil die drei Längenparameter width_mm, height_mm und depth_mm kein min/max haben. reference.json ergänzt min/max und lässt die Bauteilmaße den Parametern folgen (im Original waren 750/150/450 fest verdrahtet, obwohl width_mm und depth_mm existierten)."
 }

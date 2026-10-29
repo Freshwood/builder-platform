@@ -8,8 +8,8 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from sqlalchemy import select
 
-from calc_engine.pipeline.merge import SKELETON
-from construction_model.pipeline import Skeleton, Spec
+from homeworking.calc_engine.pipeline.merge import SKELETON
+from homeworking.construction_model.pipeline import Skeleton, Spec
 from homeworking.db.schema import AgentRunRow
 from homeworking.modules.pipeline import offline
 from homeworking.modules.pipeline.stages import (

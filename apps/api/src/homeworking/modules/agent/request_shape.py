@@ -3,7 +3,7 @@
 A provider can reject a request for its structure ("Missing required parameter:
 'messages[6].content'") although every earlier request of the run was fine. For a failed run
 nothing else survives (``agent_runs.model_messages`` is ``NULL``), so the capability
-``RecordRequestShape`` (``tools.py``) keeps the shape of the latest request in ``AgentDeps`` and
+``RecordRequestShape`` (``capabilities.py``) keeps the shape of the latest request in ``AgentDeps`` and
 ``api/chat.py`` stores it with the failed run (``usage["failed_request"]``).
 
 Only structure is recorded: message and part kinds, tool names, shortened tool call ids, lengths

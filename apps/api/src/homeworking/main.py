@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from functools import cache
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,10 +13,11 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
-from calc_engine.engine import DesignRejectedError
-from construction_model.commands import CommandError
 from homeworking.api import chat, pipeline, projects
 from homeworking.bootstrap import Container, build_container
+from homeworking.calc_engine.engine import DesignRejectedError
+from homeworking.concurrency import run_blocking
+from homeworking.construction_model.commands import CommandError
 from homeworking.logging_config import configure_logging
 from homeworking.modules.documents.pdf import warm_up as warm_up_pdf
 from homeworking.modules.projects.service import ProjectNotFoundError, VersionNotFoundError
@@ -37,7 +39,7 @@ def create_app(
         if create_schema or settings.auto_create_schema:
             await app.state.container.create_schema()
         # Warm up PDF rendering in the background; startup does not wait for it.
-        warm_up_task = asyncio.create_task(asyncio.to_thread(warm_up_pdf))
+        warm_up_task = asyncio.create_task(run_blocking(warm_up_pdf, abandon_on_cancel=True))
         yield
         warm_up_task.cancel()
         await app.state.container.close()
@@ -94,4 +96,15 @@ def create_app(
     return app
 
 
-app = create_app()
+@cache
+def _default_app() -> FastAPI:
+    return create_app()
+
+
+def __getattr__(name: str) -> FastAPI:
+    """``uvicorn homeworking.main:app``. The app is built on first access, so importing this
+    module (tests, OpenAPI export) does not read the settings, which refuse a deployment without
+    its own secret."""
+    if name == "app":
+        return _default_app()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

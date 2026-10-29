@@ -7,9 +7,9 @@ from datetime import datetime
 from typing import Literal, Protocol
 from uuid import UUID
 
-from construction_model.commands import Command, CommandError
-from construction_model.diff import ModelDiff
-from construction_model.model import ProjectModel
+from homeworking.construction_model.commands import Command, CommandError
+from homeworking.construction_model.diff import ModelDiff
+from homeworking.construction_model.model import ProjectModel
 
 Actor = Literal["user", "agent"]
 

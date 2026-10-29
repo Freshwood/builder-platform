@@ -1,6 +1,6 @@
 "use client";
 
-import type { Solid } from "@homeworking/api-client";
+import type { Solid } from "@/api";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";

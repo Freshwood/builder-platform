@@ -9,10 +9,11 @@ import {
   versions,
   type CommandRequest,
   type CommandResponse,
+  type ProjectListEntry,
   type ProjectView,
   type VersionEntry,
-} from "@homeworking/api-client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+} from "@/api";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import { sessionReady } from "@/lib/session";
 
@@ -23,9 +24,34 @@ client.interceptors.request.use(async (request) => {
   return request;
 });
 
+// Query keys. The version list and the read-only versions live below projectKey, so
+// invalidating a project refreshes its version data as well.
+export const projectsKey = ["projects"] as const;
 export const projectKey = (id: string) => ["project", id] as const;
-// Below projectKey, so invalidating a project also refreshes its version list.
-const versionsKey = (id: string) => ["project", id, "versions"] as const;
+export const versionsKey = (id: string) => [...projectKey(id), "versions"] as const;
+export const versionKey = (id: string, seq: number | null) =>
+  [...projectKey(id), "version", seq] as const;
+
+/** Refetch a project (and everything below it) and the project list after the server changed it. */
+export function invalidateProject(queryClient: QueryClient, id: string) {
+  void queryClient.invalidateQueries({ queryKey: projectKey(id) });
+  void queryClient.invalidateQueries({ queryKey: projectsKey });
+}
+
+/**
+ * Show the project a command, undo or restore returned right away and refresh what depends on
+ * it: the version list and the project list (title, summary, timestamp).
+ */
+function applyProjectResponse(queryClient: QueryClient, id: string, response: CommandResponse) {
+  const view: ProjectView = {
+    project: response.project,
+    can_undo: response.can_undo,
+    seq: response.seq,
+  };
+  queryClient.setQueryData(projectKey(id), view);
+  void queryClient.invalidateQueries({ queryKey: versionsKey(id) });
+  void queryClient.invalidateQueries({ queryKey: projectsKey });
+}
 
 export function useProject(id: string | null) {
   return useQuery({
@@ -38,10 +64,9 @@ export function useProject(id: string | null) {
   });
 }
 
-export function useVersions(id: string, enabled = true) {
+export function useVersions(id: string) {
   return useQuery({
     queryKey: versionsKey(id),
-    enabled,
     queryFn: async (): Promise<VersionEntry[]> =>
       (await versions({ path: { project_id: id }, throwOnError: true })).data,
   });
@@ -50,7 +75,7 @@ export function useVersions(id: string, enabled = true) {
 /** Read-only state of a project after version ``seq``; old versions never change. */
 export function useProjectVersion(id: string, seq: number | null) {
   return useQuery({
-    queryKey: ["project", id, "version", seq],
+    queryKey: versionKey(id, seq),
     enabled: seq !== null,
     staleTime: Infinity,
     queryFn: async (): Promise<ProjectView> =>
@@ -58,30 +83,16 @@ export function useProjectVersion(id: string, seq: number | null) {
   });
 }
 
-export function useRestoreVersion(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (seq: number): Promise<CommandResponse> => {
-      const { data, error } = await restoreVersion({ path: { project_id: id, seq } });
-      if (error || !data) throw new Error(errorMessage(error));
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(projectKey(id), {
-        project: data.project,
-        can_undo: data.can_undo,
-        seq: data.seq,
-      });
-      void queryClient.invalidateQueries({ queryKey: versionsKey(id) });
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
-    },
-  });
-}
+const byRecentChange = (projects: ProjectListEntry[]): ProjectListEntry[] =>
+  [...projects].sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? ""));
 
+/** The user's projects, most recently changed first. */
 export function useProjects() {
   return useQuery({
-    queryKey: ["projects"],
+    queryKey: projectsKey,
     queryFn: async () => (await listProjects({ throwOnError: true })).data,
+    // A module-level function: TanStack memoises the selection per data and function identity.
+    select: byRecentChange,
   });
 }
 
@@ -93,54 +104,34 @@ function errorMessage(error: unknown): string {
   return "Die Änderung konnte nicht gespeichert werden.";
 }
 
-export function useProjectCommand(id: string) {
+type Outcome = { data?: CommandResponse; error?: unknown };
+
+/** A mutation that changes the project on the server and answers with the new state. */
+function useProjectMutation<Variables>(
+  id: string,
+  run: (variables: Variables) => Promise<Outcome>,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (command: CommandRequest["command"]): Promise<CommandResponse> => {
-      const { data, error } = await executeCommand({
-        path: { project_id: id },
-        body: { command },
-      });
+    mutationFn: async (variables: Variables): Promise<CommandResponse> => {
+      const { data, error } = await run(variables);
       if (error || !data) throw new Error(errorMessage(error));
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(projectKey(id), {
-        project: data.project,
-        can_undo: data.can_undo,
-        seq: data.seq,
-      });
-      void queryClient.invalidateQueries({ queryKey: versionsKey(id) });
-    },
+    onSuccess: (response) => applyProjectResponse(queryClient, id, response),
   });
+}
+
+export function useProjectCommand(id: string) {
+  return useProjectMutation(id, (command: CommandRequest["command"]) =>
+    executeCommand({ path: { project_id: id }, body: { command } }),
+  );
 }
 
 export function useUndo(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (): Promise<CommandResponse> => {
-      const { data, error } = await undo({ path: { project_id: id } });
-      if (error || !data) throw new Error(errorMessage(error));
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(projectKey(id), {
-        project: data.project,
-        can_undo: data.can_undo,
-        seq: data.seq,
-      });
-      void queryClient.invalidateQueries({ queryKey: versionsKey(id) });
-    },
-  });
+  return useProjectMutation<void>(id, () => undo({ path: { project_id: id } }));
 }
 
-// Created once: constructing Intl formatters is expensive and formatEur runs per table cell.
-const EUR = new Intl.NumberFormat("de-DE", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 0,
-});
-
-export function formatEur(value: string | number): string {
-  return EUR.format(Number(value));
+export function useRestoreVersion(id: string) {
+  return useProjectMutation(id, (seq: number) => restoreVersion({ path: { project_id: id, seq } }));
 }

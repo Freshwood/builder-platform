@@ -1,4 +1,4 @@
-import type { Money } from "@homeworking/api-client";
+import type { Money } from "@/api";
 
 /** Retailer searches that open real product pages with current prices (no affiliation). */
 export const SHOPS: { name: string; url: (query: string) => string }[] = [
@@ -10,12 +10,18 @@ export const SHOPS: { name: string; url: (query: string) => string }[] = [
   },
 ];
 
+// Created once: constructing Intl formatters is expensive and they run per table cell.
 const eur0 = new Intl.NumberFormat("de-DE", {
   style: "currency",
   currency: "EUR",
   maximumFractionDigits: 0,
 });
 const eur2 = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+
+/** Whole euros ("63 €") for a decimal string or number as the API sends them. */
+export function formatEur(value: string | number): string {
+  return eur0.format(Number(value));
+}
 
 export function isExact(value: Money): boolean {
   return Number(value.min) === Number(value.max);

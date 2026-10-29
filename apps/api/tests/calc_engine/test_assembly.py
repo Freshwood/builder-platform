@@ -1,0 +1,650 @@
+import re
+from datetime import UTC, datetime
+from decimal import Decimal
+from typing import Any
+
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
+from design_fixtures import fixture_design, fixture_designs
+from homeworking.calc_engine.assembly.expr import ExprError, evaluate
+from homeworking.calc_engine.assembly.sheets import plan_sheets
+from homeworking.calc_engine.engine import DesignRejectedError, default_engine
+from homeworking.construction_model.assembly import AssemblyDesign
+from homeworking.construction_model.commands import (
+    AddNote,
+    ChangeParameterBy,
+    ReplaceDesign,
+    apply_to_inputs,
+)
+from homeworking.construction_model.model import ConstructionResult, Origin, ProjectInputs
+
+FIXED_NOW = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
+engine = default_engine(clock=lambda: FIXED_NOW)
+
+
+def build(design: AssemblyDesign | dict[str, Any], **params: Any) -> ConstructionResult:
+    if isinstance(design, dict):
+        design = AssemblyDesign.model_validate(design)
+    return engine.build(ProjectInputs(title="t", params=params, design=design))
+
+
+def table(**overrides: Any) -> dict[str, Any]:
+    """A minimal side table: four legs and a top."""
+    design: dict[str, Any] = {
+        "object_type": "Beistelltisch",
+        "summary": "Beistelltisch",
+        "params": [
+            {
+                "name": "width_mm",
+                "label": "Breite",
+                "kind": "length",
+                "default": 600,
+                "min": 300,
+                "max": 1200,
+            },
+            {
+                "name": "height_mm",
+                "label": "Höhe",
+                "kind": "length",
+                "default": 500,
+                "min": 300,
+                "max": 800,
+            },
+        ],
+        "parts": [
+            {
+                "id": "leg",
+                "name": "Bein",
+                "material": "frame_spruce_44x44",
+                "size": [44, 44, "height_mm - 18"],
+                "at": ["(i % 2) * (width_mm - 44)", "(i // 2) * (400 - 44)", 0],
+                "repeat": {"count": 4},
+            },
+            {
+                "id": "top",
+                "name": "Platte",
+                "material": "glulam_spruce_18",
+                "size": ["width_mm", 400, 18],
+                "at": [0, 0, "height_mm - 18"],
+            },
+        ],
+    }
+    design.update(overrides)
+    return design
+
+
+def test_minimal_design_builds_everything() -> None:
+    r = build(table())
+    assert r.key_figures["Außenmaße (B × T × H)"] == "600 × 400 × 500 mm"
+    assert [c.position for c in r.cut_list] == [1, 2]
+    assert r.cut_list[0].count == 4
+    assert r.cut_list[0].length_mm == 482
+    assert r.cut_list[1].width_mm == 400
+    # Four legs of 482 mm fit on one 2000 mm bar
+    plan = next(s for s in r.stock_plan if s.item_id.startswith("frame_spruce_44x44"))
+    assert plan.stock_count == 1
+    assert plan.stock_length_mm == 2000
+    assert sorted(plan.bars[0]) == [482, 482, 482, 482]
+    assert any(line.item_id.startswith("screw_zn_") for line in r.bom)
+    assert {d.view for d in r.drawings} == {"iso", "front", "side", "plan"}
+    assert len(r.solids) == 5
+    assert {n.code for n in r.notices} >= {"AI_DRAFT", "NO_STATICS"}
+    assert r.costs.material.min > 0
+    assert [p.name for p in r.param_specs] == ["width_mm", "height_mm"]
+
+
+def test_parameters_drive_geometry() -> None:
+    small, large = build(table(), width_mm=400), build(table(), width_mm=1000)
+    assert small.key_figures["Außenmaße (B × T × H)"].startswith("400 ×")
+    # Both still need one sheet and one bar, but the surface (finish, weight) grows
+    assert large.key_figures["Holzoberfläche"] != small.key_figures["Holzoberfläche"]
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"material": "unobtainium"}, "unbekanntes Material"),
+        ({"size": [50, 44, 400]}, "passen nicht zum Querschnitt"),
+        ({"size": [44, 44, 3000]}, "Handelslänge"),
+        ({"at": [10, 0, 0]}, "durchdringen sich"),
+        ({"at": [0, 0, 20]}, "nicht alle bauteile sind verbunden"),
+    ],
+)
+def test_engine_rejects_broken_designs(change: dict[str, Any], message: str) -> None:
+    design = table()
+    leg = {**design["parts"][0], **change}
+    if "at" in change:
+        leg.pop("repeat")
+        leg["id"] = "extra"
+        design["parts"] = [*design["parts"], leg]
+    else:
+        design["parts"] = [leg, design["parts"][1]]
+    with pytest.raises(DesignRejectedError) as exc:
+        build(design)
+    assert message in " ".join(exc.value.errors).lower() or message in " ".join(exc.value.errors)
+
+
+def test_floating_design_is_rejected() -> None:
+    design = table()
+    design["parts"] = [
+        {**p, "at": [p["at"][0], p["at"][1], f"({p['at'][2]}) + 50"]} for p in design["parts"]
+    ]
+    with pytest.raises(DesignRejectedError, match="Boden"):
+        build(design)
+
+
+def test_size_limit_for_free_designs() -> None:
+    design = table()
+    design["parts"][1] |= {
+        "size": [1500, 400, 18],
+        "at": ["i * 1500", 0, "height_mm - 18"],
+        "repeat": {"count": 3},
+    }
+    with pytest.raises(DesignRejectedError, match='category="building"'):
+        build(design)
+
+
+def test_parameter_bounds_are_enforced() -> None:
+    with pytest.raises(DesignRejectedError, match="zwischen"):
+        build(table(), width_mm=5000)
+    with pytest.raises(DesignRejectedError, match="unbekannter Parameter"):
+        build(table(), colour="red")
+
+
+@pytest.mark.parametrize("key", sorted(fixture_designs()))
+def test_fixture_designs_build_with_defaults_and_variants(key: str) -> None:
+    r = build(fixture_design(key))
+    assert r.variants, "fixture designs offer variants"
+    assert all(v.material_cost.min > 0 for v in r.variants)
+    assert [s.title for s in r.instructions[:2]] == [
+        "Material einkaufen",
+        "Teile zuschneiden und beschriften",
+    ]
+    # Every position is laid out in exactly one assembly step.
+    laid_out = [
+        int(n)
+        for step in r.instructions
+        for detail in step.details
+        if detail.startswith("Bereitlegen:")
+        for n in re.findall(r"Pos\. (\d+)", detail)
+    ]
+    assert sorted(laid_out) == sorted({s.position for s in r.solids})
+
+
+def test_instructions_are_step_by_step() -> None:
+    r = build(fixture_design("window_shutter"))
+    buy, cut = r.instructions[0], r.instructions[1]
+    assert len(buy.details) == len(r.bom)
+    # Cutting goes bar by bar with lengths and position numbers.
+    assert any(re.search(r"Stange 1 von \d+ .*\d+× 800 mm \(Pos\. 1\)", d) for d in cut.details)
+    battens = next(s for s in r.instructions if s.title == "Querleisten aufschrauben")
+    screwing = next(d for d in battens.details if "schrauben:" in d)
+    assert screwing.startswith("Pos. 2 Querleiste von hinten in Pos. 1 Brett schrauben")
+    assert "vorbohren" in screwing
+    # Screw counts in the steps add up to the screws in the key figures.
+    total = sum(
+        int(m) for s in r.instructions for d in s.details for m in re.findall(r"\((\d+) Stk\)", d)
+    )
+    assert r.key_figures["Schrauben"] == f"ca. {total} Stk"
+    latch = next(s for s in r.instructions if s.title.startswith("Verschluss"))
+    assert any("Sturmhaken" in d for d in latch.details)
+
+
+@settings(max_examples=25, deadline=None)
+@given(
+    width=st.integers(400, 1400),
+    depth=st.integers(200, 590),
+    height=st.integers(600, 2000),
+    shelves=st.integers(2, 9),
+    back=st.booleans(),
+)
+def test_shelf_is_valid_for_all_parameters(
+    width: int, depth: int, height: int, shelves: int, back: bool
+) -> None:
+    design = fixture_design("shelf")
+    r = build(
+        design, width_mm=width, depth_mm=depth, height_mm=height, shelves=shelves, back_panel=back
+    )
+    assert r.key_figures["Außenmaße (B × T × H)"] == f"{width} × {depth} × {height} mm"
+    shelf = next(c for c in r.cut_list if c.part == "Fachboden")
+    assert shelf.count == shelves
+
+
+def test_tall_shelf_gets_tip_protection() -> None:
+    r = build(fixture_design("shelf"), height_mm=2000, depth_mm=250)
+    assert any(line.item_id == "wall_anchor_set" for line in r.bom)
+    assert "TIP" in {n.code for n in r.notices}
+
+
+def test_outdoor_bench_uses_stainless_screws_and_no_glue() -> None:
+    r = build(fixture_design("garden_bench"))
+    items = {line.item_id for line in r.bom}
+    assert any(i.startswith("screw_a2_") for i in items)
+    assert not any(i.startswith("screw_zn_") for i in items)
+    assert "glue_d3_750" not in items
+
+
+def test_bench_without_backrest_is_cheaper() -> None:
+    design = fixture_design("garden_bench")
+    assert build(design, backrest=False).costs.material.max < build(design).costs.material.max
+
+
+def test_change_parameter_by_falls_back_to_design_default() -> None:
+    design = fixture_design("workbench")
+    inputs = ProjectInputs(title="t", params={}, design=design)
+    changed = apply_to_inputs(inputs, ChangeParameterBy(name="width_mm", delta=300))
+    assert changed.params["width_mm"] == 1800
+
+
+def test_replace_design_keeps_valid_parameters() -> None:
+    design = fixture_design("shelf")
+    inputs = ProjectInputs(title="t", params={"width_mm": 1300, "shelves": 4}, design=design)
+    narrower = design.model_copy(
+        update={
+            "params": [
+                p.model_copy(update={"max": 1000}) if p.name == "width_mm" else p
+                for p in design.params
+            ]
+        }
+    )
+    replaced = apply_to_inputs(inputs, ReplaceDesign(design=narrower))
+    assert replaced.params == {"shelves": 4}
+
+
+def test_replace_design_drops_stale_ai_explanations() -> None:
+    design = fixture_design("shelf")
+    inputs = ProjectInputs(title="t", params={}, design=design)
+    inputs = apply_to_inputs(inputs, AddNote(text="Lamellen aus Kantholz", origin=Origin.AI))
+    inputs = apply_to_inputs(inputs, AddNote(text="Bitte in Grün", origin=Origin.USER))
+    replaced = apply_to_inputs(inputs, ReplaceDesign(design=design))
+    assert [n.text for n in replaced.notes] == ["Bitte in Grün"]
+
+
+def test_expressions() -> None:
+    env = {"w": 800.0, "n": 3.0, "flag": 1.0}
+    assert evaluate("w - 2 * 18", env) == 764
+    assert evaluate("if(w > 500, 1, 2)", env) == 1
+    assert evaluate("max(w, 900) // 100", env) == 9
+    assert evaluate("flag and n >= 3", env) == 1
+    assert evaluate(12, env) == 12
+    # Placeholder braces as used in material ids are tolerated in expressions.
+    assert evaluate("{w} - 130", env) == 670
+    for bad in ("__import__('os')", "w.real", "[1, 2]", "unknown + 1", "w / 0", "{1, 2}"):
+        with pytest.raises(ExprError):
+            evaluate(bad, env)
+    with pytest.raises(ExprError, match="if"):
+        evaluate("n == 1 ? 2 : 0", env)
+
+
+def test_choice_parameter_expressions() -> None:
+    """A ``choice`` parameter is text and may be compared with ``==``/``!=`` in conditions."""
+    env = {"w": 800.0, "surface_type": "boards"}
+    assert evaluate("surface_type == 'boards'", env) == 1
+    assert evaluate("surface_type != 'boards'", env) == 0
+    assert evaluate("surface_type == 'panel'", env) == 0
+    assert evaluate("if(surface_type == 'boards', 18, 25)", env) == 18
+    assert evaluate("surface_type == 'boards' and w > 500", env) == 1
+    assert evaluate("not (surface_type == 'panel')", env) == 1
+    # Braces as used in material placeholders resolve to the same name.
+    assert evaluate("{surface_type} == 'boards'", env) == 1
+    for bad, message in (
+        ("surface_type - 1", "keine Zahl"),
+        ("surface_type * 2", "keine Zahl"),
+        ("w == surface_type", "nicht mit einer Zahl vergleichbar"),
+        ("surface_type > 1", "nicht mit einer Zahl vergleichbar"),
+        ("'a' < 'b'", "== oder !="),
+    ):
+        with pytest.raises(ExprError, match=message):
+            evaluate(bad, env)
+
+
+SURFACE_PARAM: dict[str, Any] = {
+    "name": "surface_type",
+    "label": "Oberfläche",
+    "kind": "choice",
+    "default": "boards",
+    "options": [
+        {"value": "boards", "label": "Bretter"},
+        {"value": "panel", "label": "Platte"},
+    ],
+}
+
+
+SURFACE_DESIGN: dict[str, Any] = {
+    "object_type": "Podest",
+    "summary": "Podest mit wählbarer Oberfläche",
+    "params": [
+        {
+            "name": "length_mm",
+            "label": "Länge",
+            "kind": "length",
+            "default": 1000,
+            "min": 500,
+            "max": 3000,
+        },
+        {
+            "name": "depth_mm",
+            "label": "Tiefe",
+            "kind": "length",
+            "default": 384,
+            "min": 384,
+            "max": 384,
+        },
+        {
+            "name": "height_mm",
+            "label": "Höhe",
+            "kind": "length",
+            "default": 350,
+            "min": 100,
+            "max": 800,
+        },
+        SURFACE_PARAM,
+    ],
+    "parts": [
+        {
+            "id": "leg",
+            "name": "Bein",
+            "material": "frame_spruce_44x44",
+            "size": [44, 44, "height_mm - 18"],
+            "at": ["i % 2 * (length_mm - 44)", "i // 2 * (depth_mm - 44)", 0],
+            "repeat": {"count": 4},
+        },
+        {
+            "id": "top_slat",
+            "name": "Deckbrett",
+            "material": "lumber_spruce_18x96",
+            "size": ["length_mm", 96, 18],
+            "at": [0, "i * 96", "height_mm - 18"],
+            "repeat": {"count": 4},
+            "when": "surface_type == 'boards'",
+        },
+        {
+            "id": "top_panel",
+            "name": "Multiplexplatte",
+            "material": "plywood_birch_18",
+            "size": ["length_mm", "depth_mm", 18],
+            "at": [0, 0, "height_mm - 18"],
+            "when": "surface_type == 'panel'",
+        },
+    ],
+}
+
+
+def test_choice_parameter_drives_optional_parts() -> None:
+    """The case from docs/problems/bug.md: `when` on a choice parameter builds one variant."""
+    boards = build(SURFACE_DESIGN, surface_type="boards")
+    assert {c.role for c in boards.components} == {"leg", "top_slat"}
+    assert sum(c.quantity for c in boards.components if c.role == "top_slat") == 4
+    panel = build(SURFACE_DESIGN, surface_type="panel")
+    assert {c.role for c in panel.components} == {"leg", "top_panel"}
+    # The choice really changes the cut list, not only the part names.
+    slats = [c for c in boards.cut_list if c.part == "Deckbrett"]
+    assert len(slats) == 1
+    assert (slats[0].length_mm, slats[0].count) == (1000, 4)
+    panel_line = [c for c in panel.cut_list if c.part == "Multiplexplatte"]
+    assert len(panel_line) == 1
+    assert (panel_line[0].length_mm, panel_line[0].width_mm) == (1000, 384)
+    # Four 96 mm slats and one panel cover the same 384 mm depth.
+    assert sum(c.length_mm * c.count for c in slats) == 4 * 1000
+
+
+def test_choice_parameter_is_not_a_measurement() -> None:
+    design = {
+        **SURFACE_DESIGN,
+        "parts": [
+            *SURFACE_DESIGN["parts"][:1],
+            {
+                "id": "top_panel",
+                "name": "Multiplexplatte",
+                "material": "plywood_birch_18",
+                "size": ["length_mm", "surface_type", 18],
+                "at": [0, 0, "height_mm - 18"],
+            },
+        ],
+    }
+    with pytest.raises(DesignRejectedError, match="keine Zahl"):
+        build(design, surface_type="boards")
+
+
+def test_sheet_planning() -> None:
+    sheets = plan_sheets([(1800, 297), (1800, 297), (764, 297)], (2000, 600))
+    assert len(sheets) == 2
+    assert sum(s.used_area for s in sheets) == 2 * 1800 * 297 + 764 * 297
+
+
+def test_solids_match_cut_list_quantities() -> None:
+    r = build(fixture_design("workbench"), castors=True)
+    pieces = sum(c.count for c in r.cut_list)
+    castors = sum(1 for s in r.solids if s.name == "Lenkrolle")
+    assert castors == 4
+    assert pieces + castors == len(r.solids)
+    assert sum((line.total.min for line in r.bom), Decimal(0)) == r.costs.material.min
+
+
+@settings(max_examples=25, deadline=None)
+@given(
+    length=st.integers(800, 2400),
+    seat=st.integers(380, 500),
+    slats=st.integers(2, 4),
+    backrest=st.booleans(),
+    wood=st.sampled_from(["douglas", "larch"]),
+)
+def test_bench_is_valid_for_all_parameters(
+    length: int, seat: int, slats: int, backrest: bool, wood: str
+) -> None:
+    r = build(
+        fixture_design("garden_bench"),
+        length_mm=length,
+        seat_height_mm=seat,
+        slats=slats,
+        backrest=backrest,
+        wood=wood,
+    )
+    assert r.key_figures["Außenmaße (B × T × H)"].startswith(f"{length} ×")
+
+
+@settings(max_examples=25, deadline=None)
+@given(
+    width=st.integers(800, 2000),
+    depth=st.integers(500, 900),
+    height=st.integers(750, 1050),
+    shelf=st.booleans(),
+    castors=st.booleans(),
+)
+def test_workbench_is_valid_for_all_parameters(
+    width: int, depth: int, height: int, shelf: bool, castors: bool
+) -> None:
+    r = build(
+        fixture_design("workbench"),
+        width_mm=width,
+        depth_mm=depth,
+        height_mm=height,
+        lower_shelf=shelf,
+        castors=castors,
+    )
+    assert r.key_figures["Außenmaße (B × T × H)"] == f"{width} × {depth} × {height} mm"
+
+
+def shutter_wing(**overrides: Any) -> dict[str, Any]:
+    """A board shutter wing as an LLM would write it: vertical boards and two battens."""
+    design: dict[str, Any] = {
+        "object_type": "Fensterladen",
+        "summary": "Fensterladen",
+        "use": "outdoor",
+        "support": "wall",
+        "params": [
+            {"name": "height_mm", "label": "Höhe", "kind": "length", "default": 380},
+            {
+                "name": "wood",
+                "label": "Holzart",
+                "kind": "choice",
+                "default": "douglas",
+                "options": [
+                    {"value": "douglas", "label": "Douglasie"},
+                    {"value": "oak", "label": "Eiche"},
+                ],
+            },
+        ],
+        "parts": [
+            {
+                "id": "board",
+                "name": "Brett",
+                "material": "lumber_{wood}_18x96",
+                "size": [96, 18, "height_mm"],
+                "at": ["i * 99", 0, 0],
+                "repeat": {"count": 2},
+            },
+            {
+                "id": "batten",
+                "name": "Querleiste",
+                "material": "lumber_{wood}",
+                "size": [151, 18, 70],
+                "at": [20, 18, "60 + i * (height_mm - 190)"],
+                "repeat": {"count": 2},
+            },
+        ],
+        "hardware": [
+            {"item": "hinge_strap_200", "quantity": 2},
+            {"item": "latch_barrel_80", "quantity": 1},
+        ],
+        "steps": [
+            {
+                "title": "Querleisten aufschrauben",
+                "text": "Leisten auf die Bretter schrauben.",
+                "parts": ["batten"],
+            },
+            {
+                "title": "Scharniere montieren",
+                "text": "Zwei Ladenbänder anschrauben, Verschluss innen anbringen.",
+            },
+        ],
+    }
+    for param in design["params"]:
+        if param["kind"] == "length":
+            param |= {"min": 300, "max": 1200}
+    design.update(overrides)
+    return design
+
+
+def test_made_to_order_lumber_in_any_species_and_section() -> None:
+    r = build(shutter_wing())
+    boards = [line for line in r.bom if line.name.startswith("Brett Douglasie")]
+    assert {line.spec.split(",")[0] for line in boards} == {"18 × 96 mm", "18 × 70 mm"}
+    assert all("Holzfachhandel" in (line.note or "") for line in boards)
+    assert "Kantholz" not in " ".join(line.name for line in r.bom)
+    # Price per metre comes from the volume: 18 × 96 mm Douglas at 1000–1600 €/m³
+    board = next(line for line in boards if line.spec.startswith("18 × 96"))
+    metres = Decimal(board.spec.split("Länge ")[1].removesuffix(" m").replace(",", "."))
+    assert board.unit_price.min == (Decimal("1.73") * metres).quantize(Decimal("0.01"))
+    oak = build(shutter_wing(), wood="oak")
+    assert oak.costs.material.min > r.costs.material.min
+    assert any(line.name.startswith("Brett Eiche") for line in oak.bom)
+
+
+@pytest.mark.parametrize(
+    ("material", "message"),
+    [
+        ("lumber_teak_18x96", "Holzart 'teak' ist unbekannt"),
+        ("lumber_douglas_4x96", "nicht lieferbar"),
+        ("lumber_douglas_18x", "Format"),
+    ],
+)
+def test_invalid_lumber_is_rejected(material: str, message: str) -> None:
+    design = shutter_wing()
+    design["parts"][0]["material"] = material
+    with pytest.raises(DesignRejectedError) as exc:
+        build(design)
+    assert message in " ".join(exc.value.errors)
+
+
+def test_hardware_named_in_steps_must_be_in_bom() -> None:
+    with pytest.raises(DesignRejectedError) as exc:
+        build(shutter_wing(hardware=[]))
+    errors = " ".join(exc.value.errors)
+    assert "Scharniere/Bänder" in errors
+    assert "Verschluss" in errors
+    assert "hinge_strap_200" in errors
+
+
+def test_listed_screws_are_left_to_the_engine() -> None:
+    """Regression podest_kinder_modenschau_es_so_art_2: free-text screws under hardware."""
+    base = shutter_wing()
+    listed = shutter_wing(
+        hardware=[
+            *base["hardware"],
+            {"item": "Schrauben 4×40 mm", "quantity": 24},
+            {"item": "screw_a2_4x40_200", "quantity": 1},
+        ]
+    )
+    assert build(listed).bom == build(base).bom
+
+
+def test_unknown_hardware_names_the_nearest_fitting() -> None:
+    design = shutter_wing(hardware=[{"item": "hinge_strap200", "quantity": 2}])
+    with pytest.raises(DesignRejectedError) as exc:
+        build(design)
+    assert "meintest du 'hinge_strap_200'?" in " ".join(exc.value.errors)
+
+
+def test_wall_mounted_groups_may_be_separate() -> None:
+    wing = shutter_wing()
+    second = [
+        {**part, "id": f"{part['id']}_b", "at": [f"200 + {part['at'][0]}", *part["at"][1:]]}
+        for part in wing["parts"]
+    ]
+    two_wings = shutter_wing(parts=[*wing["parts"], *second])
+    assert build(two_wings).key_figures["Bauteile"].startswith("8 Teile")
+    with pytest.raises(DesignRejectedError, match="Nicht alle Bauteile"):
+        build({**two_wings, "support": "floor"})
+
+
+def test_window_shutter_matches_the_reported_case() -> None:
+    """31 × 38 cm, two wings of boards with hinges and a latch (docs: construction problem)."""
+    design = fixture_design("window_shutter")
+    r = build(design, width_mm=310, height_mm=380, wings=2, board_mm=18)
+    # Automatic board count: two boards of about 75 mm per 155 mm wing, not 49 mm battens
+    assert {c.cross_section for c in r.cut_list} == {"18 × 75", "18 × 70"}
+    names = " ".join(line.name for line in r.bom)
+    assert "Ladenband" in names
+    assert "Schubriegel" in names
+    hinges = next(line for line in r.bom if line.name.startswith("Ladenband"))
+    assert hinges.quantity == 4
+    assert hinges.spec.startswith("Länge 100 mm")
+    # Hinges and latch are placed parts, so the drawings show them on the wall side
+    assert {s.name for s in r.solids} >= {"Ladenband", "Schubriegel"}
+    assert [d.view for d in r.drawings][-2:] == ["iso_back", "back"]
+    boards = sorted(s.at[0] for s in r.solids if s.name == "Brett")
+    assert len(boards) == 4
+    # Two wings of 153.5 mm with a 3 mm joint: the right wing starts at 156.5 mm
+    assert boards[2] == pytest.approx(156.5, abs=0.1)
+    # Only the AI-draft label every design carries (ADR-0008), no engine warning.
+    assert [n.code for n in r.notices if n.severity == "warning"] == ["AI_DRAFT"]
+
+
+@settings(max_examples=40, deadline=None)
+@given(
+    width=st.integers(300, 1600),
+    height=st.integers(300, 1600),
+    wings=st.integers(1, 2),
+    board_mm=st.integers(18, 28),
+    wood=st.sampled_from(["douglas", "larch", "oak", "pine", "spruce"]),
+)
+def test_window_shutter_is_valid_for_all_parameters(
+    width: int, height: int, wings: int, board_mm: int, wood: str
+) -> None:
+    """With the automatic board count every size builds, with hinges for each wing."""
+    design = fixture_design("window_shutter")
+    r = build(design, width_mm=width, height_mm=height, wings=wings, board_mm=board_mm, wood=wood)
+    assert r.key_figures["Außenmaße (B × T × H)"].startswith(f"{width} ×")
+    assert sum(1 for s in r.solids if s.name == "Ladenband") == 2 * wings
+    assert sum(1 for s in r.solids if s.name == "Schubriegel") == 1
+
+
+def test_window_shutter_in_pine_warns_about_outdoor_use() -> None:
+    """Pine is a valid wish for the shutter; the engine only adds a durability hint."""
+    design = fixture_design("window_shutter")
+    r = build(design, width_mm=310, height_mm=380, wings=2, wood="pine")
+    assert {line.name for line in r.bom if "Kiefer" in line.name}
+    assert r.notices

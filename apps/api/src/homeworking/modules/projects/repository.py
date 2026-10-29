@@ -9,9 +9,9 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from construction_model.commands import Command, command_adapter
-from construction_model.diff import ModelDiff
-from construction_model.model import ProjectModel
+from homeworking.construction_model.commands import Command, command_adapter
+from homeworking.construction_model.diff import ModelDiff
+from homeworking.construction_model.model import ProjectModel
 from homeworking.db.schema import ProjectCommandRow, ProjectRow
 from homeworking.modules.projects.ports import (
     CommandRecord,

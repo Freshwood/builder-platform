@@ -9,12 +9,17 @@ from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 DEV_SECRET = "dev-only-insecure-session-secret"  # noqa: S105
+# Environments in which the known development secret and the offline model are acceptable.
+LOCAL_ENVIRONMENTS = ("development", "test")
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    environment: Literal["development", "test", "production"] = "development"
+    # Production unless said otherwise: a deployment that forgets ENVIRONMENT must fail on the
+    # development secret and the offline model, not run with them. ``.env.example`` sets
+    # ``development``; the test suite sets ``test``.
+    environment: Literal["development", "test", "production"] = "production"
     database_url: str = "postgresql+psycopg://homeworking:homeworking@localhost:5433/homeworking"
     session_secret: SecretStr = SecretStr(DEV_SECRET)
     # Comma-separated in the environment (CORS_ORIGINS=http://a,http://b), not JSON.
@@ -40,6 +45,11 @@ class Settings(BaseSettings):
     llm_stage_max_output_tokens: int = 16_000
     # Low temperature: designs must follow the schema and the user's brief, not be creative.
     llm_temperature: float = 0.2
+    # May the chat agent's ``save_design`` create a project? Live, new designs go through the
+    # staged pipeline (``plan_design``, ADR-0010) and ``save_design`` only changes the open
+    # project. The offline model drafts a design itself and saves it, so unset means: allowed in
+    # test mode, refused otherwise (see ``save_design_creates``).
+    agent_save_design_creates: bool | None = None
     # Free-form designs need a few repair rounds and long tool arguments (ADR-0004).
     agent_request_limit: int = 12
     # Counts input (incl. cached) and output of all requests of a turn; reasoning models used
@@ -54,15 +64,27 @@ class Settings(BaseSettings):
         return value
 
     @model_validator(mode="after")
-    def _check_production(self) -> Settings:
-        if self.environment == "production":
+    def _check_environment(self) -> Settings:
+        if self.environment not in LOCAL_ENVIRONMENTS:
             if self.session_secret.get_secret_value() == DEV_SECRET:
-                raise ValueError("SESSION_SECRET must be set in production")
+                raise ValueError(
+                    f"SESSION_SECRET must be set when ENVIRONMENT={self.environment} "
+                    "(ENVIRONMENT defaults to production; use development or test locally)"
+                )
             if self.llm_mode == "test":
-                raise ValueError("LLM_MODE=test is not allowed in production")
+                raise ValueError(
+                    f"LLM_MODE=test is not allowed when ENVIRONMENT={self.environment}"
+                )
         if self.llm_mode == "openai" and not self.llm_model:
             raise ValueError("LLM_MODEL is required when LLM_MODE=openai")
         return self
+
+    @property
+    def save_design_creates(self) -> bool:
+        """``agent_save_design_creates``, by default derived from the model mode."""
+        if self.agent_save_design_creates is not None:
+            return self.agent_save_design_creates
+        return self.llm_mode == "test"
 
     @property
     def secure_cookies(self) -> bool:

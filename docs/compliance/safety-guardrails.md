@@ -3,7 +3,7 @@
 ## Grundsatz
 
 **Das LLM rechnet nicht.** Alle Maße, Mengen, Zuschnitte, Kosten und Zeichnungen kommen aus der
-deterministischen Engine (`packages/calc-engine`). Das LLM versteht Anforderungen, stellt Rückfragen,
+deterministischen Engine (`homeworking.calc_engine`). Das LLM versteht Anforderungen, stellt Rückfragen,
 schlägt Commands vor und erklärt die Ergebnisse der Engine.
 
 ## Themen, die blockiert und an Fachleute verwiesen werden

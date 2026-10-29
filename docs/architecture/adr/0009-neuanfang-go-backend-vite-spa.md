@@ -1,6 +1,6 @@
 # ADR-0009: Neuanfang mit Go-Backend, Vite-SPA und BDD-Szenarien
 
-- Status: akzeptiert
+- Status: nicht umgesetzt (Go-Backend und Vite-SPA am 2026-10-29 entfernt, Python und Next.js bleiben; Ersatz-ADR steht aus)
 - Datum: 2026-10-16
 - Löst ab: den Technologie-Stack aus ADR-0001 (FastAPI, Python-Pakete, import-linter),
   ADR-0003 (Pydantic AI) und den Next.js-Client. Die fachlichen Entscheidungen aus ADR-0001 bis

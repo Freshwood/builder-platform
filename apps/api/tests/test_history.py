@@ -13,13 +13,14 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from homeworking.bootstrap import build_container
+from homeworking.modules.agent.deps import AgentDeps
 from homeworking.modules.agent.history import (
     DESIGN_STUB,
     LOOKUP_STUB,
     SUPERSEDED_STUB,
     compact_history,
 )
-from homeworking.modules.agent.tools import AgentDeps, build_agent
+from homeworking.modules.agent.tools import build_agent
 from homeworking.settings import Settings
 
 DESIGN = {"object_type": "Regal", "parts": [{"id": "side"}] * 20}

@@ -5,7 +5,7 @@ Every case is checked twice, offline (no network, no LLM):
 1. Each recorded tool call is replayed through the real agent tool path with a scripted
    ``FunctionModel``. The new outcome must equal ``expect_outcome`` and the error text the model
    would see must contain ``errors_contain``: the message stays actionable.
-2. The golden design (the fix a human would make) must build and pass the corpus invariants, the
+2. The reference design (the fix a human would make) must build and pass the corpus invariants, the
    case's intent expectation and the view consistency check.
 """
 
@@ -29,15 +29,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "regressions"))
 sys.path.insert(0, str(_ROOT / "packages" / "calc-engine" / "tests"))
 
 import loader  # noqa: E402
-from corpus import Case, build_result, check  # noqa: E402
 from loader import AttemptRecord, CaseError, LoadedCase, load_case  # noqa: E402
 
-from calc_engine.assembly.intent import evaluate, view_consistency  # noqa: E402
-from calc_engine.engine import default_engine  # noqa: E402
-from construction_model.assembly import AssemblyDesign  # noqa: E402
-from construction_model.model import ProjectInputs  # noqa: E402
+from corpus import Case, build_result, check  # noqa: E402
 from homeworking.bootstrap import build_container  # noqa: E402
-from homeworking.modules.agent.tools import AgentDeps, build_agent  # noqa: E402
+from homeworking.calc_engine.assembly.intent import evaluate, view_consistency  # noqa: E402
+from homeworking.calc_engine.engine import default_engine  # noqa: E402
+from homeworking.construction_model.assembly import AssemblyDesign  # noqa: E402
+from homeworking.construction_model.model import ProjectInputs  # noqa: E402
+from homeworking.modules.agent.deps import AgentDeps  # noqa: E402
+from homeworking.modules.agent.tools import build_agent  # noqa: E402
 from homeworking.settings import Settings  # noqa: E402
 
 CASES = loader.load_all()
@@ -113,27 +114,27 @@ async def test_recorded_call_still_gets_the_recorded_outcome(
         assert needle in text, f"'{needle}' fehlt in den Fehlern:\n{text}"
 
 
-def golden_design(case: LoadedCase) -> AssemblyDesign:
-    golden = case.case.golden
-    assert golden is not None
-    assert case.golden_design is not None
-    return AssemblyDesign.model_validate(case.golden_design)
+def reference_design(case: LoadedCase) -> AssemblyDesign:
+    reference = case.case.reference
+    assert reference is not None
+    assert case.reference_design is not None
+    return AssemblyDesign.model_validate(case.reference_design)
 
 
 @pytest.mark.parametrize(
-    "case", [c for c in CASES if c.case.golden], ids=_ids([c for c in CASES if c.case.golden])
+    "case", [c for c in CASES if c.case.reference], ids=_ids([c for c in CASES if c.case.reference])
 )
-def test_golden_design_meets_the_invariants_and_the_intent(case: LoadedCase) -> None:
-    golden = case.case.golden
-    assert golden is not None
-    design = golden_design(case)
+def test_reference_design_meets_the_invariants_and_the_intent(case: LoadedCase) -> None:
+    reference = case.case.reference
+    assert reference is not None
+    design = reference_design(case)
     corpus_case = Case(
-        f"regression:{case.slug}", design, dict(golden.params), source=f"regression:{case.slug}"
+        f"regression:{case.slug}", design, dict(reference.params), source=f"regression:{case.slug}"
     )
     result = build_result(corpus_case, ENGINE)
 
     problems = [f"[{v.rule}] {v.detail}" for v in check(result, corpus_case)]
-    inputs = ProjectInputs(title=case.case.title, params=dict(golden.params), design=design)
+    inputs = ProjectInputs(title=case.case.title, params=dict(reference.params), design=design)
     problems += [
         f"[{v.rule}] {v.detail}" for v in evaluate(inputs, result, case.case.expect, ENGINE)
     ]
@@ -212,9 +213,9 @@ def test_a_wellformed_case_loads(tmp_path: Path) -> None:
         {"expect": {"features": ["walkabel_top"]}},
         {"attempts": [{"file": "attempts/01.json", "expect_outcome": "nope"}]},
         {"attempts": [{"file": "attempts/01.json", "expect_outcome": "accepted", "extra": 1}]},
-        {"failure_class": "intent_mismatch"},  # needs a golden design
-        {"golden": {"params": {}}},  # no design
-        {"golden": {"design": "g.json", "template": "shelf"}},  # templates are gone (ADR-0008)
+        {"failure_class": "intent_mismatch"},  # needs a reference design
+        {"reference": {"params": {}}},  # no design
+        {"reference": {"design": "g.json", "template": "shelf"}},  # templates are gone (ADR-0008)
         {"id": "other_name"},
     ],
     ids=lambda c: next(iter(c)) + ":" + str(next(iter(c.values())))[:30],
@@ -232,8 +233,8 @@ def test_a_missing_attempt_file_fails_to_load(tmp_path: Path) -> None:
         load_case(directory)
 
 
-def test_a_missing_golden_file_fails_to_load(tmp_path: Path) -> None:
-    directory = _write_case(tmp_path, golden={"design": "golden.json"})
+def test_a_missing_reference_file_fails_to_load(tmp_path: Path) -> None:
+    directory = _write_case(tmp_path, reference={"design": "reference.json"})
     with pytest.raises(CaseError, match="Datei fehlt"):
         load_case(directory)
 

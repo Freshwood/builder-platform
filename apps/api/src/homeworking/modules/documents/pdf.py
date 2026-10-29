@@ -9,8 +9,14 @@ from decimal import Decimal
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from construction_model.base import ParamValue
-from construction_model.model import ConstructionResult, Money, Origin, ParamSpec, ProjectModel
+from homeworking.construction_model.base import ParamValue
+from homeworking.construction_model.model import (
+    ConstructionResult,
+    Money,
+    Origin,
+    ParamSpec,
+    ProjectModel,
+)
 from homeworking.modules.compliance.disclosure import (
     AI_CONTENT_LABEL,
     AI_DOCUMENT_STATEMENT,

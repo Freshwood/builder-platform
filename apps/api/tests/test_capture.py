@@ -12,13 +12,13 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from api_designs import design_json
 
+from api_designs import design_json
 from homeworking.bootstrap import build_container
-from homeworking.modules.agent import capture
-from homeworking.modules.agent.capture import CaptureError, RunData
 from homeworking.modules.conversations.service import AgentRun
 from homeworking.settings import Settings
+from homeworking_dev import capture
+from homeworking_dev.capture import CaptureError, RunData
 
 BRIEF = (
     "Erstelle mir ein Podest für Kinder für eine Modenschau. Maximal 2 Meter lang und 1 Meter "
@@ -112,7 +112,7 @@ def test_an_engine_loop_becomes_a_draft(tmp_path: Path) -> None:
     draft = _capture(_engine_loop_row(), tmp_path)
 
     assert draft.parent == tmp_path / "_drafts"
-    assert sorted(p.name for p in draft.iterdir()) == ["attempts", "case.json", "golden.json"]
+    assert sorted(p.name for p in draft.iterdir()) == ["attempts", "case.json", "reference.json"]
     assert sorted(p.name for p in (draft / "attempts").iterdir()) == [
         "01.json",
         "02.json",
@@ -134,7 +134,7 @@ def test_an_engine_loop_becomes_a_draft(tmp_path: Path) -> None:
     ]
     assert "TODO" in case["title"]
     assert "TODO" in case["expect"]["note"]
-    assert _read(draft / "golden.json").get("_todo")
+    assert _read(draft / "reference.json").get("_todo")
     assert "invalid_args=1, engine_rejected=2" in case["notes"]
     # The recorded entry is stored unchanged.
     assert _read(draft / "attempts" / "02.json") == _engine_loop_row()["design_attempts"][1]
@@ -325,23 +325,23 @@ def test_the_cli_reads_an_exported_row(
 
 
 def _complete(draft: Path) -> None:
-    """What the maintainer does: title, expect, golden, class, outcomes; TODO lines removed."""
+    """What the maintainer does: title, expect, reference, class, outcomes; TODO lines removed."""
     path = draft / "case.json"
     case = _read(path)
     case["failure_class"] = "intent_mismatch"
     case["title"] = "Podest für Kinder"
     case["expect"] = {"envelope": {"max_length_mm": 2000}, "use": "indoor"}
-    case["golden"] = {"design": "golden.json", "params": {}}
+    case["reference"] = {"design": "reference.json", "params": {}}
     case["notes"] = "Bearbeitet."
     path.write_text(json.dumps(case), encoding="utf-8")
-    (draft / "golden.json").write_text(json.dumps(design_json("shelf")), encoding="utf-8")
+    (draft / "reference.json").write_text(json.dumps(design_json("shelf")), encoding="utf-8")
 
 
 def test_a_draft_with_placeholders_is_refused(tmp_path: Path) -> None:
     draft = _capture(_engine_loop_row(), tmp_path)
     with pytest.raises(CaptureError, match="TODO") as refused:
         capture.promote(draft.name, tmp_path, run_checks=False)
-    assert "golden.json ist noch der Platzhalter" in str(refused.value)
+    assert "reference.json ist noch der Platzhalter" in str(refused.value)
     assert draft.is_dir()
     assert not (tmp_path / draft.name).exists()
 

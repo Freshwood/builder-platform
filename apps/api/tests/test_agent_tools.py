@@ -4,19 +4,17 @@ from typing import Any, cast
 from uuid import uuid4
 
 import pytest
-from api_designs import design as offline_design
-from design_fixtures import fixture_design
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from calc_engine.catalog import default_catalog
+from api_designs import design as offline_design
+from design_fixtures import fixture_design
 from homeworking.bootstrap import build_container
+from homeworking.calc_engine.catalog import default_catalog
 from homeworking.modules.agent.args import _parse_json_string
-from homeworking.modules.agent.tools import (
-    AgentDeps,
-    build_agent,
-    design_materials,
-)
+from homeworking.modules.agent.deps import AgentDeps
+from homeworking.modules.agent.summaries import design_materials
+from homeworking.modules.agent.tools import build_agent
 from homeworking.settings import Settings
 
 

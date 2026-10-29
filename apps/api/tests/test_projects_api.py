@@ -1,5 +1,6 @@
 import httpx
 import pytest
+
 from api_designs import create_body, design
 
 CREATE = create_body("raised_bed", "Hochbeet Test", length_mm=2000, width_mm=1000, height_mm=800)
@@ -99,8 +100,8 @@ async def test_list_projects_has_summary(client: httpx.AsyncClient) -> None:
 
 
 async def test_concurrent_append_is_rejected(settings) -> None:  # type: ignore[no-untyped-def]
-    from construction_model.commands import Rename
     from homeworking.bootstrap import build_container
+    from homeworking.construction_model.commands import Rename
     from homeworking.modules.projects.ports import ConcurrentModificationError
 
     container = build_container(settings)

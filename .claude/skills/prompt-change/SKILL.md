@@ -6,8 +6,8 @@ description: Change the agent's system prompt, a tool (name, docstring, argument
 # Traceable prompt or agent change
 
 Everything the model sees is fingerprinted (`modules/agent/provenance.py`). Follow these steps for
-every change to `prompts/system.de.md`, `modules/agent/tools.py` (names, docstrings, argument
-types), `packages/construction-model/.../assembly.py` (design schema) or
+every change to `prompts/system.de.md`, the tools in `modules/agent/design_tools.py` and
+`modules/agent/project_tools.py` (names, docstrings, argument types), `apps/api/src/homeworking/construction_model/assembly.py` (design schema) or
 `modules/agent/routing.py`.
 
 1. Measure before: `task bench -- --label before --out /tmp/bench`.

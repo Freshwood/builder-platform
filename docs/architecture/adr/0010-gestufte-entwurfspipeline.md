@@ -2,8 +2,8 @@
 
 - Status: vorgeschlagen
 - Datum: 2026-10-28
-- Ergänzt: ADR-0006 (Token-Budget), ADR-0008 (Unikate). Stack: Python; Go nur dort, wo es
-  nachweislich etwas bringt (siehe Konsequenzen).
+- Ergänzt: ADR-0006 (Token-Budget), ADR-0008 (Unikate). Stack: Python (die Go-Portierung
+  wurde am 2026-10-29 entfernt).
 
 ## Kontext
 
@@ -65,13 +65,20 @@ insgesamt deutlich unter 40K statt 100–150K.
 
 - Der laufende Python-Agent bleibt für Änderungen, Preise, Rückgängig und Fragen bestehen
   (`change_project`, `undo_last_change`); nur der Neuentwurf wird durch die Pipeline ersetzt.
-- Die Go-Portierung (ADR-0009) übernimmt die Verträge unverändert, wenn die Engine portiert ist.
+- *Überholt (2026-10-29):* Die Go-Portierung (ADR-0009) wurde entfernt. Die Verträge bleiben in Python.
+  Ursprünglich: Die Go-Portierung übernimmt die Verträge unverändert, wenn die Engine portiert ist.
   Go lohnt sich dort, wo CPU-lastig gerechnet wird (Geometrie, `derive`, SVG/PDF), nicht für die
   Pipeline-Steuerung, die auf LLM-Latenz wartet.
 - Neue Prompts und Tools folgen dem Ablauf in `docs/ai/README.md` (Version, Lock, Snapshot,
   Changelog); jede Stufe bekommt dort einen eigenen Abschnitt.
 
 ## Stand der Umsetzung (2026-10-28)
+
+- Fehlerpfade (2026-10-29): Fällt ein Modellaufruf einer Stufe aus (Provider-Fehler,
+  Zeitüberschreitung, unbrauchbare Ausgabe nach den Wiederholungen), antworten die Endpunkte mit
+  422 und einer deutschen Meldung. Der Lauf steht trotzdem als `failed` in `agent_runs`, mit dem
+  bis dahin verbrauchten Usage. Im Chat meldet `plan_design` den Fehler an das Modell, das ihn
+  erklärt. Fällt nur die Dokumentationsstufe aus, bleibt der Entwurf erhalten.
 
 - Umgesetzt: Verträge, Lückenregeln, Zusammenführen, Gerüst-Prüfung (`calc_engine.pipeline`),
   Stufe 1 bis 3 als Endpunkte `POST /api/pipeline/intake`, `/skeleton` und `/modules`
@@ -85,7 +92,7 @@ insgesamt deutlich unter 40K statt 100–150K.
 - Stufe 5 und Neuentwurf im Chat: Das Chat-Werkzeug `plan_design(spec, title)` ersetzt
   `save_design` für neue Projekte und für die komplette Neuplanung. Das Chat-Modell füllt nur
   den Steckbrief; `Pipeline.design` führt Gerüst, Module und Dokumentation aus
-  (`api/planner.py` speichert jede Stufe in `agent_runs`, mit der Chat-ID). Die Dokumentation
+  (`modules/agent/planner.py` speichert jede Stufe in `agent_runs`, mit der Chat-ID). Die Dokumentation
   (`docs.de.md`) liefert die Erklärung („Warum so?“) und die Texte der Bauschritte; die Engine
   ordnet jedem Schritt die Teile seines Moduls zu und prüft ihn. Lehnt sie die Texte ab oder
   fällt das Modell aus, bleiben Modultitel und -rolle als Schritt, die Erklärung bleibt leer: der

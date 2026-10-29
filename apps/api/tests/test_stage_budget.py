@@ -1,4 +1,4 @@
-"""Token budget of the pipeline stages, measured offline (see modules/pipeline/bench.py).
+"""Token budget of the pipeline stages, measured offline (see devtools/homeworking_dev/pipeline_bench.py).
 
 The request side is exact (instructions, output schema, prompt; for modules also the catalog digest). Compare: the old single design
 call carried a 7.6K-token prefix on every request (docs/ai/benchmarks). Tighten the limits when a
@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from homeworking.modules.pipeline.bench import measure
+from homeworking_dev.pipeline_bench import measure
 
 # stage -> (max input tokens of one request, max static prefix tokens)
 BUDGET = {

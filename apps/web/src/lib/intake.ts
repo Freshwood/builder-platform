@@ -1,6 +1,6 @@
 /** Intake step: the brief goes to the engine's gap rules before the planning starts (ADR-0010). */
 
-import { intake, type IntakeResponse, type Question, type Spec } from "@homeworking/api-client";
+import { intake, type IntakeResponse, type Question, type Spec } from "@/api";
 
 import type { Brief } from "@/lib/brief";
 

@@ -5,7 +5,7 @@ description: Measure the agent's token use and cost offline (no API calls) and c
 
 # Offline token benchmark
 
-`task bench -- --label <name>` replays five fixed scenarios through the real agent, tools and
+`task bench -- --label <name>` (tool: `apps/api/devtools/homeworking_dev/bench.py`) replays five fixed scenarios through the real agent, tools and
 engine with a scripted model:
 
 - pack project;
@@ -19,7 +19,7 @@ It meters every model request: instructions, tool definitions, history and outpu
   tool.
 - Costs per model configuration are computed from `docs/ai/models.json`. The prices there carry
   a source and a date; update them by hand from https://openrouter.ai/api/v1/models.
-- Token counts are estimates (`CHARS_PER_TOKEN` in `modules/agent/metering.py`). Deltas between
+- Token counts are estimates (`CHARS_PER_TOKEN` in `modules/llm/metering.py`). Deltas between
   runs are exact.
 - Compare against `docs/ai/benchmarks/2026-10-07-baseline.md`.
 

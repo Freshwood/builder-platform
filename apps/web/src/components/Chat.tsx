@@ -11,6 +11,7 @@ import { messageBlocks } from "@/lib/activity";
 import {
   assistantErrorText,
   formatElapsed,
+  messageText,
   toolOutputs,
   useElapsed,
   type Assistant,
@@ -69,7 +70,10 @@ function WorkingIndicator({ startedAt, waiting }: { startedAt: number | null; wa
         ))}
       </span>
       {waiting ? "liest deine Angaben" : "arbeitet"}
-      <span className="text-xs tabular-nums">{formatElapsed(elapsed)}</span>
+      {/* Not announced: a timer in a live region would be read out every second. */}
+      <span className="text-xs tabular-nums" aria-hidden="true">
+        {formatElapsed(elapsed)}
+      </span>
     </li>
   );
 }
@@ -146,19 +150,41 @@ const MessageItem = memo(function MessageItem({
   );
 });
 
-export function Chat({ assistant, projectId }: { assistant: Assistant; projectId: string | null }) {
+export function Chat({
+  assistant,
+  projectId,
+  historyFailed = false,
+  onReloadHistory,
+}: {
+  assistant: Assistant;
+  projectId: string | null;
+  /** The stored conversation of the opened project could not be loaded. */
+  historyFailed?: boolean;
+  onReloadHistory?: () => void;
+}) {
   const { messages, status, error, busy, submit, retry, startedAt } = assistant;
   const [input, setInput] = useState("");
-  const listRef = useRef<HTMLOListElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const count = messages.length;
   const shownCount = useRef(0);
+
+  // The log itself stays silent: announcing it live would read the streaming answer out again
+  // with every token. Each finished answer is announced once through a separate live region,
+  // but only for turns of this session, not for the stored conversation loaded on open.
+  const [turnSeen, setTurnSeen] = useState(false);
+  if (busy && !turnSeen) setTurnSeen(true);
+  const last = messages.at(-1);
+  const announcement =
+    turnSeen && !busy && last?.role === "assistant"
+      ? messageText(last) || "Der Assistent hat seine Arbeit beendet."
+      : "";
 
   // Follow the conversation while it grows: glide to a new message, but keep up with a
   // streaming answer instantly (a smooth scroll per update stutters) and only while the user
   // has not scrolled up to read.
   useEffect(() => {
-    const list = listRef.current;
+    const list = scrollRef.current;
     if (!list) return;
     if (count !== shownCount.current) {
       shownCount.current = count;
@@ -168,20 +194,26 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
     }
   }, [messages, count, busy]);
 
-  function send(text = input) {
-    if (submit(text) && text === input) setInput("");
+  /** Send what is typed in the field and clear it. */
+  function sendInput() {
+    if (submit(input)) setInput("");
+  }
+
+  /** Send a suggestion as is; a draft in the field stays untouched. */
+  function sendSuggestion(text: string) {
+    submit(text);
   }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    send();
+    sendInput();
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     // Enter sends, Shift+Enter starts a new line.
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
-      send();
+      sendInput();
     }
   }
 
@@ -199,25 +231,48 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
         </div>
       </div>
 
-      <ol
-        ref={listRef}
-        aria-live="polite"
+      <div
+        ref={scrollRef}
+        role="log"
+        aria-live="off"
         aria-label="Chatverlauf"
         tabIndex={0}
-        className="scrollbar-thin min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4"
+        className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-4 py-4"
         data-testid="messages"
       >
-        {messages.map((message, index) => (
-          <MessageItem
-            key={message.id}
-            message={message}
-            live={busy && index === messages.length - 1}
-          />
-        ))}
-        {busy && <WorkingIndicator startedAt={startedAt} waiting={status === "submitted"} />}
-      </ol>
+        <ol className="space-y-4">
+          {messages.map((message, index) => (
+            <MessageItem
+              key={message.id}
+              message={message}
+              live={busy && index === messages.length - 1}
+            />
+          ))}
+          {busy && <WorkingIndicator startedAt={startedAt} waiting={status === "submitted"} />}
+        </ol>
+      </div>
+      <p role="status" aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
 
       <div className="border-t border-border bg-bg/60 px-3 pt-2 pb-3 backdrop-blur">
+        {historyFailed && (
+          <div
+            role="alert"
+            className="mb-2 flex items-center gap-2 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning"
+          >
+            <Icon name="warning" className="h-4 w-4" />
+            <span className="flex-1">Der bisherige Chatverlauf konnte nicht geladen werden.</span>
+            <button
+              type="button"
+              onClick={onReloadHistory}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 font-medium hover:bg-warning/10"
+            >
+              <Icon name="rotate" className="h-4 w-4" /> Erneut laden
+            </button>
+          </div>
+        )}
+
         {error && (
           <div
             role="alert"
@@ -246,7 +301,7 @@ export function Chat({ assistant, projectId }: { assistant: Assistant; projectId
               <li key={action} className="shrink-0">
                 <button
                   type="button"
-                  onClick={() => send(action)}
+                  onClick={() => sendSuggestion(action)}
                   className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium whitespace-nowrap text-muted transition hover:border-text/40 hover:text-text"
                 >
                   {action}

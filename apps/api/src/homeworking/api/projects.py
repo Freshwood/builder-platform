@@ -13,8 +13,9 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from construction_model.assembly import AssemblyDesign
-from construction_model.commands import (
+from homeworking.api.deps import ContainerDep, UserDep
+from homeworking.construction_model.assembly import AssemblyDesign
+from homeworking.construction_model.commands import (
     AddNote,
     ChangeParameterBy,
     Command,
@@ -30,9 +31,8 @@ from construction_model.commands import (
     Undo,
     command_adapter,
 )
-from construction_model.diff import ModelDiff
-from construction_model.model import Origin, ParamValue, ProjectModel, Region
-from homeworking.api.deps import ContainerDep, UserDep
+from homeworking.construction_model.diff import ModelDiff
+from homeworking.construction_model.model import Origin, ParamValue, ProjectModel, Region
 from homeworking.modules.compliance.disclosure import (
     AI_CHAT_DISCLOSURE,
     DOCUMENT_NOTICES,

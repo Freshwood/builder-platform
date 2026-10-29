@@ -1,14 +1,18 @@
 # Homeworking – Architektur (gültiger Stand)
 
-- Stand: 2026-10-16
+- Stand: 2026-10-29
 - Fasst die Entscheidungen [ADR-0001 bis ADR-0008](adr/archiv/) zusammen und ergänzt sie um
-  [ADR-0009](adr/0009-neuanfang-go-backend-vite-spa.md) (Neuanfang mit Go-Backend und Vite-SPA).
+  [ADR-0010](adr/0010-gestufte-entwurfspipeline.md) (gestufte Entwurfspipeline).
 - Dieses Dokument ist die verbindliche Beschreibung. Die archivierten ADRs erklären nur noch,
-  *wie* es dazu kam. Neue Entscheidungen werden als ADR ab 0010 geschrieben und hier eingearbeitet.
+  *wie* es dazu kam. Neue Entscheidungen werden als ADR ab 0011 geschrieben und hier eingearbeitet.
+
+> **Stack (2026-10-29):** Python (FastAPI) plus Next.js. Der Go-Neuanfang aus
+> [ADR-0009](adr/0009-neuanfang-go-backend-vite-spa.md) wurde nicht umgesetzt und entfernt; ein
+> Ersatz-ADR steht aus. Paketkarte und Auffälligkeiten: [STRUKTUR.md](STRUKTUR.md).
 
 Veraltetes aus den alten ADRs ist hier bewusst weggelassen: Construction Packs, Vorlagen,
 Vertrauensstufen (`trust`), die Werkzeuge `create_project`, `create_from_template`,
-`design_project`/`redesign_project` und der Python-/Next.js-Stack.
+`design_project`/`redesign_project`.
 
 ---
 
@@ -26,23 +30,28 @@ Homeworking macht aus einer Beschreibung eines Heimwerkerprojekts ein berechenba
   entwirft jedes Projekt selbst genau nach der Angabe des Kunden. Jeder Entwurf trägt den Hinweis
   „KI-Entwurf“ (Transparenz nach Art. 50 KI-Verordnung).
 
-## 2. Modularer Monolith mit I/O-freiem Kern (ADR-0001, ADR-0009)
+## 2. Modularer Monolith mit I/O-freiem Kern (ADR-0001)
 
-- **Ein Deployment-Artefakt:** ein Go-Binary (`backend/cmd/homeworking`). Es liefert die API unter
-  `/api` und in Produktion auch die gebaute SPA aus (`go:embed`), sodass kein Reverse-Proxy nötig ist.
-- **Fachmodule** unter `backend/internal/modules/*`: `projects`, `conversations`, `identity`,
-  `drawings`, `documents`, `compliance`, `agent`.
-- **I/O-freier Kern:**
-  - `backend/internal/model` ist die Domäne (Eingaben, Commands, Diff, `AssemblyDesign`,
+- **Ein Backend-Prozess:** FastAPI-App `homeworking` (`apps/api`), die API unter `/api`. Der
+  Next.js-Client (`apps/web`) leitet `/api` per Proxy dorthin.
+- **Fachmodule** unter `apps/api/src/homeworking/modules/*`: `projects`, `conversations`,
+  `identity`, `drawings`, `documents`, `compliance`, `agent`, `pipeline`.
+- **I/O-freier Kern** als Unterpakete desselben Python-Pakets `homeworking`:
+  - `homeworking.construction_model` ist die Domäne (Eingaben, Commands, Diff, `AssemblyDesign`,
     Zeichnungs-IR).
-  - `backend/internal/engine` ist die Rechen-Engine (Prüfung, Geometrie, Ableitung, Katalog).
+  - `homeworking.calc_engine` ist die Rechen-Engine (Prüfung, Geometrie, Ableitung, Katalog).
   - Beide kennen weder HTTP noch Datenbank noch LLM.
-- **Modulgrenzen** werden geprüft (`depguard` in golangci-lint, Teil von `task backend:check`):
-  - `model` importiert nur die Standardbibliothek und `decimal`.
-  - `engine` importiert nur `model`.
-  - `modules/agent` wird nur von der HTTP-Schicht importiert.
-- **Ports** sind Go-Interfaces im jeweiligen Modul. Adapter werden im Composition Root
-  (`backend/internal/app`) verdrahtet.
+- **Modulgrenzen** prüft `lint-imports` (Teil von `task check`):
+  - `construction_model` importiert weder `calc_engine` noch `api`, `modules`, `db`, FastAPI,
+    SQLAlchemy oder Pydantic AI.
+  - `calc_engine` importiert nichts aus `api`, `modules`, `db`, FastAPI, SQLAlchemy oder Pydantic AI.
+  - `modules/agent` und `modules/pipeline` werden nur von der HTTP-Schicht (`api/`) importiert.
+  - `modules/pipeline` importiert nicht `modules/agent`; `modules/llm` (Modellfabrik, Metering,
+    Provenienz-Lock) kennt weder Agent noch Pipeline.
+  - `modules/*` importieren weder `api`, `bootstrap` noch `main`; die Laufzeit importiert nicht
+    `homeworking_dev` (Werkzeuge: Benchmark, Live-Auswertung, Fall-Erfassung in
+    `apps/api/devtools`).
+- **Ports** (`modules/projects/ports.py`) werden im Composition Root (`bootstrap.py`) verdrahtet.
 - Keine Microservices und kein Kubernetes in Phase I.
 
 ## 3. Projektmodell: Eingaben plus Command-Log (ADR-0002, ADR-0008)
@@ -94,8 +103,8 @@ Konsequenzen:
 
 ## 5. LLM-Zugang (ADR-0003, ADR-0006)
 
-- **Provider-agnostisch** über eine OpenAI-kompatible Chat-Completions-API (schlanker eigener Client
-  mit Streaming und Tool-Calls, frei konfigurierbare Base-URL). Mögliche Anbieter: OpenRouter, Mistral, Azure OpenAI EU, STACKIT, Scaleway, Ollama, vLLM.
+- **Provider-agnostisch** über eine OpenAI-kompatible Chat-Completions-API (Pydantic AI mit
+  Streaming und Tool-Calls, frei konfigurierbare Base-URL). Mögliche Anbieter: OpenRouter, Mistral, Azure OpenAI EU, STACKIT, Scaleway, Ollama, vLLM.
 - **Konfiguration nur über Umgebungsvariablen:** `LLM_MODE` (`test` | `openai`), `LLM_BASE_URL`,
   `LLM_API_KEY`, `LLM_MODEL`, optional `LLM_MODEL_FAST`, `LLM_REASONING`.
 - **LiteLLM** wird nie als Bibliothek eingebunden (Supply-Chain-Vorfall März 2026). Wenn
@@ -123,94 +132,15 @@ Konsequenzen:
 
 ## 6. Freie Entwürfe: `AssemblyDesign` (ADR-0004, ADR-0007)
 
-### 6.1 Was das LLM beschreibt
+Das LLM beschreibt Parameter, Bauteile (Quader oder Stab, Maße als Ausdrücke in mm), Formen,
+Ausschnitte, Wiederholungen, Bedingungen, Varianten, Beschläge, Holzverbindungen und Bauschritte.
+Die Engine prüft jeden Entwurf und lehnt ihn mit einer konkreten Meldung ab (`DesignRejectedError`),
+sonst leitet sie Stückliste, Zuschnitt, Schrauben, Kosten (Decimal), Gewicht, Zeichnungen
+(Zeichnungs-IR → SVG/PDF), 3D-Daten, Anleitung und Intent-Checks ab. Katalog:
+`apps/api/src/homeworking/calc_engine/data/catalog.json`.
 
-- **Parameter** mit Name, Einheit, Grenzen und optional Auswahlwerten.
-- **Bauteile** mit Katalogmaterial. Maße und Positionen sind **Ausdrücke über die Parameter** in mm
-  (x = Breite, y = Tiefe, z = oben). Zwei Platzierungen:
-  - *Quader*: `size`, `at`, optional `rotate` um eine Achse;
-  - *Stab* zwischen zwei Punkten: `start`, `end`, Querschnitt aus dem Material oder `section`,
-    Ausrichtung `facing`, Endschnitte `cuts` (`square`, `level`, `plumb`, `corner`). Die Engine
-    bestimmt Zuschnittlänge und Neigung.
-- **Formen** (`shape`): `cloud`, `ellipse`, `rounded`, `triangle`, `arch`, `polygon`.
-  **Ausschnitte** (`cutouts`): Rechteck, Ellipse, Polygon.
-- **Wiederholungen** (`repeat`), **Bedingungen** (`when`), **Varianten**.
-- **Beschläge** (`hardware`) und **Holzverbindungen** (`joints`): `tenon` (Zapfen), `half_lap`
-  (Blatt), `notch` (Kerve).
-- **Bauschritte** (`steps`): Reihenfolge und Montagehinweise. Die konkreten Unterschritte schreibt
-  die Engine.
-- Einsatzort (innen/außen), Montage (`support`: Boden oder Wand), Oberfläche und Kategorie
-  (`category`, z. B. `building`).
-- Material-, Holzart-, Stärke- und Bauweisewünsche des Nutzers sind verbindlich. Interne Begriffe
-  (Katalog, IDs) werden dem Nutzer gegenüber nicht verwendet.
+Alle Regeln im Einzelnen: [ENGINE.md](ENGINE.md).
 
-### 6.2 Was die Engine prüft
-
-Jeder Entwurf wird geprüft. Bei einem Fehler lehnt die Engine ihn mit einer konkreten,
-für das LLM verständlichen Meldung ab (`DesignRejectedError`).
-
-- Material existiert im Katalog; Querschnitt bzw. Plattenstärke passt; Länge ≤ Handelslänge;
-  Plattenzuschnitt ≤ Plattenformat; Schüttgut innerhalb seines Stärkenbereichs.
-- **Maßholz** (`FD-LUMBER`): Jede Holzart mit `lumber_price_m3` ist in jedem Querschnitt bestellbar
-  (Stärke 8–200 mm, Breite bis 400 mm), als `lumber_<holzart>_<t>x<b>` oder `lumber_<holzart>`.
-  Preis = Volumen × Preis je m³. Teure Holzarten werden nie ersetzt.
-- Keine Durchdringung von Bauteilen, außer bei deklarierten Holzverbindungen.
-- Alle Teile hängen zusammen. Bei Wandmontage (`support="wall"`) dürfen getrennte Baugruppen
-  existieren, wenn jede an der Wand anliegt.
-- Boden- bzw. Wandkontakt; nichts unter Geländeniveau, außer Betonteilen bei Gebäuden.
-- Ausschnitte liegen innerhalb der Kontur und überschneiden sich nicht. Endschnitte flacher als
-  10° zur Stabachse werden abgelehnt. Kontur und Schrägschnitt lassen sich an einem Stab nicht
-  kombinieren.
-- **Beschläge sind Pflicht, wenn die Anleitung sie nennt** (`FD-HW`): Nennt ein Bauschritt
-  Scharniere, Verschlüsse oder Griffe ohne passenden Beschlag, wird der Entwurf mit den passenden
-  Katalog-IDs abgelehnt. Außenprojekte warnen bei nicht außentauglichen Beschlägen.
-- Größen- und Mengengrenzen, siehe Kapitel 8.
-
-### 6.3 Was die Engine ableitet
-
-- **Stückliste** inkl. Maßholz-Hinweis, Schüttgut nach m³ bzw. m² mit 5 % Verschnitt.
-- **Zuschnitt:** 1D-Handelslängen-Optimierung (First-Fit-Decreasing, 4 mm Sägeschnitt) und
-  Plattenaufteilung.
-- **Schrauben** aus erkannten Kontaktflächen (geschraubt wird durch das dünnere Teil), Holznägel
-  und Holzbauschrauben aus den Holzverbindungen, Oberflächenmittel aus der Fläche.
-- **Kosten** (Decimal, keine Gleitkommazahlen), **Gewicht**, **Kippwarnung**, **Werkzeug**.
-- **Geometrie:** Bauteile sind Prismen, also eine 2D-Kontur extrudiert über die Stärke. Sie werden
-  in konvexe Stücke zerlegt (Ohrenschneiden mit Lochbrücken). Durchdringung prüft der
-  Separating-Axis-Test, Kontakt ergibt sich aus koplanaren gegenüberliegenden Flächen.
-  Achsparallele Quader haben einen exakten Schnellpfad.
-- **Zeichnungen:** Ansichten, Draufsicht, Isometrie mit Positionsnummern, automatische Bemaßung,
-  Materiallegende, Sortierung über trennende Ebenen. Bei Wandmontage zusätzlich `iso_back` und
-  `back`. Zu jedem geformten Holz- oder Plattenteil eine Schablone `template_<pos>`. Die Engine
-  erzeugt eine rendererunabhängige Zeichnungs-IR, daraus wird byte-stabiles SVG und PDF.
-- **3D-Daten** für den Browser (Quader und Dreiecksnetze).
-- **Anleitung** mit konkreten Unterschritten (`InstructionStep.details`):
-  - Einkaufen je Stücklistenzeile;
-  - Zuschnitt Stange für Stange (z. B. „Stange 1 von 2 (5,00 m): 6× 800 mm (Pos. 1) … Rest ca. 180 mm“);
-  - jede Verschraubung („Pos. A von <Seite> in Pos. B schrauben: n Stellen mit je k Schrauben …“);
-  - „Holzverbindungen anreißen und ausarbeiten“, Oberfläche, Kippsicherung.
-  - Ein Teil wird im ersten Schritt montiert, der es nennt. Die Schraubenmengen der Unterschritte
-    ergeben in Summe die Kennzahl „Schrauben“.
-- **Intent-Checks** (`Expectation`): Hüllmaße, begehbare Oberseite, Ebenen, Türen u. a., plus
-  Konsistenz der Ansichten. Sie sichern Regressionsfälle ab.
-
-### 6.4 Holzverbindungen und Schüttgut (ADR-0007)
-
-| Verbindung | Regel |
-|---|---|
-| `tenon` | Stärke 1/3 des Holzes, Länge 0,4 × Gegenholz (30–60 mm), Zuschnitt je Zapfenende verlängert, 1 Holznagel (2 ab 200 mm Breite) |
-| `half_lap` | Überlappung erlaubt, je Teil halbe Überdeckung, 1 Holznagel |
-| `notch` | Überlappung bis 1/3 der Bauteilhöhe, 1 Holzbauschraube |
-
-An deklarierten Verbindungen entfallen automatische Schrauben.
-
-Schüttgut und Flächenmaterial (`kind="bulk"`): Ausfachung, Beton und Dämmung nach m³,
-Dachdeckung und Schalung nach m², jeweils mit erlaubtem Stärkenbereich.
-
-### 6.5 Der Katalog
-
-`backend/internal/engine/data/catalog.json` ist die zentrale Fachquelle für Querschnitte,
-Handelslängen, Formate, Preise, Eignung außen und Beschlagtypen. Seine Pflege ist ein
-fachlicher Vorgang.
 
 ## 7. Token-Budget, Routing und Prompt-Provenienz (ADR-0006, ADR-0008)
 
@@ -251,33 +181,35 @@ fachlicher Vorgang.
 - Alle Ergebnisse sind Planungshilfen ohne Standsicherheitsnachweis.
 - Geheimnisse (`.env`) werden nie gelesen, ausgegeben oder eingecheckt; nur `.env.example` ist versioniert.
 
-## 9. Technologie-Stack (ADR-0009)
+## 9. Technologie-Stack
 
 | Schicht | Technik |
 |---|---|
-| Backend | Go (ein Binary), `net/http` (ServeMux mit Mustern), `log/slog` |
-| API-Vertrag | contract-first: `backend/openapi.json` ist die Quelle; ein Go-Test prüft, dass der Router jede Operation bedient |
-| Datenbank | SQLite (`modernc.org/sqlite`, ohne CGO) für Entwicklung und Tests; PostgreSQL (`pgx`) für Produktion; eingebettete SQL-Migrationen je Dialekt, beim Start ausgeführt |
-| LLM | eigener Client für OpenAI-kompatible Chat-Completions (OpenRouter-Reasoning, Cache-Punkte); eigenes Offline-Modell |
-| Chat-Stream | AI-SDK-UI-Message-Stream (SSE), serverseitig in Go implementiert |
-| PDF | Go-Renderer aus der Zeichnungs-IR (ohne WeasyPrint, ohne Browser) |
-| Frontend | Vite + React 19 + TypeScript, React Router, TanStack Query, Vercel AI SDK `useChat`, three.js, Tailwind 4 |
-| API-Client | generiert mit `@hey-api/openapi-ts` aus `backend/openapi.json` |
-| Funktionale Tests | Gherkin (Deutsch) mit playwright-bdd unter `tests/` |
-| Build und Aufgaben | Task (`Taskfile.yml`), pnpm-Workspace |
+| Backend | Python 3.13, FastAPI, Uvicorn |
+| API-Vertrag | aus FastAPI exportiert (`task openapi`) nach `apps/web/openapi.json`; die CI prüft Drift |
+| Datenbank | PostgreSQL (Produktion, JSONB), SQLite (Tests); SQLAlchemy async, Alembic |
+| LLM | Pydantic AI mit OpenAI-kompatibler API (OpenRouter-Reasoning, Cache-Punkte); Offline-Modell |
+| Chat-Stream | AI-SDK-UI-Message-Stream (SSE) |
+| PDF | WeasyPrint aus HTML-Vorlage, Zeichnungen aus der Zeichnungs-IR als SVG |
+| Frontend | `apps/web`: Next.js 16, React 19, TanStack Query, Vercel AI SDK `useChat`, three.js, Tailwind 4 |
+| API-Client | `apps/web/src/api`, generiert mit `@hey-api/openapi-ts` |
+| Funktionale Tests | Gherkin (Deutsch): pytest-bdd (`apps/api/tests/bdd`), playwright-bdd (`apps/web/tests/bdd`) |
+| Build und Aufgaben | Task (`Taskfile.yml`), uv, pnpm |
 
 ## 10. Teststrategie
 
-- **`task check`** ist das eine Signal für Mensch und KI-Agent. Es ruft `task backend:check` und
-  `task frontend:check` auf. Beide enthalten Linter, Typprüfung, Unit-Tests und die
-  **funktionalen BDD-Szenarien** unter `tests/features/`.
-- **BDD-Szenarien** (`tests/features/backend/*.feature`, `tests/features/frontend/*.feature`)
-  beschreiben das Verhalten fachlich und technologieunabhängig: Backend-Szenarien sprechen nur
-  HTTP, Frontend-Szenarien nur den Browser. Sie laufen mit dem Offline-Modell.
+- **`task check`** prüft Lint, Typen und Importgrenzen (ruff, mypy strict, import-linter, eslint,
+  tsc) und lässt die Vitest-Unit-Tests der reinen Frontend-Logik (`apps/web/src/lib`) laufen;
+  **`task test`** führt pytest aus (Engine, API, Agent, SVG-Goldens, PDF).
+- **Funktionale BDD-Szenarien** (`task bdd`): Backend-Szenarien (`apps/api/tests/bdd`, pytest-bdd)
+  sprechen die API im selben Prozess an und laufen in `task test` mit. Frontend-Szenarien
+  (`apps/web/tests/bdd`, playwright-bdd) bedienen den Browser. Beide nutzen das Offline-Modell.
+  `task e2e` führt im Frontend-Paket alle Browser-Tests aus (Playwright mit axe-Prüfung:
+  `apps/web/tests/e2e` für Abläufe ohne Gegenstück in den Szenarien, dazu die BDD-Szenarien).
 - **Engine-Tests:** Golden-Dateien, Korpus-Invarianten über alle Testentwürfe, Intent-Checks,
-  Fuzzing des Ausdrucks-Parsers.
+  Hypothesis-Tests für den Ausdrucks-Parser.
 - **Regressionsfälle:** Jeder gemeldete fehlerhafte Entwurf oder Agent-Lauf wird ein Fall unter
-  `backend/testdata/regressions/` (`task regress:capture`). Ein Bugfix ist ohne Fall nicht fertig.
+  `apps/api/tests/regressions/` (`task regress:capture`). Ein Bugfix ist ohne Fall nicht fertig.
 - **Agent-Tests:** Tool-Argument-Reparatur, Routing, Prompt-Lock, Token-Budget, Stream-Format.
 - **Live-Evaluation** (`task eval:live`) kostet Geld, braucht einen Schlüssel und läuft nicht in CI.
 - Kein Test braucht einen API-Key oder Netzwerkzugriff.

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Question } from "@homeworking/api-client";
+import type { Question } from "@/api";
 
 import { Chips, NumberInput } from "@/components/BriefControls";
 import { ANSWER_FIELD } from "@/lib/intake";

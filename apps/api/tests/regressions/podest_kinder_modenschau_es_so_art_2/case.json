@@ -70,8 +70,8 @@
       "expect_outcome": "accepted"
     }
   ],
-  "golden": {
-    "design": "golden.json",
+  "reference": {
+    "design": "reference.json",
     "params": {
       "length_mm": 2000,
       "deck_boards": 8,
@@ -79,5 +79,5 @@
       "surface": "boards"
     }
   },
-  "notes": "Lauf 3289388f (trace d8b15dfc), Modell upstage/solar-pro4, Prompt 2026-10-14.1: Abbruch mit UsageLimitExceeded (207 638 > 200 000 Tokens) vor Anfrage 8. Ursachen: (1) das Thinking jeder Reparaturrunde (~3K Tokens) wurde bei jeder weiteren Anfrage mitgeschickt, Input 8K -> 32K; (2) 01 scheiterte an 'explanation' im design-Objekt; (3) 06 war geometrisch gültig und scheiterte nur an Freitext-Schrauben unter hardware, die die Engine ohnehin selbst ableitet. Fixes: history.py kürzt Thinking im laufenden Turn, args.py zieht design.explanation hoch, derive.py ignoriert Schrauben unter hardware (auto_screws), Limit 1 000 000. Golden-Design wie podium_kids_catwalk (gleicher Brief)."
+  "notes": "Lauf 3289388f (trace d8b15dfc), Modell upstage/solar-pro4, Prompt 2026-10-14.1: Abbruch mit UsageLimitExceeded (207 638 > 200 000 Tokens) vor Anfrage 8. Ursachen: (1) das Thinking jeder Reparaturrunde (~3K Tokens) wurde bei jeder weiteren Anfrage mitgeschickt, Input 8K -> 32K; (2) 01 scheiterte an 'explanation' im design-Objekt; (3) 06 war geometrisch gültig und scheiterte nur an Freitext-Schrauben unter hardware, die die Engine ohnehin selbst ableitet. Fixes: history.py kürzt Thinking im laufenden Turn, args.py zieht design.explanation hoch, derive.py ignoriert Schrauben unter hardware (auto_screws), Limit 1 000 000. Referenz-Design wie podium_kids_catwalk (gleicher Brief)."
 }

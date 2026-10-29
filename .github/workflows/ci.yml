@@ -44,7 +44,7 @@ jobs:
       - name: OpenAPI schema is up to date
         run: |
           uv run python -m homeworking.openapi > /tmp/openapi.json
-          diff -u packages/api-client/openapi.json /tmp/openapi.json
+          diff -u apps/web/openapi.json /tmp/openapi.json
 
   web:
     runs-on: ubuntu-24.04
@@ -58,10 +58,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generated API client is up to date
         run: |
-          pnpm --filter @homeworking/api-client generate
-          git diff --exit-code packages/api-client/src
+          pnpm --filter web generate
+          git diff --exit-code apps/web/src/api
       - run: pnpm -r lint
       - run: pnpm -r typecheck
+      - run: pnpm -r test
       - run: pnpm --filter web build
 
   e2e:

@@ -7,7 +7,7 @@ behind it. Architecture decision: [ADR-0006](../architecture/adr/archiv/0006-tok
 |---|---|
 | System prompt | `apps/api/src/homeworking/modules/agent/prompts/system.de.md` |
 | Prompt version | `PROMPT_VERSION` in `modules/agent/prompts/__init__.py` |
-| Tools (names, descriptions, argument schemas) | `modules/agent/tools.py`, design schema in `packages/construction-model/src/construction_model/assembly.py` |
+| Tools (names, descriptions, argument schemas) | `modules/agent/design_tools.py`, `modules/agent/project_tools.py` (assembled in `tools.py`), design schema in `apps/api/src/homeworking/construction_model/assembly.py` |
 | Model routing | `modules/agent/routing.py` (`ROUTING_VERSION`) |
 | History compaction | `modules/agent/history.py` |
 | Fingerprint lock | `modules/agent/prompts/prompt.lock` |
@@ -46,7 +46,7 @@ same data as JSON lines (`agent_turn`, `agent_turn_done`).
 
 Despite its name, the JSON column `agent_runs.design_attempts` (no extra column) holds one entry
 per submitted design and per failed tool call of any tool, in call order. Successful calls of
-other tools are not recorded. Entries are built by `tool_attempt()` in `modules/agent/tools.py`:
+other tools are not recorded. Entries are built by `tool_attempt()` in `modules/agent/deps.py`:
 
 ```json
 {
@@ -75,12 +75,12 @@ other tools are not recorded. Entries are built by `tool_attempt()` in `modules/
 
 Hooks (`RecordToolAttempts`, pydantic-ai capability): `before_tool_validate` keeps the raw
 arguments by `tool_call_id`, `on_tool_validate_error` and `on_tool_execute_error` record the
-failures that never reach a tool body; the bodies call `_attempt` / `_fail`. Add the `raw_args`
+failures that never reach a tool body; the bodies call `record_attempt` / `fail` (`deps.py`). Add the `raw_args`
 of a bad run as a fixture under `apps/api/tests/fixtures/tool_args/` (see `test_failure_capture.py`).
 
 **`failed_request`.** A failed run keeps no `model_messages`, so a provider error such as HTTP 400
 `Missing required parameter: 'messages[6].content'` could not be traced to a request. The
-capability `RecordRequestShape` (`tools.py`, helpers in `modules/agent/request_shape.py`) keeps the
+capability `RecordRequestShape` (`capabilities.py`, helpers in `modules/agent/request_shape.py`) keeps the
 *shape* of the latest model request in `AgentDeps` (overwritten per request) and `api/chat.py`
 stores it for runs with status `failed` as `agent_runs.usage["failed_request"]` (successful runs
 store nothing; no migration). It holds structure only, never text: per message its index, kind and

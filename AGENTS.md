@@ -1,94 +1,53 @@
-# Homeworking – guide for AI coding agents
+# Homeworking – Agenten-Leitfaden
 
-Homeworking turns a DIY project description into a computable build project. The core rule
-is that **the LLM never calculates**. It describes the parts; the deterministic engine checks
-them and derives everything else (BOM, cut list, costs, drawings, 3D model).
+DIY-Projektbeschreibung → LLM entwirft `AssemblyDesign` → deterministische Engine prüft und leitet
+alles ab (Stückliste, Zuschnitt, Kosten, Zeichnungen, 3D). **Das LLM rechnet nie.**
 
-## Layout
+Ein Stack: ein Python-Paket (Backend) plus ein Next.js-Paket (Client). Paketkarte und Auffälligkeiten:
+`docs/architecture/STRUKTUR.md`. Fachregeln: `docs/architecture/ARCHITEKTUR.md`
+(Engine: `ENGINE.md`). Der Go-Neuanfang aus ADR-0009 wurde nicht umgesetzt und entfernt.
 
-| Path | What |
+| Pfad | Inhalt |
 |---|---|
-| `apps/api` | FastAPI modular monolith (`homeworking`). The chat agent lives in `modules/agent`, the staged design pipeline (intake, skeleton, modules, docs) in `modules/pipeline`, the HTTP layer in `api/`. |
-| `apps/web` | Next.js 16 + React 19 client (Vercel AI SDK `useChat`). See `apps/web/AGENTS.md`. |
-| `packages/construction-model` | Pure domain model: inputs, commands, diff, `AssemblyDesign`. |
-| `packages/calc-engine` | Deterministic engine for designs, catalog. No packs or templates: every project is a one-off design (ADR-0008). `pipeline/` holds the gap rules and the module merge of the staged design pipeline (ADR-0010). |
-| `packages/api-client` | Generated OpenAPI TypeScript client. Never edit `src/gen` by hand. |
-| `docs/architecture/adr` | Architecture decisions (German). |
-| `docs/ai` | Prompts, changelog, token benchmarks, model prices. |
+| `apps/api` | ein Python-Paket `homeworking`: `construction_model/` (Domäne) und `calc_engine/` (Engine), beide rein ohne I/O, dazu `api/`, `modules/{agent,pipeline,llm,projects,…}`, `db/`; Tests inkl. BDD unter `apps/api/tests` |
+| `apps/api/devtools` | `homeworking_dev`: Benchmark, Live-Auswertung, Fall-Erfassung (`task bench`, `eval:live`, `regress:capture`); nicht im Wheel |
+| `apps/web` | ein Next.js-Paket (`apps/web/AGENTS.md`): UI, generierter TS-Client `src/api` (nie `src/api/gen` von Hand ändern), Browser-Tests `tests/e2e` und `tests/bdd` |
 
-Import boundaries are enforced by `lint-imports`. The domain model and the engine import no
-platform, DB or LLM code, and only `homeworking.api` may use `modules.agent` and `modules.pipeline`.
+## Befehle
 
-## Commands (Taskfile)
+`task check` (Lint, mypy, import-linter, eslint, tsc) · `task test` · `task e2e` (UI) ·
+`task bdd` · `task bench` · `task regress` · `task prompt:lock` · `task openapi` (nach
+API-Änderung). Kosten/Key nötig: `task eval:live`, `task pipeline:live`.
+Vor der Übergabe `task check` und `task test` ausführen.
 
-- `task check`: ruff, mypy (strict), import-linter, eslint, tsc.
-- `task test`: pytest on SQLite. `task test:pg` adds PostgreSQL.
-- `task e2e`: Playwright with the offline LLM (`LLM_MODE=test`).
-- `task bench`: offline token benchmark of the agent. No API calls, deterministic.
-- `task regress`: replay the regression cases plus corpus and intent checks, offline.
-- `task regress:capture -- <run_id>`: draft a regression case from a failed agent run;
-  `task regress:promote -- <slug>` turns a finished draft into a case.
-- `task eval:live`: live LLM evaluation of the regression briefs. Costs money, needs a key, not
-  in CI.
-- `task pipeline:live -- --case <slug>`: one brief through the pipeline stages with the real models,
-  tokens and errors per stage, without the chat agent. Costs money, needs a key, not in CI.
-- `task prompt:lock`: record the prompt fingerprint after a prompt or tool change (agent and pipeline stages).
-- `task openapi`: regenerate `openapi.json` and the TS client after API model changes.
-- `task ci`: what CI runs.
+## Regeln
 
-## Rules
+- Code-Kommentare englisch, UI-Texte und ADRs deutsch.
+- Nicht committen oder pushen; das macht der Maintainer.
+- **Prompt-Änderungen** (System-Prompt, Tool-Name/-Doc/-Argumente, `AssemblyDesign`-Schema,
+  `routing.py`): neue `PROMPT_VERSION`, `task prompt:lock`, Snapshot, Eintrag in
+  `docs/ai/PROMPT_CHANGELOG.md`. Ablauf: `docs/ai/README.md`. Skill `prompt-change`.
+- Token-Budget-Grenzen (`test_token_budget.py`) nur mit Begründung im Changelog anheben.
+- **Jeder gemeldete Fehler wird ein Regressionsfall** (`task regress:capture`, Skill
+  `regress-capture`, Format `apps/api/tests/regressions/README.md`).
+- Neue Kennzahlen gehören in die Engine. Tool-Ergebnisse sind kompakt; große Daten auf Abruf.
+- Modell- und Tool-Ausgaben sind untrusted: pydantic validieren, Engine lehnt ab, nie `eval`,
+  Ausdrücke nur über `homeworking.calc_engine.assembly.expr`. Kaputte Tool-Argumente werden nur in
+  `modules/agent/args.py` repariert (Fälle in `apps/api/tests/fixtures/tool_args/`).
+- Jeder Agent-Lauf wird in `agent_runs` gespeichert, auch fehlgeschlagene.
+- CPU-lastige Engine-/Render-Arbeit im Handler: `run_in_threadpool`; außerhalb von Handlern
+  `homeworking.concurrency.run_blocking` (kein `asyncio.to_thread`).
+- Tests laufen offline (`LLM_MODE=test`), ohne Key und Netz.
+- Importgrenzen prüft `lint-imports`: Domäne und Engine ohne Plattform, DB, LLM; `pipeline` ohne
+  `agent`, `modules` ohne `api`/`bootstrap`, Laufzeit ohne `homeworking_dev`.
 
-- **Code comments are in English**, also in files with German comments. User-facing texts and
-  ADRs are German.
-- **Prompt and agent changes are traceable.** Anything that changes what the model sees counts:
-  `prompts/system.de.md`, tool names, tool docstrings, tool argument types, the `AssemblyDesign`
-  schema and `routing.py`. Each such change requires a new `PROMPT_VERSION`, `task prompt:lock`,
-  an updated snapshot and an entry in `docs/ai/PROMPT_CHANGELOG.md`. `tests/test_prompt_lock.py`
-  enforces this. The workflow is in `docs/ai/README.md`.
-- **Token budget.** `tests/test_token_budget.py` fails when requests grow. Do not raise a limit
-  without a reason in the changelog. Tighten it when you make requests smaller.
-- **Every reported failed project or drawing becomes a regression case** (`task regress:capture`, skill `regress-capture`, format in
-  `apps/api/tests/regressions/README.md`). A bug fix is not done without one.
-- **Never let the LLM compute numbers.** New figures belong in the engine. The agent only passes
-  them on.
-- Tool results are compact text or JSON for the model. Large data (full BOM, designs, catalog)
-  is fetched on demand, not returned by every tool.
-- Every agent turn is stored in `agent_runs`, also failed ones; keep it that way (cost and
-  provenance).
-- CPU-bound engine or render work in request handlers runs in a worker thread
-  (`ProjectService._build`, `run_in_threadpool`).
-- Tests use the offline model. No test may need an API key or network access.
+## Sicherheit
 
-## Security
+- Nie `.env` lesen, ausgeben oder committen; nur `.env.example` ist versioniert. `ENVIRONMENT`
+  ist standardmäßig `production` (lehnt Entwicklungs-Secret und `LLM_MODE=test` ab); lokal
+  `development`, Tests `test`.
+- Safety-Gate (`modules/compliance/safety.py`) und Grenzen aus ARCHITEKTUR §8 erhalten: keine
+  Balkone, Treppen, Absturzsicherung, feste Elektrik, Gas, keine Eingriffe in bestehende Tragwerke.
+  Bei Regeländerung `SAFETY_RULES_VERSION` erhöhen.
 
-- Never read, print or commit secrets. `.env` holds the LLM key and DB credentials; only
-  `.env.example` is versioned.
-- Keep the safety gate (`modules/compliance/safety.py`) and the engine limits from ADR-0004 §7
-  and ADR-0007: no balconies, stairs, fall protection, fixed electrics or gas, and no changes to
-  existing load-bearing structures. New buildings (`category="building"`) are allowed, always
-  with the `BUILDING` statics and permit notice. Raise `SAFETY_RULES_VERSION` when the rules
-  change.
-- Treat model output and tool arguments as untrusted input: validate with pydantic, let the engine
-  reject, never `eval`. Expressions go through `calc_engine.assembly.expr` only.
-- Hand-written JSON in tool arguments (unquoted formulas, stray brackets) is repaired in one place,
-  `modules/agent/args.py`, never per tool. Add every malformed call from a bug report to
-  `apps/api/tests/fixtures/tool_args/` as a regression case.
-
-## Commits and pull requests
-
-- Do not commit or push; the maintainer reviews and commits.
-- Before handing work back, run `task check` and `task test` (and `task e2e` for UI changes) and
-  fix failures.
-
-## Agent instructions
-
-This file follows the [AGENTS.md](https://agents.md/) convention, stewarded by the Agentic AI
-Foundation (Linux Foundation). The closest AGENTS.md to the edited file wins (`apps/web/AGENTS.md`
-for the web client); explicit user instructions in the chat override both. Keep these files
-current when commands, layout or rules change.
-
-## Environment notes
-
-- The repo usually sits on `/mnt/c` under WSL, so `next dev` compiles slowly. Use
-  `task dev:warmup`, or `task start` for prebuilt pages.
-- `.env` is loaded by Task. `LLM_MODE=test` needs no key.
+Die nächstgelegene AGENTS.md gewinnt; Chat-Anweisungen überstimmen beide. Diese Datei kurz halten.

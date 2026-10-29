@@ -15,8 +15,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from calc_engine.assembly.intent import Expectation
-from construction_model.base import ParamValue
+from homeworking.calc_engine.assembly.intent import Expectation
+from homeworking.construction_model.base import ParamValue
 
 #: ``REGRESSION_CASES_DIR`` lets ``capture promote`` replay a draft in ``_drafts/`` with the very
 #: same tests, before the draft becomes a case.
@@ -43,7 +43,7 @@ Outcome = Literal[
     "exception",
 ]
 #: Failure classes whose bug is the call itself: no design has to exist to describe a fix.
-CLASSES_WITHOUT_GOLDEN: frozenset[str] = frozenset({"args_syntax", "schema_validation"})
+CLASSES_WITHOUT_REFERENCE: frozenset[str] = frozenset({"args_syntax", "schema_validation"})
 
 
 class CaseError(ValueError):
@@ -91,7 +91,7 @@ class AttemptRecord(_Model):
         return self
 
 
-class Golden(_Model):
+class Reference(_Model):
     """The correct construction: a design file in the case directory and its parameters."""
 
     design: str = Field(pattern=r"^[A-Za-z0-9_.-]+\.json$")
@@ -106,30 +106,30 @@ class RegressionCase(_Model):
     brief: str = Field(min_length=1, description="The user's text, verbatim")
     expect: Expectation
     attempts: list[AttemptRef] = Field(default_factory=list)
-    golden: Golden | None = None
+    reference: Reference | None = None
     notes: str = ""
 
     @model_validator(mode="after")
-    def _golden_is_present_where_needed(self) -> RegressionCase:
-        if self.golden is None and self.failure_class not in CLASSES_WITHOUT_GOLDEN:
-            raise ValueError(f"failure_class '{self.failure_class}' needs a golden design")
+    def _reference_is_present_where_needed(self) -> RegressionCase:
+        if self.reference is None and self.failure_class not in CLASSES_WITHOUT_REFERENCE:
+            raise ValueError(f"failure_class '{self.failure_class}' needs a reference design")
         return self
 
 
 class LoadedCase:
-    """A validated case with its attempt records and golden design read from disk."""
+    """A validated case with its attempt records and reference design read from disk."""
 
     def __init__(
         self,
         directory: Path,
         case: RegressionCase,
         attempts: list[AttemptRecord],
-        golden_design: dict[str, Any] | None,
+        reference_design: dict[str, Any] | None,
     ) -> None:
         self.directory = directory
         self.case = case
         self.attempts = attempts
-        self.golden_design = golden_design
+        self.reference_design = reference_design
 
     @property
     def slug(self) -> str:
@@ -154,15 +154,15 @@ def load_case(directory: Path) -> LoadedCase:
         attempts = [
             AttemptRecord.model_validate(_read_json(directory / ref.file)) for ref in case.attempts
         ]
-        golden_design: dict[str, Any] | None = None
-        if case.golden is not None:
-            data = _read_json(directory / case.golden.design)
+        reference_design: dict[str, Any] | None = None
+        if case.reference is not None:
+            data = _read_json(directory / case.reference.design)
             if not isinstance(data, dict):
-                raise CaseError(f"{directory / case.golden.design}: erwartet ein JSON-Objekt")
-            golden_design = data
+                raise CaseError(f"{directory / case.reference.design}: erwartet ein JSON-Objekt")
+            reference_design = data
     except ValidationError as error:
         raise CaseError(f"{directory}: {error}") from error
-    return LoadedCase(directory, case, attempts, golden_design)
+    return LoadedCase(directory, case, attempts, reference_design)
 
 
 def case_directories(root: Path = CASES_DIR) -> list[Path]:

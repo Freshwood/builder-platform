@@ -2,11 +2,11 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
-from api_designs import design
 from syrupy.extensions.single_file import SingleFileSnapshotExtension, WriteMode
 
-from calc_engine.engine import default_engine
-from construction_model.model import Note, Origin, ProjectInputs, ProjectModel
+from api_designs import design
+from homeworking.calc_engine.engine import default_engine
+from homeworking.construction_model.model import Note, Origin, ProjectInputs, ProjectModel
 from homeworking.modules.compliance.redaction import redact
 from homeworking.modules.compliance.safety import check_message
 from homeworking.modules.documents.pdf import render_html, render_pdf

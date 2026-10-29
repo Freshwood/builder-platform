@@ -6,12 +6,13 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import pytest
-from api_designs import design as offline_design
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
+from api_designs import design as offline_design
 from homeworking.bootstrap import build_container
-from homeworking.modules.agent.tools import RAW_ARGS_MAX_CHARS, AgentDeps, build_agent
+from homeworking.modules.agent.deps import RAW_ARGS_MAX_CHARS, AgentDeps
+from homeworking.modules.agent.tools import build_agent
 from homeworking.settings import Settings
 
 

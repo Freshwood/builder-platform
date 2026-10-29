@@ -4,10 +4,9 @@ from typing import Any
 from uuid import uuid4
 
 from api_designs import design
-
-from calc_engine.engine import default_engine
-from construction_model.commands import CreateProject, ReplaceInputs, command_adapter
-from construction_model.model import ProjectInputs, ProjectModel
+from homeworking.calc_engine.engine import default_engine
+from homeworking.construction_model.commands import CreateProject, ReplaceInputs, command_adapter
+from homeworking.construction_model.model import ProjectInputs, ProjectModel
 from homeworking.modules.projects.repository import load_command, load_model
 
 

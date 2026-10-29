@@ -1,7 +1,8 @@
 "use client";
 
+import { projectChat } from "@/api";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import { DefaultChatTransport, safeValidateUIMessages, type UIMessage } from "ai";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { sessionReady } from "@/lib/session";
@@ -166,6 +167,46 @@ export function useAssistant(projectId: string | null, onProjectChanged: (id: st
 }
 
 export type Assistant = ReturnType<typeof useAssistant>;
+
+/** The stored conversation of a project; messages that are not valid UI messages fail the load. */
+export async function loadStoredChat(projectId: string): Promise<UIMessage[]> {
+  const { data } = await projectChat({ path: { project_id: projectId }, throwOnError: true });
+  const result = await safeValidateUIMessages({ messages: data });
+  if (!result.success) throw result.error;
+  return result.data;
+}
+
+/**
+ * Load the stored conversation of an opened project into the chat (it survives reloads).
+ * ``error`` is set when that failed, so the chat can say so instead of looking empty.
+ */
+export function useStoredChat(
+  projectId: string | null,
+  restore: (messages: UIMessage[]) => void,
+): { error: boolean; reload: () => void } {
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    loadStoredChat(projectId).then(
+      (stored) => {
+        if (cancelled) return;
+        setError(false);
+        if (stored.length) restore(stored);
+      },
+      () => {
+        if (!cancelled) setError(true);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, attempt, restore]);
+
+  return { error, reload: () => setAttempt((n) => n + 1) };
+}
 
 /** Seconds since ``since`` while it is set, refreshed every second. */
 export function useElapsed(since: number | null): number {

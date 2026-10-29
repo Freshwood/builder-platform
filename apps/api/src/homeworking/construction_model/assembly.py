@@ -1,0 +1,257 @@
+"""Parametric assembly design: the generic input format for free-form projects (ADR-0004).
+
+A design describes *what* is built: named parameters and parts (boxes, or members between two
+points) whose size and position are expressions over those parameters, optionally with an
+outline shape, cutouts, end cuts and carpentry joints. It is written by the LLM (or shipped as a template) and
+stored as project input. Everything derived from it (BOM, cut list, costs, drawings) is computed
+by the engine.
+
+Coordinate system (millimetres): x to the right (width), y to the back (depth), z up (height).
+The floor is z = 0. A part's ``at`` is its minimum corner (front-left-bottom) before rotation.
+"""
+
+from __future__ import annotations
+
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from homeworking.construction_model.base import Origin, ParamValue
+
+Identifier = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,39}$")]
+# Explained once in the AssemblyDesign docstring: repeating the description on every field
+# cost ~2.7K characters in every LLM request that carries the design schema.
+Expr = float | str
+Vec3 = tuple[Expr, Expr, Expr]
+Use = Literal["indoor", "outdoor"]
+Support = Literal["floor", "wall"]
+USES: tuple[Use, ...] = ("indoor", "outdoor")
+SUPPORTS: tuple[Support, ...] = ("floor", "wall")
+
+
+class _Frozen(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class ChoiceOption(_Frozen):
+    value: str = Field(pattern=r"^[a-z0-9_]{1,40}$")
+    label: str = Field(min_length=1, max_length=60)
+
+
+# Example bounds quoted in the error for a numeric parameter without min/max.
+_EXAMPLE_RANGE = {"length": (300, 1200), "count": (1, 10), "angle": (0, 90)}
+
+
+def _known_ids(known: list[str]) -> str:
+    """Existing ids for an error message, capped to keep the tool result short."""
+    return ", ".join(known[:15]) + (" …" if len(known) > 15 else "")
+
+
+class DesignParam(_Frozen):
+    """A user-adjustable parameter. Lengths are millimetres and should end in ``_mm``."""
+
+    name: Identifier
+    label: str = Field(min_length=1, max_length=80, description="German label for the UI")
+    kind: Literal["length", "count", "angle", "bool", "choice"]
+    default: ParamValue
+    min: float | None = None
+    max: float | None = None
+    options: list[ChoiceOption] = Field(
+        default_factory=list, description="Only for kind=choice, e.g. wood species"
+    )
+
+    @model_validator(mode="after")
+    def _check(self) -> DesignParam:
+        if self.kind in {"length", "count", "angle"}:
+            if self.min is None or self.max is None:
+                low, high = _EXAMPLE_RANGE[self.kind]
+                raise ValueError(
+                    f"Parameter '{self.name}' (Art {self.kind}) braucht min und max, "
+                    f'z. B. "min": {low}, "max": {high} und einen default dazwischen'
+                )
+            if self.min > self.max:
+                raise ValueError(
+                    f"Parameter '{self.name}': min ({self.min:g}) ist größer als max "
+                    f"({self.max:g}) – Werte vertauscht?"
+                )
+        if self.kind == "choice" and not self.options:
+            raise ValueError(
+                f"Auswahl-Parameter '{self.name}' braucht options, "
+                'z. B. [{"value": "oak", "label": "Eiche"}] und einen default aus den values'
+            )
+        return self
+
+
+class Rotation(_Frozen):
+    """Rotation about an axis through the part's ``at`` point (right-hand rule)."""
+
+    axis: Literal["x", "y", "z"]
+    deg: Expr
+
+
+class Repeat(_Frozen):
+    """Repeat a part ``count`` times; ``var`` (0-based index) is usable in its expressions."""
+
+    count: Expr
+    var: Identifier = "i"
+
+
+Vec2 = tuple[Expr, Expr]
+ShapeKind = Literal["rect", "rounded", "ellipse", "triangle", "arch", "cloud", "polygon"]
+EndCut = Literal["square", "level", "plumb", "corner"]
+
+
+class Shape(_Frozen):
+    """Outline on the face across the thinnest size; (u, v) in mm from the minimum corner, u
+    along the first remaining axis in x, y, z order (members: along the length)."""
+
+    kind: ShapeKind
+    radius: Expr | None = None
+    apex: Expr | None = None
+    bumps: int | None = Field(None, ge=2, le=12)
+    points: list[Vec2] = Field(default_factory=list, max_length=40)
+
+
+class Cutout(_Frozen):
+    """Hole in (u, v): rect/ellipse by at and size, polygon by points."""
+
+    kind: Literal["rect", "ellipse", "polygon"] = "rect"
+    at: Vec2 = (0, 0)
+    size: Vec2 = (0, 0)
+    points: list[Vec2] = Field(default_factory=list, max_length=40)
+
+
+class PartSpec(_Frozen):
+    id: Identifier
+    name: str = Field(
+        min_length=1, max_length=60, description="German part name, e.g. 'Seitenteil'"
+    )
+    material: str = Field(
+        description=(
+            "Catalog item id or made-to-order lumber 'lumber_<species>_<thickness>x<width>' "
+            "(any species, any section, e.g. 'lumber_douglas_18x96'). May contain {param} "
+            "placeholders for choice parameters, e.g. 'lumber_{wood}_18x96'."
+        ),
+        max_length=80,
+    )
+    size: Vec3 | None = Field(None, description="Box: extent along x, y, z in mm")
+    at: Vec3 | None = Field(None, description="Box: minimum corner (x, y, z) before rotation")
+    rotate: Rotation | None = None
+    start: Vec3 | None = Field(None, description="Member: centre of one end")
+    end: Vec3 | None = None
+    section: Vec2 | None = None
+    facing: Literal["x", "y", "z"] | None = Field(None, description="Member thickness direction")
+    cuts: tuple[EndCut, EndCut] = ("square", "square")
+    shape: Shape | None = None
+    cutouts: list[Cutout] = Field(default_factory=list, max_length=12)
+    repeat: Repeat | None = None
+    when: Expr | None = Field(None, description="Include the part only if this evaluates truthy")
+
+    @model_validator(mode="after")
+    def _placement(self) -> PartSpec:
+        box = self.size is not None and self.at is not None
+        member = self.start is not None and self.end is not None
+        if box == member:
+            given = [f for f in ("size", "at", "start", "end") if getattr(self, f) is not None]
+            raise ValueError(
+                f"Bauteil '{self.id}': entweder size und at (Box) oder start und end (Stab) "
+                f"angeben, nicht beides und nicht nur eines davon (angegeben: "
+                f"{', '.join(given) or 'nichts'})"
+            )
+        if member and self.rotate is not None:
+            raise ValueError(
+                f"Bauteil '{self.id}': rotate gilt nur für Boxen (size/at), nicht für Stäbe – "
+                "einen Stab über start und end neigen"
+            )
+        return self
+
+
+class HardwareSpec(_Frozen):
+    """Explicit hardware, e.g. hinges, castors or brackets. Screws are added automatically."""
+
+    item: str = Field(max_length=80)
+    quantity: Expr
+    note: str | None = Field(None, max_length=120)
+    when: Expr | None = None
+
+
+class JointSpec(_Frozen):
+    """Carpentry joint between all touching or overlapping instances of two parts."""
+
+    kind: Literal["tenon", "half_lap", "notch"]
+    part: Identifier
+    into: Identifier
+
+
+class DesignStep(_Frozen):
+    title: str = Field(min_length=1, max_length=80)
+    text: str = Field(min_length=1, max_length=800)
+    parts: list[Identifier] = Field(
+        default_factory=list,
+        description="Part ids newly mounted in this step (each part in one step); the engine adds parts, screws and hardware per step",
+    )
+
+
+class DesignVariant(_Frozen):
+    key: Identifier
+    name: str = Field(min_length=1, max_length=40)
+    description: str = Field(max_length=200)
+    overrides: dict[str, ParamValue]
+
+
+class AssemblyDesign(_Frozen):
+    """A complete parametric design of a buildable object.
+
+    Coordinates in mm: x = width (right), y = depth (back), z = height (up), floor z = 0.
+    Numeric fields (size, at, start, end, section, points, count, quantity, when, deg) take a
+    number or an arithmetic expression over parameters and the repeat variable, e.g.
+    'width_mm - 2 * 18' or
+    'i * (height_mm - 18) / (shelves - 1)'. Allowed: + - * / // % ( ), min, max, round,
+    floor, ceil, abs, if(cond, a, b), comparisons and and/or/not.
+    """
+
+    object_type: str = Field(min_length=1, max_length=60, description="German, e.g. 'Wandregal'")
+    summary: str = Field(
+        max_length=200,
+        description="One German sentence; may contain {param} placeholders",
+    )
+    category: Literal["object", "building"] = "object"
+    use: Use = "indoor"
+    support: Support = Field(
+        "floor", description="floor: stands on z=0; wall: back side (max y) is fixed to a wall"
+    )
+    origin: Origin = Origin.AI
+    params: list[DesignParam] = Field(max_length=30)
+    parts: list[PartSpec] = Field(min_length=1, max_length=120)
+    joints: list[JointSpec] = Field(default_factory=list, max_length=40)
+    hardware: list[HardwareSpec] = Field(default_factory=list, max_length=30)
+    auto_screws: bool = Field(True, description="Derive screws from contact faces")
+    finish: str | None = Field(None, description="Catalog item id of an oil/glaze, or null")
+    steps: list[DesignStep] = Field(default_factory=list, max_length=20)
+    variants: list[DesignVariant] = Field(default_factory=list, max_length=4)
+
+    @model_validator(mode="after")
+    def _unique_ids(self) -> AssemblyDesign:
+        for label, ids in (
+            ("Parameter-Namen", [p.name for p in self.params]),
+            ("Bauteil-IDs", [p.id for p in self.parts]),
+            ("Varianten-Keys", [v.key for v in self.variants]),
+        ):
+            duplicates = sorted({i for i in ids if ids.count(i) > 1})
+            if duplicates:
+                raise ValueError(
+                    f"Doppelte {label}: {', '.join(duplicates)} – jede ID nur einmal vergeben"
+                    + (
+                        " (mehrere gleiche Teile: repeat statt Kopien)"
+                        if "Bauteil" in label
+                        else ""
+                    )
+                )
+        part_ids = [p.id for p in self.parts]
+        unknown = sorted({i for j in self.joints for i in (j.part, j.into) if i not in part_ids})
+        if unknown:
+            raise ValueError(
+                f"joints nennen unbekannte Bauteil-IDs: {', '.join(unknown)} – "
+                f"vorhandene IDs: {_known_ids(part_ids)}"
+            )
+        return self

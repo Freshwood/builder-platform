@@ -38,8 +38,9 @@ from homeworking.bootstrap import build_container
 from homeworking.db.schema import AgentRunRow
 from homeworking.main import create_app
 from homeworking.modules.agent import request_shape as shape
-from homeworking.modules.agent.model import Models
-from homeworking.modules.agent.tools import AgentDeps, build_agent
+from homeworking.modules.agent.deps import AgentDeps
+from homeworking.modules.agent.tools import build_agent
+from homeworking.modules.llm.model import Models
 from homeworking.settings import Settings
 
 SECRET = "SENTINEL-GEHEIM-7731"

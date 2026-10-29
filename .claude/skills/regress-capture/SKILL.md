@@ -20,7 +20,7 @@ commit; the maintainer reviews and commits.
 2. **Read and classify.** Read `case.json`, the `attempts/NN.json` files and the brief. The
    `failure_class` is only a guess from the recorded outcomes; set the right one (table below).
    Fill in `title` (German, one line).
-3. **Write `expect` from the BRIEF.** Use the vocabulary of `calc_engine/assembly/intent.py` and
+3. **Write `expect` from the BRIEF.** Use the vocabulary of `homeworking/calc_engine/assembly/intent.py` and
    only constraints the user actually stated. Never invent a constraint to make a case pass and
    never loosen one later.
    - `envelope`: `max_length_mm`, `max_width_mm`, `max_height_mm` and `min_*` ("maximal 2 m lang").
@@ -31,16 +31,15 @@ commit; the maintainer reviews and commits.
    - `features`: `walkable_top`, `choice_param:<name>=<v1>|<v2>` ("aus Brettern oder Platte"),
      `hinged_doors`, `standing_stable`, `levels`, `contoured`.
    - `parts` (min/max component count) only when the user named a count.
-4. **Produce the golden.** The corrected design that satisfies the brief, built through the
-   engine (the LLM never calculates): either `golden.template` (a shipped template plus
-   `params`) or `golden.json` (an `AssemblyDesign`). Run it:
-   `task regress -- -k <slug>` must show the golden meeting the corpus invariants, `expect` and
-   the view consistency. Fix the golden, not `expect`. For `args_syntax` and `schema_validation`
-   the golden block may be removed.
+4. **Produce the reference.** The corrected design that satisfies the brief, built through the
+   engine (the LLM never calculates): `reference.json` (an `AssemblyDesign`) plus the `params`
+   in the `reference` block. Run it: `task regress -- -k <slug>` must show the reference meeting
+   the corpus invariants, `expect` and the view consistency. Fix the reference, not `expect`. For
+   `args_syntax` and `schema_validation` the `reference` block may be removed.
 5. **Confirm the case reproduces the failure on the OLD behaviour.** A case that never failed is
    worthless. Replay with the code before your fix: the recorded call must show the reported
    outcome and `errors_contain` must match what the model saw. Once the bug is fixed, set
-   `expect_outcome` to what the code does now (often `accepted`); the golden and the intent
+   `expect_outcome` to what the code does now (often `accepted`); the reference and the intent
    checks keep guarding. For a draft from a run the recorded outcome is the starting point.
 6. **Fix the root cause** (table below). A change to the system prompt, a tool, the design schema
    or routing goes through the `prompt-change` skill (new `PROMPT_VERSION`, lock, snapshot,
@@ -59,7 +58,7 @@ commit; the maintainer reviews and commits.
 | `engine_loop` | two or more `engine_rejected` in a row, the model cannot repair | engine error messages (what to change), expression/resolve rules, template; prompt only if the rule is missing |
 | `intent_mismatch` | accepted design that ignores the brief (too big, wrong material, no door) | engine/template defaults, prompt rule, or a missing `intent` feature |
 | `drawing_defect` | project builds but views, dimensions or cut list disagree | drawing generation in `calc_engine`; extend `intent.view_consistency` |
-| `template_defect` | shipped template fails for some parameters | `calc_engine/data/templates/*.json` and the construction pack |
+| `template_defect` | shipped template fails for some parameters | `homeworking/calc_engine/data/templates/*.json` and the construction pack |
 
 The heuristic of `capture` picks: unrepairable JSON, else any `invalid_args`, else at least two
 `engine_rejected`, else `intent_mismatch`. A run with one schema error followed by an engine
